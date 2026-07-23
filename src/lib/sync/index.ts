@@ -1,6 +1,5 @@
-import { apiClient } from "@/lib/api";
+import { apiClient, type SyncOrderResult } from "@/lib/api";
 import { db } from "@/lib/db";
-import type { SyncOrderResult } from "@/lib/api";
 import type { SyncStatus } from "@/lib/types";
 
 // Background reconciliation between IndexedDB and the server.
@@ -82,6 +81,8 @@ function mapSyncResultToStatus(result: SyncOrderResult): SyncStatus {
     case "conflict":
       return "conflict";
     case "error":
+      return "error";
+    default:
       return "error";
   }
 }

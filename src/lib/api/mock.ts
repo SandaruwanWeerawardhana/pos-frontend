@@ -46,6 +46,12 @@ function defaultState(): MockApiState {
   return { products: structuredClone(DEFAULT_PRODUCTS), syncedOrderIds: [] };
 }
 
+function isMockApiState(value: unknown): value is MockApiState {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.products) && Array.isArray(candidate.syncedOrderIds);
+}
+
 // In-memory + localStorage-backed state, separate from the real IndexedDB
 // offline store. This only simulates a persistent backend for frontend dev;
 // it is lazily loaded so importing this module is safe during SSR/build.
@@ -61,7 +67,8 @@ function getState(): MockApiState {
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    state = raw ? (JSON.parse(raw) as MockApiState) : defaultState();
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    state = isMockApiState(parsed) ? parsed : defaultState();
   } catch {
     state = defaultState();
   }
@@ -78,7 +85,7 @@ function encodeBase64Url(value: string): string {
     typeof btoa === "function"
       ? btoa(value)
       : Buffer.from(value, "utf-8").toString("base64");
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return base64.replaceAll("+", "-").replaceAll("/", "_").replace(/={1,2}$/, "");
 }
 
 function makeFakeJwt(user: AuthUser): string {
