@@ -12,12 +12,11 @@ export interface SyncStatusSummary {
   triggerSync: () => Promise<void>;
 }
 
-// Reactive view over pendingOrders + syncMeta, backed by Dexie's liveQuery
-// so it updates as SyncManager (or the cart) writes to those tables.
+
 export function useSyncStatus(): SyncStatusSummary {
   const [pendingCount, setPendingCount] = useState(0);
   const [conflictCount, setConflictCount] = useState(0);
-  const [lastSyncedAt, setLastSyncedAtState] = useState<number | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
   useEffect(() => {
     const countsSubscription = liveQuery(async () => {
@@ -39,7 +38,7 @@ export function useSyncStatus(): SyncStatusSummary {
       db.syncMeta.get("last_synced_at"),
     ).subscribe({
       next: (record) => {
-        setLastSyncedAtState(typeof record?.value === "number" ? record.value : null);
+        setLastSyncedAt(typeof record?.value === "number" ? record.value : null);
       },
     });
 
