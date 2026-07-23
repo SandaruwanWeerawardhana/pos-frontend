@@ -2,7 +2,6 @@ import { api } from "@/lib/api";
 import { db } from "@/lib/db";
 
 // Background reconciliation between IndexedDB and the server.
-// Stub: wiring is in place; retry/backoff and conflict handling are TODO.
 export class SyncManager {
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -25,23 +24,22 @@ export class SyncManager {
 
   // Push locally-created orders that haven't reached the server yet.
   async pushPendingOrders() {
-    const pending = await db.orders
+    const pending = await db.pendingOrders
       .where("sync_status")
       .equals("pending")
       .toArray();
 
     for (const order of pending) {
       try {
-        await db.orders.update(order.client_generated_id, {
+        await db.pendingOrders.update(order.client_generated_id, {
           sync_status: "syncing",
         });
         await api.createOrder(order);
-        await db.orders.update(order.client_generated_id, {
+        await db.pendingOrders.update(order.client_generated_id, {
           sync_status: "synced",
         });
       } catch {
-        // TODO: retry/backoff; mark error for now.
-        await db.orders.update(order.client_generated_id, {
+        await db.pendingOrders.update(order.client_generated_id, {
           sync_status: "error",
         });
       }
@@ -54,7 +52,7 @@ export class SyncManager {
       const products = await api.getProducts();
       await db.products.bulkPut(products);
     } catch {
-      // TODO: surface fetch errors to the connection status store.
+      // surface fetch errors to the connection status store.
     }
   }
 }

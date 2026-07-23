@@ -1,4 +1,4 @@
-import type { Order, Product } from "@/lib/types";
+import type { PendingOrder, Product } from "@/lib/types";
 import type { ApiClient } from "./client";
 
 // Thin fetch wrapper stub. Endpoints are placeholders — adjust to the real
@@ -12,7 +12,7 @@ export function createRealApi(baseUrl: string): ApiClient {
       if (!res.ok) throw new Error(`getProducts failed: ${res.status}`);
       return (await res.json()) as Product[];
     },
-    async createOrder(order: Order) {
+    async createOrder(order: PendingOrder) {
       const res = await fetch(url("/orders"), {
         method: "POST",
         headers: { "content-type": "application/json" },

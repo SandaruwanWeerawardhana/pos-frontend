@@ -1,4 +1,4 @@
-import type { Order, Product } from "@/lib/types";
+import type { PendingOrder, Product } from "@/lib/types";
 import type { ApiClient } from "./client";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -39,7 +39,7 @@ export const mockApi: ApiClient = {
     await delay(150);
     return structuredClone(SAMPLE_PRODUCTS);
   },
-  async createOrder(order: Order) {
+  async createOrder(order: PendingOrder) {
     await delay(150);
     return { server_id: `srv_${order.client_generated_id}` };
   },
