@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppHeader } from "@/components/shell/app-header";
 import { AppShellInit } from "@/components/shell/app-shell-init";
 import "./globals.css";
 
@@ -35,7 +34,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <AppShellInit />
-        <AppHeader />
         {children}
       </body>
     </html>
