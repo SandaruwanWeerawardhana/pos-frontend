@@ -1,9 +1,34 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+﻿import { act, renderHook, waitFor } from "@testing-library/react";
 import { db } from "@/lib/db";
 import { mockApi } from "@/lib/api/mock";
 import type { PendingOrder } from "@/lib/types";
 import { useSyncStatus } from "@/lib/sync/use-sync-status";
 import { syncManager } from "@/lib/sync";
+
+// Records every liveQuery unsubscribe handed to the hook so the cleanup test
+// can assert both subscriptions are actually torn down on unmount.
+const { unsubscribeSpies } = vi.hoisted(() => ({
+  unsubscribeSpies: [] as ReturnType<typeof vi.fn>[],
+}));
+
+vi.mock("dexie", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("dexie")>();
+  return {
+    ...actual,
+    liveQuery: ((querier: () => Promise<unknown>) => {
+      const observable = actual.liveQuery(querier);
+      return {
+        ...observable,
+        subscribe: (...args: Parameters<typeof observable.subscribe>) => {
+          const subscription = observable.subscribe(...args);
+          const unsubscribe = vi.fn(() => subscription.unsubscribe());
+          unsubscribeSpies.push(unsubscribe);
+          return { ...subscription, unsubscribe };
+        },
+      };
+    }) as typeof actual.liveQuery,
+  };
+});
 
 function makePendingOrder(id: string): PendingOrder {
   return {
@@ -30,7 +55,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("useSyncStatus", () => {
@@ -136,7 +161,7 @@ describe("useSyncStatus", () => {
   });
 
   it("triggerSync() delegates to the shared syncManager", async () => {
-    const triggerSpy = jest
+    const triggerSpy = vi
       .spyOn(syncManager, "triggerSync")
       .mockResolvedValue(undefined);
     const { result } = renderHook(() => useSyncStatus());
@@ -167,32 +192,18 @@ describe("useSyncStatus", () => {
   });
 
   it("unsubscribes both liveQueries on unmount", async () => {
-    const unsubscribes: jest.Mock[] = [];
-    const subscribeSpy = jest
-      .spyOn(dexie, "liveQuery")
-      .mockImplementation(((querier: () => unknown) => {
-        const observable = actualLiveQuery(querier as () => Promise<unknown>);
-        return {
-          ...observable,
-          subscribe: (...args: Parameters<typeof observable.subscribe>) => {
-            const subscription = observable.subscribe(...args);
-            const unsubscribe = jest.fn(() => subscription.unsubscribe());
-            unsubscribes.push(unsubscribe);
-            return { ...subscription, unsubscribe };
-          },
-        };
-      }) as typeof dexie.liveQuery);
+    unsubscribeSpies.length = 0;
 
     const { unmount } = renderHook(() => useSyncStatus());
     await waitFor(() => {
-      expect(unsubscribes).toHaveLength(2);
+      expect(unsubscribeSpies).toHaveLength(2);
     });
 
     unmount();
 
-    for (const unsubscribe of unsubscribes) {
+    for (const unsubscribe of unsubscribeSpies) {
       expect(unsubscribe).toHaveBeenCalledTimes(1);
     }
-    subscribeSpy.mockRestore();
   });
 });
+

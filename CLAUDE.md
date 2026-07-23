@@ -14,7 +14,7 @@ This repo runs Next.js 16.2.11, which has breaking API/convention changes vs. ol
 - `npm run build` — production build
 - `npm run start` — run production build
 - `npm run lint` — ESLint (flat config, `eslint-config-next` core-web-vitals + typescript)
-- `npm run test` — Jest (`jest.config.mjs`, via `next/jest`) + React Testing Library; jsdom environment, `fake-indexeddb` polyfill for Dexie. Tests live in `tests/`, not colocated with source.
+- `npm run test` — Vitest single run (`vitest.config.ts`); `npm run test:watch` for watch mode. React Testing Library, jsdom environment, `fake-indexeddb` polyfill for Dexie, globals enabled (no `import { describe, it } from "vitest"` needed). Tests live in `tests/`, not colocated with source.
 
 ## Architecture
 

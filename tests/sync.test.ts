@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+﻿import { waitFor } from "@testing-library/react";
 import { db, getLastSyncedAt } from "@/lib/db";
 import { mockApi } from "@/lib/api/mock";
 import type { PendingOrder } from "@/lib/types";
@@ -29,7 +29,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("SyncManager.start", () => {
@@ -53,7 +53,7 @@ describe("SyncManager.start", () => {
 
   it("is idempotent - a second start() does not add a second scheduler", async () => {
     await db.pendingOrders.add(makePendingOrder("double-start-1"));
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
 
     const manager = new SyncManager();
     manager.start();
@@ -74,7 +74,7 @@ describe("SyncManager.start", () => {
     manager.start();
     manager.stop();
 
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
     await db.pendingOrders.add(makePendingOrder("after-stop-1"));
 
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -114,7 +114,7 @@ describe("SyncManager.syncOnce", () => {
   });
 
   it("does not call the server when there is nothing to push", async () => {
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
 
     await new SyncManager().syncOnce();
 
@@ -140,7 +140,7 @@ describe("SyncManager.syncOnce", () => {
     const manager = new SyncManager();
     await manager.syncOnce();
 
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
     await manager.syncOnce();
 
     expect(syncOrdersSpy).not.toHaveBeenCalled();
@@ -169,7 +169,7 @@ describe("SyncManager.syncOnce", () => {
 
   it("releases the claim back to 'error' when the transport itself fails", async () => {
     await db.pendingOrders.add(makePendingOrder("transport-fail-1"));
-    jest
+    vi
       .spyOn(mockApi, "syncOrders")
       .mockRejectedValueOnce(new Error("network unreachable"));
 
@@ -202,7 +202,7 @@ describe("SyncManager.syncOnce", () => {
     await db.pendingOrders.bulkAdd(
       Array.from({ length: 5 }, (_, index) => makePendingOrder(`batch-${index}`)),
     );
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
 
     const manager = new SyncManager(30_000, 300_000, 2);
     await manager.syncOnce();
@@ -220,7 +220,7 @@ describe("SyncManager.syncOnce", () => {
     const ids = ["dup-1", "dup-2", "dup-3"];
     await db.pendingOrders.bulkAdd(ids.map(makePendingOrder));
 
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
 
     const managerA = new SyncManager();
     const managerB = new SyncManager();
@@ -241,7 +241,7 @@ describe("SyncManager.syncOnce", () => {
 
   it("ignores a re-entrant syncOnce() while one is already in flight", async () => {
     await db.pendingOrders.add(makePendingOrder("reentrant-1"));
-    const syncOrdersSpy = jest.spyOn(mockApi, "syncOrders");
+    const syncOrdersSpy = vi.spyOn(mockApi, "syncOrders");
 
     const manager = new SyncManager();
     await Promise.all([manager.syncOnce(), manager.syncOnce()]);
@@ -268,7 +268,7 @@ describe("SyncManager.syncOnce", () => {
 
   it("still pushes orders when the product pull fails", async () => {
     await db.pendingOrders.add(makePendingOrder("pull-fails-1"));
-    jest
+    vi
       .spyOn(mockApi, "getProducts")
       .mockRejectedValueOnce(new Error("products endpoint down"));
 
@@ -280,3 +280,4 @@ describe("SyncManager.syncOnce", () => {
     expect(await getLastSyncedAt()).not.toBeNull();
   });
 });
+
