@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { liveQuery } from "dexie";
 import { db } from "@/lib/db";
 import { syncManager } from "./index";
@@ -48,7 +48,7 @@ export function useSyncStatus(): SyncStatusSummary {
     };
   }, []);
 
-  const triggerSync = useCallback(() => syncManager.triggerSync(), []);
+  const triggerSync = () => syncManager.triggerSync();
 
   return { pendingCount, conflictCount, lastSyncedAt, triggerSync };
 }

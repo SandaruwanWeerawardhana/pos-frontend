@@ -2,9 +2,15 @@
 
 import { useEffect } from "react";
 import { useConnectionListener } from "@/lib/store/connection";
+import { syncManager } from "@/lib/sync";
 
 export function AppShellInit() {
   useConnectionListener();
+
+  useEffect(() => {
+    syncManager.start();
+    return () => syncManager.stop();
+  }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {

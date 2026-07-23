@@ -1,5 +1,5 @@
 import { apiClient, type SyncOrderResult } from "@/lib/api";
-import { db, setLastSyncedAt } from "@/lib/db";
+import { db, seedProducts, setLastSyncedAt } from "@/lib/db";
 import type { PendingOrder, SyncStatus } from "@/lib/types";
 import { useConnectionStore } from "@/lib/store/connection";
 
@@ -33,6 +33,17 @@ async function claimBatch(maxBatchSize: number): Promise<PendingOrder[]> {
 
     return batch;
   });
+}
+
+// A "syncing" claim only lives for the duration of one in-process run, so any
+// order still marked "syncing" at startup was orphaned by a reload or crash
+// mid-push. Nothing would ever pick those up again (they're neither "pending"
+// nor "error"), so release them back to "pending" before the first cycle.
+async function releaseOrphanedClaims(): Promise<void> {
+  await db.pendingOrders
+    .where("sync_status")
+    .equals("syncing")
+    .modify({ sync_status: "pending" satisfies SyncStatus });
 }
 
 function mapSyncResultToStatus(result: SyncOrderResult): SyncStatus {
@@ -77,9 +88,14 @@ export class SyncManager {
       }
     });
 
-    if (useConnectionStore.getState().online) {
-      this.scheduleNext(0);
-    }
+    // Recover orphaned claims before the first cycle so they're visible as
+    // "pending" to the very first claimBatch() rather than a cycle later.
+    void releaseOrphanedClaims().finally(() => {
+      if (!this.unsubscribeConnection) return; // stopped while recovering
+      if (useConnectionStore.getState().online) {
+        this.scheduleNext(0);
+      }
+    });
   }
 
   stop() {
@@ -123,6 +139,7 @@ export class SyncManager {
       await this.pushPendingOrders();
       this.failureStreak = 0;
       await this.pullProducts();
+      await setLastSyncedAt(Date.now());
     } catch {
       this.failureStreak += 1;
     } finally {
@@ -146,7 +163,6 @@ export class SyncManager {
           },
         })),
       );
-      await setLastSyncedAt(Date.now());
     } catch (error) {
       // Transport-level failure (server unreachable): release the claim so
       // these orders are retried next cycle, and let the caller back off.
@@ -164,7 +180,7 @@ export class SyncManager {
   private async pullProducts(): Promise<void> {
     try {
       const products = await apiClient.getProducts();
-      await db.products.bulkPut(products);
+      await seedProducts(products);
     } catch {
       // non-fatal: a stale product cache shouldn't back off order syncing.
     }
