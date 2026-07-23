@@ -1,10 +1,18 @@
 import type { ApiClient } from "./client";
 import { mockApi } from "./mock";
-import { createRealApi } from "./real";
+import { realApi } from "./real";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+// Defaults to the mock backend; set NEXT_PUBLIC_USE_MOCK_API=false to switch
+// to the real Go backend once it's ready - a one-line config change.
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
 
-// Real client when an API URL is configured, otherwise the in-memory mock.
-export const api: ApiClient = baseUrl ? createRealApi(baseUrl) : mockApi;
+export const apiClient: ApiClient = useMock ? mockApi : realApi;
 
 export type { ApiClient } from "./client";
+export type {
+  AuthUser,
+  LoginResult,
+  SyncOrderOutcome,
+  SyncOrderResult,
+  SyncOrdersResponse,
+} from "./client";

@@ -22,13 +22,13 @@ No test runner is configured in this repo yet.
 Local-first POS app. Data flows: UI reads/writes IndexedDB (via Dexie) as the source of truth; a background `SyncManager` reconciles with the server API on an interval.
 
 - `src/lib/types` — shared domain types. **Money is always integer cents (`price_cents`, `total_cents`, etc.), never floats.**
-- `src/lib/db` (`PosDB` / `db`) — Dexie wrapper over IndexedDB with `products` and `orders` tables. This is what the UI should read from directly, not the API client.
-- `src/lib/api` — `ApiClient` interface (`client.ts`) implemented by two interchangeable backends:
-  - `mock.ts` — in-memory fake with simulated latency, used when no API URL is set.
-  - `real.ts` — thin `fetch` wrapper; endpoints are placeholder stubs pending a real backend.
-  - `index.ts` selects real vs. mock based on `NEXT_PUBLIC_API_URL`.
-- `src/lib/sync` (`SyncManager` / `syncManager`) — polls every 15s: pushes orders with `sync_status: "pending"` to the API, pulls/refreshes the product cache. Retry/backoff and conflict handling are not yet implemented (see TODOs in the file) — orders that fail to push are marked `sync_status: "error"` and not retried automatically.
-- `src/lib/store` — Zustand stores: `cart.ts` (cart line items, derives subtotal/tax/total in cents; tax rate is captured per-product at add-to-cart time, not re-fetched), `connection.ts` (online/offline UI state, seeded from `navigator.onLine`).
+- `src/lib/db` (`PosDB` / `db`) — Dexie wrapper over IndexedDB with `products`, `cartItems`, `pendingOrders`, and `syncMeta` tables, plus the functions the UI calls directly (`searchProducts`, `addToCart`, `createLocalOrder`, etc.) — see the file for the full list. This is what the UI should read from directly, not the API client. Cart state lives in `cartItems`, not a separate store.
+- `src/lib/api` — `ApiClient` interface (`client.ts`: `login`, `getProducts`, `syncOrders`) implemented by two interchangeable backends:
+  - `mock.ts` — in-memory + `localStorage`-backed fake (separate from the IndexedDB offline store; only for frontend dev persistence across reloads) with simulated latency and test hooks (`mockApi.setSyncDelay`, `mockApi.setNextSyncResult`) for forcing sync outcomes.
+  - `real.ts` — stub for the real Go backend; every method throws "not implemented" pending the real backend.
+  - `index.ts` exports `apiClient`, chosen via `NEXT_PUBLIC_USE_MOCK_API` (mock unless explicitly set to `"false"`).
+- `src/lib/sync` (`SyncManager` / `syncManager`) — polls every 15s: batches orders with `sync_status: "pending"` to `apiClient.syncOrders`, pulls/refreshes the product cache. Retry/backoff is not yet implemented (see TODO in the file) — orders that fail to push are marked `sync_status: "error"` and not retried automatically; conflicts reported by the server are marked `sync_status: "conflict"`.
+- `src/lib/store` — Zustand store: `connection.ts` (online/offline UI state, seeded from `navigator.onLine`, kept in sync with the browser's `online`/`offline` events via `useConnectionListener`).
 - `src/components/providers/query-provider.tsx` — TanStack Query provider; one `QueryClient` created in component state per session (server-safe).
 
 Path alias: `@/*` maps to `src/*` (see `tsconfig.json`).

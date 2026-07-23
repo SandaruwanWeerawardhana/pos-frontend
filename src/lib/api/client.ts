@@ -1,7 +1,31 @@
 import type { PendingOrder, Product } from "@/lib/types";
 
-// Contract shared by the real (HTTP) and mock API clients.
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface LoginResult {
+  token: string;
+  user: AuthUser;
+}
+
+export type SyncOrderResult = "synced" | "already_synced" | "conflict" | "error";
+
+export interface SyncOrderOutcome {
+  client_generated_id: string;
+  result: SyncOrderResult;
+  server_id?: string;
+}
+
+export interface SyncOrdersResponse {
+  results: SyncOrderOutcome[];
+}
+
+// Contract shared by the real (HTTP, Go backend) and mock API clients.
 export interface ApiClient {
+  login(email: string, password: string): Promise<LoginResult>;
   getProducts(): Promise<Product[]>;
-  createOrder(order: PendingOrder): Promise<{ server_id: string }>;
+  syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse>;
 }
