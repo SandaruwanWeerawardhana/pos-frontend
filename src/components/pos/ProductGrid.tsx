@@ -14,7 +14,7 @@ function StockBadge({ quantity }: Readonly<{ quantity: number }>) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        Out of Stock
+        <span>Out of Stock</span>
       </span>
     );
   }
@@ -22,14 +22,14 @@ function StockBadge({ quantity }: Readonly<{ quantity: number }>) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Low Stock
+        <span>Low Stock</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-      In Stock
+      <span>In Stock</span>
     </span>
   );
 }

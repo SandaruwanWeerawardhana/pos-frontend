@@ -12,6 +12,12 @@ type ScaleListener = (reading: ScaleReading) => void;
 type BarcodeListener = (code: string) => void;
 type StatusListener = (status: DeviceStatus, simulated: boolean) => void;
 
+function getRandomUnitInterval(): number {
+  const values = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(values);
+  return values[0] / 0x100000000;
+}
+
 class HardwareService {
   private readonly scaleListeners = new Set<ScaleListener>();
   private readonly barcodeListeners = new Set<BarcodeListener>();
@@ -89,11 +95,13 @@ class HardwareService {
   private startSimulated(): void {
     if (this.simulatedTimer) return;
     this.setStatus("connected", true);
-    this.lastGrams = 100 + Math.round(Math.random() * 400);
+    this.lastGrams = 100 + Math.round(getRandomUnitInterval() * 400);
 
     this.simulatedTimer = setInterval(() => {
       const jitter =
-        (Math.random() - 0.5) * 2 * HARDWARE_CONFIG.simulatedScaleJitterGrams;
+        (getRandomUnitInterval() - 0.5) *
+        2 *
+        HARDWARE_CONFIG.simulatedScaleJitterGrams;
       this.lastGrams = Math.max(0, this.lastGrams + jitter);
       const reading: ScaleReading = {
         grams: Math.round(this.lastGrams),
