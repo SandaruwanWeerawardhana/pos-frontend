@@ -127,7 +127,7 @@ export function Terminal() {
 
       {/* Product area */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex-1">
             <ProductSearch onResults={setResults} />
           </div>

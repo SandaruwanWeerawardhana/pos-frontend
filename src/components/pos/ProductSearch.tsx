@@ -5,9 +5,9 @@ import { searchProducts } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
 
-interface ProductSearchProps {
+type ProductSearchProps = Readonly<{
   onResults: (products: Product[]) => void;
-}
+}>;
 
 export function ProductSearch({ onResults }: ProductSearchProps) {
   const [query, setQuery] = useState("");
