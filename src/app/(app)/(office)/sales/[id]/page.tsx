@@ -34,13 +34,13 @@ export default function SaleDetailPage({
   }
 
   if (order === undefined) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-on-surface-variant dark:text-zinc-400">Loading…</p>;
   }
 
   if (order === null) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
           Order not found.
         </p>
         <Link href={ROUTES.sales.root} className="text-sm hover:underline">
@@ -53,12 +53,12 @@ export default function SaleDetailPage({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Sale detail
         </h1>
         <Link
           href={ROUTES.sales.root}
-          className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="text-sm text-on-surface-variant hover:underline dark:text-zinc-400"
         >
           Back to sales
         </Link>
@@ -74,7 +74,7 @@ export default function SaleDetailPage({
           >
             Mark as refunded
           </Button>
-          <p className="mt-2 text-center text-xs text-zinc-400">
+          <p className="mt-2 text-center text-xs text-on-surface-variant">
             Local-only annotation — there is no backend refund endpoint yet,
             so this does not sync.
           </p>

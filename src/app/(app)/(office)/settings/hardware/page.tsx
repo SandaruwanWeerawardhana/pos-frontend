@@ -6,12 +6,12 @@ export default function HardwareSettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Hardware setup
         </h1>
         <Link
           href={ROUTES.settings.root}
-          className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="text-sm text-on-surface-variant hover:underline dark:text-zinc-400"
         >
           Back to settings
         </Link>

@@ -37,7 +37,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
       <div>
-        <h1 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="mb-4 text-lg font-semibold text-on-surface dark:text-zinc-50">
           Shop settings
         </h1>
         <div className="flex flex-col gap-3">
@@ -58,11 +58,11 @@ export default function SettingsPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h2 className="mb-2 text-sm font-medium text-on-surface-variant dark:text-zinc-300">
           Plugin
         </h2>
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex items-center gap-2 text-sm text-on-surface-variant dark:text-zinc-300">
             <input
               type="radio"
               name="plugin"
@@ -74,7 +74,7 @@ export default function SettingsPage() {
           {all.map((plugin) => (
             <label
               key={plugin.key}
-              className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+              className="flex items-center gap-2 text-sm text-on-surface-variant dark:text-zinc-300"
             >
               <input
                 type="radio"
@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
       <Link
         href={ROUTES.settings.hardware}
-        className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+        className="text-sm text-on-surface-variant hover:underline dark:text-zinc-400"
       >
         Hardware setup →
       </Link>

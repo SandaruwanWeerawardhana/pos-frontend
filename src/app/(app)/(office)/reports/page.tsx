@@ -93,11 +93,11 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
         Reports
       </h1>
       <div>
-        <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h2 className="mb-2 text-sm font-medium text-on-surface-variant dark:text-zinc-300">
           Sales by day
         </h2>
         <Table
@@ -108,7 +108,7 @@ export default function ReportsPage() {
         />
       </div>
       <div>
-        <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h2 className="mb-2 text-sm font-medium text-on-surface-variant dark:text-zinc-300">
           Top products
         </h2>
         <Table
