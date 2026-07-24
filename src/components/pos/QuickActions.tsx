@@ -45,12 +45,9 @@ export function QuickActions({
     onClick: () => void;
     danger?: boolean;
   }[] = [
-    { label: "Suspend Sale", icon: "suspend", onClick: () => onNotImplemented("Suspend Sale") },
     { label: "Hold Order", icon: "hold", onClick: onHold },
-    { label: "Recall Order", icon: "recall", onClick: onRecall },
     { label: "Clear Cart", icon: "clear", onClick: onClear, danger: true },
     { label: "Print Receipt", icon: "print", onClick: () => onNotImplemented("Print Receipt") },
-    { label: "Open Drawer", icon: "drawer", onClick: () => onNotImplemented("Open Drawer") },
   ];
 
   return (
