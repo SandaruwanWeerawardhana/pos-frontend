@@ -8,6 +8,7 @@ import type { PaymentMethod } from "@/lib/types";
 interface PaymentModalProps {
   open: boolean;
   totalCents: number;
+  initialMethod?: PaymentMethod;
   onClose: () => void;
   onConfirm: (method: PaymentMethod) => void;
   submitting?: boolean;
@@ -22,11 +23,19 @@ const METHODS: { key: PaymentMethod; label: string }[] = [
 export function PaymentModal({
   open,
   totalCents,
+  initialMethod = "cash",
   onClose,
   onConfirm,
   submitting,
-}: PaymentModalProps) {
-  const [method, setMethod] = useState<PaymentMethod>("cash");
+}: Readonly<PaymentModalProps>) {
+  const [method, setMethod] = useState<PaymentMethod>(initialMethod);
+  const [wasOpen, setWasOpen] = useState(open);
+
+  // Reset the selected method each time the modal opens, without an effect.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setMethod(initialMethod);
+  }
 
   return (
     <Modal open={open} onClose={onClose} title="Take payment">

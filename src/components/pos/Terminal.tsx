@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { ProductSearch } from "./ProductSearch";
 import { ProductGrid } from "./ProductGrid";
 import { Cart } from "./Cart";
+import { CategorySidebar } from "./CategorySidebar";
+import { QuickActions } from "./QuickActions";
 import { PaymentModal } from "./PaymentModal";
 import { HoldModal } from "./HoldModal";
 import { Receipt } from "./Receipt";
@@ -23,6 +25,18 @@ import type {
   Product,
 } from "@/lib/types";
 
+const emptySubscribe = () => () => {};
+
+// True only after client hydration; false during SSR and the first client
+// render. Lets us gate localStorage-backed (persisted) UI without a mismatch.
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 function computeDiscountCents(
   discount: Discount | null,
   subtotalCents: number,
@@ -34,15 +48,22 @@ function computeDiscountCents(
 
 export function Terminal() {
   const [results, setResults] = useState<Product[]>([]);
+  const [category, setCategory] = useState("all");
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(
     null,
   );
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [holdOpen, setHoldOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<PendingOrder | null>(
     null,
   );
+
+  // Persisted plugin store rehydrates from localStorage on the client only, so
+  // gate plugin-dependent UI until after mount to keep the first client render
+  // identical to the server render (no hydration mismatch).
+  const mounted = useHydrated();
 
   const cart = useCart();
   const { reading } = useScale();
@@ -62,13 +83,25 @@ export function Terminal() {
 
   async function handleBarcodeScan(code: string) {
     const matches = await searchProducts(code);
-    const match = matches.find((product) => product.barcode === code) ?? matches[0];
+    const match =
+      matches.find((product) => product.barcode === code) ?? matches[0];
     if (match) {
       await handleAdd(match);
       showToast(`Added ${match.name}`, "success");
     } else {
       showToast(`No product found for barcode ${code}`, "error");
     }
+  }
+
+  function handlePay(method: PaymentMethod) {
+    setPaymentMethod(method);
+    setPaymentOpen(true);
+  }
+
+  async function handleClearCart() {
+    await cart.clear();
+    setSelectedDiscount(null);
+    showToast("Cart cleared", "success");
   }
 
   async function handleConfirmPayment(method: PaymentMethod) {
@@ -89,46 +122,61 @@ export function Terminal() {
   }
 
   return (
-    <div className="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_360px]">
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-1 gap-4 bg-zinc-50 p-4 dark:bg-zinc-950">
+      <CategorySidebar
+        totalCount={results.length}
+        active={category}
+        onSelect={setCategory}
+      />
+
+      {/* Product area */}
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex-1">
             <ProductSearch onResults={setResults} />
           </div>
           <BarcodeScanner onScan={handleBarcodeScan} />
         </div>
-        {activePlugin?.computeAddQuantity && <ScaleDisplay />}
-        <ProductGrid products={results} onAdd={handleAdd} />
+
+        {mounted && activePlugin?.computeAddQuantity && <ScaleDisplay />}
+
+        <div className="flex-1 overflow-y-auto">
+          <ProductGrid products={results} onAdd={handleAdd} />
+        </div>
+
+        <QuickActions
+          onHold={() => setHoldOpen(true)}
+          onRecall={() => setHoldOpen(true)}
+          onClear={handleClearCart}
+          onNotImplemented={(label) =>
+            showToast(`${label} — not implemented yet`, "error")
+          }
+          disabled={cart.items.length === 0}
+        />
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            Cart
-          </h2>
-          <button
-            type="button"
-            onClick={() => setHoldOpen(true)}
-            className="text-xs text-zinc-500 hover:underline dark:text-zinc-400"
-          >
-            Held carts
-          </button>
-        </div>
+      {/* Checkout panel */}
+      <div
+        suppressHydrationWarning
+        className="hidden w-[360px] shrink-0 flex-col rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:flex"
+      >
         <Cart
           items={cart.items}
           total={total}
+          discountCents={discountCents}
           selectedDiscount={selectedDiscount}
           onSelectDiscount={setSelectedDiscount}
           onUpdateQuantity={cart.updateQuantity}
           onRemove={cart.remove}
           onHold={() => setHoldOpen(true)}
-          onPay={() => setPaymentOpen(true)}
+          onPay={handlePay}
         />
       </div>
 
       <PaymentModal
         open={paymentOpen}
         totalCents={total.total_cents}
+        initialMethod={paymentMethod}
         onClose={() => setPaymentOpen(false)}
         onConfirm={handleConfirmPayment}
         submitting={submitting}
