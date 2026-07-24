@@ -5,7 +5,11 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export function Receipt({ order }: { order: PendingOrder }) {
+type ReceiptProps = Readonly<{
+  order: PendingOrder;
+}>;
+
+export function Receipt({ order }: ReceiptProps) {
   return (
     <div className="mx-auto w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 font-mono text-sm dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-center text-base font-semibold text-zinc-900 dark:text-zinc-50">
