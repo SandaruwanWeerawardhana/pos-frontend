@@ -35,15 +35,6 @@ const PAYMENT_BUTTONS: {
   { label: "QR Pay", method: "other", className: "bg-violet-500 hover:bg-violet-600" },
 ];
 
-const SECONDARY_PAYMENT: {
-  label: string;
-  method: PaymentMethod;
-  className: string;
-}[] = [
-  { label: "Bank Transfer", method: "other", className: "bg-slate-500 hover:bg-slate-600" },
-  { label: "Gift Voucher", method: "other", className: "bg-orange-400 hover:bg-orange-500" },
-];
-
 export function Cart({
   items,
   total,
@@ -60,31 +51,6 @@ export function Cart({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Customer card */}
-      <div className="mb-3 flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-50 to-violet-50 p-3 dark:from-blue-950/40 dark:to-violet-950/40">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-          WI
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            Walk-in Customer
-          </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            No loyalty account
-          </p>
-        </div>
-        <button
-          type="button"
-          className="rounded-lg border border-zinc-200 bg-white p-2 text-zinc-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800"
-          aria-label="Find customer"
-        >
-          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4-4" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           Cart{" "}
@@ -158,19 +124,6 @@ export function Cart({
             disabled={empty}
             onClick={() => onPay(btn.method)}
             className={`rounded-xl px-2 py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${btn.className}`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        {SECONDARY_PAYMENT.map((btn) => (
-          <button
-            key={btn.label}
-            type="button"
-            disabled={empty}
-            onClick={() => onPay(btn.method)}
-            className={`rounded-xl px-2 py-2.5 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${btn.className}`}
           >
             {btn.label}
           </button>
