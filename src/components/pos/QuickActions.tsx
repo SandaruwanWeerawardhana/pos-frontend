@@ -58,10 +58,10 @@ export function QuickActions({
             type="button"
             onClick={action.onClick}
             disabled={disabled && action.label === "Clear Cart"}
-            className={`flex flex-col items-center gap-2 rounded-xl border border-zinc-200 px-2 py-3 text-xs font-medium transition-colors hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-800 dark:hover:bg-zinc-800 ${
+            className={`flex flex-col items-center gap-2 rounded-lg border border-outline-variant px-2 py-3 text-xs font-medium transition-colors hover:bg-surface-container dark:border-zinc-800 dark:hover:bg-zinc-800 disabled:opacity-40 ${
               action.danger
-                ? "text-red-600 dark:text-red-400"
-                : "text-zinc-600 dark:text-zinc-300"
+                ? "text-error dark:text-red-400"
+                : "text-on-surface-variant dark:text-zinc-300"
             }`}
           >
             <Icon name={action.icon} />

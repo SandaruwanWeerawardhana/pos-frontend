@@ -118,7 +118,7 @@ export function Terminal() {
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-4 overflow-hidden p-4">
+    <div className="flex h-full min-h-0 gap-4 overflow-hidden bg-background p-4">
       <CategorySidebar
         totalCount={results.length}
         active={category}
@@ -154,7 +154,7 @@ export function Terminal() {
       {/* Checkout panel */}
       <div
         suppressHydrationWarning
-        className="hidden h-full min-h-0 w-[360px] shrink-0 flex-col rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:flex"
+        className="hidden h-full min-h-0 w-[360px] shrink-0 flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:flex"
       >
         <Cart
           items={cart.items}

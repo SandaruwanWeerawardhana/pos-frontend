@@ -23,9 +23,9 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const VARIANT_CLASSES: Record<ToastVariant, string> = {
-  info: "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900",
-  success: "bg-green-600 text-white",
-  error: "bg-red-600 text-white",
+  info: "border-secondary text-on-surface",
+  success: "border-on-tertiary-container text-on-surface",
+  error: "border-error text-on-surface",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -45,11 +45,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-lg px-4 py-2 text-sm shadow-lg ${VARIANT_CLASSES[toast.variant]}`}
+            className={`rounded-lg border-l-4 bg-surface-container-lowest/70 px-4 py-2 text-sm shadow-lg backdrop-blur-md ${VARIANT_CLASSES[toast.variant]}`}
           >
             {toast.message}
           </div>

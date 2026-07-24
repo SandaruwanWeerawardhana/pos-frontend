@@ -30,9 +30,9 @@ const PAYMENT_BUTTONS: {
   method: PaymentMethod;
   className: string;
 }[] = [
-  { label: "Cash", method: "cash", className: "bg-emerald-500 hover:bg-emerald-600" },
-  { label: "Card", method: "card", className: "bg-blue-600 hover:bg-blue-700" },
-  { label: "QR Pay", method: "other", className: "bg-violet-500 hover:bg-violet-600" },
+  { label: "Cash", method: "cash", className: "bg-tertiary-container hover:bg-tertiary-container/90" },
+  { label: "Card", method: "card", className: "bg-secondary hover:bg-secondary/90" },
+  { label: "QR Pay", method: "other", className: "bg-primary-container hover:bg-primary-container/90" },
 ];
 
 export function Cart({
@@ -52,15 +52,15 @@ export function Cart({
   return (
     <div className="flex h-full flex-col">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2 className="text-sm font-semibold text-on-surface dark:text-zinc-50">
           Cart{" "}
-          <span className="font-normal text-zinc-400">({itemCount} items)</span>
+          <span className="font-normal text-on-surface-variant">({itemCount} items)</span>
         </h2>
         <button
           type="button"
           onClick={onHold}
           disabled={empty}
-          className="text-xs font-medium text-blue-600 hover:underline disabled:text-zinc-300 dark:disabled:text-zinc-600"
+          className="text-xs font-medium text-secondary hover:underline disabled:text-zinc-300 dark:disabled:text-zinc-600"
         >
           Hold
         </button>
@@ -68,7 +68,7 @@ export function Cart({
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         {empty ? (
-          <p className="py-10 text-center text-sm text-zinc-400">
+          <p className="py-10 text-center text-sm text-on-surface-variant">
             Cart is empty.
           </p>
         ) : (
@@ -84,7 +84,7 @@ export function Cart({
       </div>
 
       {/* Totals */}
-      <div className="mt-3 space-y-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+      <div className="mt-3 space-y-2 border-t border-outline-variant pt-3 dark:border-zinc-800">
         <DiscountInput
           selectedId={selectedDiscount?.id ?? null}
           onSelect={onSelectDiscount}
@@ -95,21 +95,21 @@ export function Cart({
           <Row
             label="Discount"
             value={discountCents > 0 ? `-${formatCents(discountCents)}` : "$0.00"}
-            valueClass={discountCents > 0 ? "text-red-500" : undefined}
+            valueClass={discountCents > 0 ? "text-error" : undefined}
           />
           <Row label="Tax" value={formatCents(total.tax_total_cents)} />
         </div>
-        <div className="flex items-center justify-between border-t border-zinc-200 pt-2 dark:border-zinc-800">
-          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="flex items-center justify-between border-t border-outline-variant pt-2 dark:border-zinc-800">
+          <span className="text-base font-semibold text-on-surface dark:text-zinc-50">
             Grand Total
           </span>
-          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          <span className="text-display-lg text-on-surface dark:text-zinc-50">
             {formatCents(total.total_cents)}
           </span>
         </div>
-        <div className="flex items-center justify-between text-sm text-zinc-500">
+        <div className="flex items-center justify-between text-sm text-on-surface-variant">
           <span>Balance</span>
-          <span className="font-semibold text-blue-600">
+          <span className="font-semibold text-secondary">
             {formatCents(total.total_cents)}
           </span>
         </div>
@@ -140,9 +140,9 @@ function Row({
 }: Readonly<{ label: string; value: string; valueClass?: string }>) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
+      <span className="text-on-surface-variant dark:text-zinc-400">{label}</span>
       <span
-        className={`font-medium tabular-nums text-zinc-900 dark:text-zinc-50 ${valueClass ?? ""}`}
+        className={`font-medium tabular-nums text-on-surface dark:text-zinc-50 ${valueClass ?? ""}`}
       >
         {value}
       </span>

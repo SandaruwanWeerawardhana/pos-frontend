@@ -25,6 +25,7 @@ export function ProductSearch({ onResults }: ProductSearchProps) {
       onChange={(event) => setQuery(event.target.value)}
       placeholder="Search by name, SKU, or barcode…"
       autoFocus
+      pill
     />
   );
 }

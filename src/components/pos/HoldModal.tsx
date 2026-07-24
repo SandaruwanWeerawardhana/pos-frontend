@@ -64,7 +64,7 @@ export function HoldModal({
         </div>
       )}
       {held.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
           No held carts.
         </p>
       ) : (
@@ -72,11 +72,11 @@ export function HoldModal({
           {held.map((cart) => (
             <li
               key={cart.id}
-              className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+              className="flex items-center justify-between rounded-lg border border-outline-variant px-3 py-2 text-sm dark:border-zinc-800"
             >
-              <span className="text-zinc-900 dark:text-zinc-50">
+              <span className="text-on-surface dark:text-zinc-50">
                 {cart.label}{" "}
-                <span className="text-zinc-400">
+                <span className="text-on-surface-variant">
                   ({cart.items.length} items)
                 </span>
               </span>

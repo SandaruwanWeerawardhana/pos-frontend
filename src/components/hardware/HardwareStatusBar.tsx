@@ -25,7 +25,7 @@ type DeviceIndicatorProps = Readonly<{
 function DeviceIndicator({ label, kind }: DeviceIndicatorProps) {
   const device = useHardware(kind);
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+    <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
       <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[device.status]}`} />
       {label}: {STATUS_LABEL[device.status]}
       {device.simulated && device.status === "connected" ? " (simulated)" : ""}
@@ -35,7 +35,7 @@ function DeviceIndicator({ label, kind }: DeviceIndicatorProps) {
 
 export function HardwareStatusBar() {
   return (
-    <div className="flex items-center gap-4 border-b border-zinc-200 bg-zinc-50 px-4 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="flex items-center gap-4 border-b border-outline-variant bg-surface-container-low px-4 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
       <DeviceIndicator label="Scale" kind="scale" />
       <DeviceIndicator label="Barcode" kind="barcode" />
     </div>

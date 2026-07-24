@@ -32,7 +32,7 @@ export function CategorySidebar({
   return (
     <aside
       suppressHydrationWarning
-      className={`hidden shrink-0 flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-3 transition-[width] duration-150 dark:border-zinc-800 dark:bg-zinc-900 xl:flex ${
+      className={`hidden shrink-0 flex-col gap-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 dark:border-zinc-800 dark:bg-zinc-900 xl:flex ${
         collapsed ? "w-14" : "w-56"
       }`}
     >
@@ -40,7 +40,7 @@ export function CategorySidebar({
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
         aria-label={collapsed ? "Expand categories" : "Collapse categories"}
-        className={`mb-1 flex items-center rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 ${
+        className={`mb-1 flex items-center rounded-lg p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-zinc-800 dark:hover:text-zinc-300 ${
           collapsed ? "justify-center" : "justify-end"
         }`}
       >
@@ -62,7 +62,7 @@ export function CategorySidebar({
         collapsed={collapsed}
         onClick={() => onSelect("all")}
       />
-      <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+      <div className="my-1 border-t border-outline-variant/50 dark:border-zinc-800" />
       {CATEGORIES.map((category) => (
         <CategoryRow
           key={category}
@@ -98,8 +98,8 @@ function CategoryRow({
         collapsed ? "justify-center" : "justify-between"
       } ${
         active
-          ? "bg-blue-600 text-white"
-          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          ? "bg-primary text-on-primary"
+          : "text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800"
       }`}
     >
       {collapsed ? (
@@ -111,7 +111,7 @@ function CategoryRow({
           <span>{label}</span>
           {count !== undefined && (
             <span
-              className={`text-xs tabular-nums ${active ? "text-blue-100" : "text-zinc-400"}`}
+              className={`text-xs tabular-nums ${active ? "text-on-primary/70" : "text-on-surface-variant"}`}
             >
               {count}
             </span>

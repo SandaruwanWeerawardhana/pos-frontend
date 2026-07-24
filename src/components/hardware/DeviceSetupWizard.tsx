@@ -40,7 +40,7 @@ export function DeviceSetupWizard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="flex gap-4 text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="flex gap-4 text-sm text-on-surface-variant dark:text-zinc-300">
           <span className="flex items-center gap-1.5">
             Scale:{" "}
             <Badge variant={scale.status === "connected" ? "success" : "neutral"}>
@@ -66,11 +66,11 @@ export function DeviceSetupWizard() {
           {found.map((device) => (
             <li
               key={device.id}
-              className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800"
+              className="flex items-center justify-between rounded-lg border border-outline-variant px-4 py-2 text-sm dark:border-zinc-800"
             >
               <span>
                 {device.name}{" "}
-                <span className="text-zinc-400">({device.kind})</span>
+                <span className="text-on-surface-variant">({device.kind})</span>
               </span>
               {pairedIds.includes(device.id) ? (
                 <Badge variant="success">Paired</Badge>
@@ -89,7 +89,7 @@ export function DeviceSetupWizard() {
         </ul>
       )}
 
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-on-surface-variant">
         No physical HAL server is configured yet — the app already runs
         against a simulated scale/barcode feed. Set NEXT_PUBLIC_HAL_URL to
         connect real hardware.
