@@ -25,15 +25,7 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-const PAYMENT_BUTTONS: {
-  label: string;
-  method: PaymentMethod;
-  className: string;
-}[] = [
-  { label: "Cash", method: "cash", className: "bg-tertiary-container hover:bg-tertiary-container/90" },
-  { label: "Card", method: "card", className: "bg-secondary hover:bg-secondary/90" },
-  { label: "QR Pay", method: "other", className: "bg-primary-container hover:bg-primary-container/90" },
-];
+const DEFAULT_PAYMENT_METHOD: PaymentMethod = "cash";
 
 export function Cart({
   items,
@@ -103,7 +95,7 @@ export function Cart({
           <span className="text-base font-semibold text-on-surface dark:text-zinc-50">
             Grand Total
           </span>
-          <span className="text-display-lg text-on-surface dark:text-zinc-50">
+          <span className="text-headline-lg text-on-surface dark:text-zinc-50">
             {formatCents(total.total_cents)}
           </span>
         </div>
@@ -115,20 +107,15 @@ export function Cart({
         </div>
       </div>
 
-      {/* Payment buttons */}
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {PAYMENT_BUTTONS.map((btn) => (
-          <button
-            key={btn.label}
-            type="button"
-            disabled={empty}
-            onClick={() => onPay(btn.method)}
-            className={`rounded-xl px-2 py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${btn.className}`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
+      {/* Pay */}
+      <button
+        type="button"
+        disabled={empty}
+        onClick={() => onPay(DEFAULT_PAYMENT_METHOD)}
+        className="mt-3 rounded-xl bg-secondary px-2 py-3 text-sm font-semibold text-on-secondary transition-colors hover:bg-secondary/90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Pay Now
+      </button>
     </div>
   );
 }

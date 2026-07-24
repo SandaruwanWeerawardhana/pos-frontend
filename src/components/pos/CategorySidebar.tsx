@@ -28,26 +28,36 @@ export function CategorySidebar({
   onSelect,
 }: Readonly<CategorySidebarProps>) {
   const [collapsed, setCollapsed] = useState(true);
+  const sidebarClassName = [
+    "hidden shrink-0 flex-col gap-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 dark:border-zinc-800 dark:bg-zinc-900 xl:flex",
+    collapsed ? "w-14" : "w-56",
+  ].join(" ");
+  const toggleButtonClassName = [
+    "mb-1 flex items-center rounded-lg p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-zinc-800 dark:hover:text-zinc-300",
+    collapsed ? "justify-center" : "justify-end",
+  ].join(" ");
+  const chevronClassName = [
+    "h-4 w-4 transition-transform",
+    collapsed ? "rotate-180" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <aside
       suppressHydrationWarning
-      className={`hidden shrink-0 flex-col gap-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 dark:border-zinc-800 dark:bg-zinc-900 xl:flex ${
-        collapsed ? "w-14" : "w-56"
-      }`}
+      className={sidebarClassName}
     >
       <button
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
         aria-label={collapsed ? "Expand categories" : "Collapse categories"}
-        className={`mb-1 flex items-center rounded-lg p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-zinc-800 dark:hover:text-zinc-300 ${
-          collapsed ? "justify-center" : "justify-end"
-        }`}
+        className={toggleButtonClassName}
       >
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`}
+          className={chevronClassName}
           stroke="currentColor"
           strokeWidth="2"
         >
@@ -89,18 +99,24 @@ function CategoryRow({
   collapsed: boolean;
   onClick: () => void;
 }>) {
+  const buttonClassName = [
+    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+    collapsed ? "justify-center" : "justify-between",
+    active
+      ? "bg-primary text-on-primary"
+      : "text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800",
+  ].join(" ");
+  const countClassName = [
+    "text-xs tabular-nums",
+    active ? "text-on-primary/70" : "text-on-surface-variant",
+  ].join(" ");
+
   return (
     <button
       type="button"
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        collapsed ? "justify-center" : "justify-between"
-      } ${
-        active
-          ? "bg-primary text-on-primary"
-          : "text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800"
-      }`}
+      className={buttonClassName}
     >
       {collapsed ? (
         <span className="text-xs font-semibold uppercase">
@@ -110,9 +126,7 @@ function CategoryRow({
         <>
           <span>{label}</span>
           {count !== undefined && (
-            <span
-              className={`text-xs tabular-nums ${active ? "text-on-primary/70" : "text-on-surface-variant"}`}
-            >
+            <span className={countClassName}>
               {count}
             </span>
           )}
