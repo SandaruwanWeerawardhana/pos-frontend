@@ -6,6 +6,7 @@ interface AuthState {
   user: AuthUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -18,6 +19,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       async login(email, password) {
         const result = await apiClient.login(email, password);
+        set({ user: result.user, token: result.token });
+      },
+      async register(name, email, password) {
+        const result = await apiClient.register(name, email, password);
         set({ user: result.user, token: result.token });
       },
       logout() {

@@ -30,33 +30,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-8">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4"
-      >
-        <h1 className="text-2xl font-semibold text-on-surface dark:text-zinc-50">
-          Login
-        </h1>
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          autoFocus
-        />
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-    </main>
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+      <h1 className="text-2xl font-semibold text-on-surface dark:text-zinc-50">
+        Login
+      </h1>
+      <Input
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        required
+        autoFocus
+      />
+      <Input
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        required
+      />
+      <Button type="submit" disabled={submitting}>
+        {submitting ? "Signing in…" : "Sign in"}
+      </Button>
+    </form>
   );
 }

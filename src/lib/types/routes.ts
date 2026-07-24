@@ -3,7 +3,10 @@
 
 export const ROUTES = {
   home: "/",
-  login: "/login",
+  auth: {
+    login: "/auth/login",
+    register: "/auth/register",
+  },
   admin: "/admin",
   pos: {
     root: "/pos",

@@ -35,7 +35,7 @@ export default function LandingPage() {
             connectivity comes back.
           </p>
           <Link
-            href={ROUTES.login}
+            href={ROUTES.auth.login}
             className="mt-2 rounded-full bg-zinc-900 px-8 py-3 text-base font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Login

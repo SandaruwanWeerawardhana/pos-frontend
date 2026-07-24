@@ -7,9 +7,11 @@ import { ROUTES } from "@/lib/types/routes";
 
 // Client-side route guard. Auth is persisted to localStorage via Zustand, so a
 // server middleware can't see it — this waits for persist rehydration, then
-// redirects to /login when no token is present. Rendering null until hydrated
+// redirects to /auth/login when no token is present. Rendering null until hydrated
 // avoids a false redirect on first paint for already-authenticated users.
-export function RequireAuth({ children }: { children: React.ReactNode }) {
+export function RequireAuth({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();
   const token = useAuthStore((state) => state.token);
   const [hydrated, setHydrated] = useState(() =>
@@ -21,7 +23,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated && !token) router.replace(ROUTES.login);
+    if (hydrated && !token) router.replace(ROUTES.auth.login);
   }, [hydrated, token, router]);
 
   if (!hydrated || !token) return null;

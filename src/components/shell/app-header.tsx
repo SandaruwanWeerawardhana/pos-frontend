@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectionPill } from "./connection-pill";
+import { ROUTES } from "@/lib/types/routes";
 
 const NAV_LINKS = [
-  { href: "/pos", label: "POS" },
-  { href: "/admin", label: "Admin" },
-  { href: "/login", label: "Login" },
+  { href: ROUTES.pos.root, label: "POS" },
+  { href: ROUTES.admin, label: "Admin" },
+  { href: ROUTES.auth.login, label: "Login" },
 ];
 
 export function AppHeader() {
