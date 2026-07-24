@@ -41,16 +41,6 @@ function ProductCard({
   const disabled = product.stock_quantity <= 0;
   return (
     <div className="group relative flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-shadow hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
-      <button
-        type="button"
-        aria-label="Add to favorites"
-        className="absolute right-3 top-3 text-outline-variant transition-colors hover:text-amber-400 dark:text-zinc-600"
-      >
-        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8">
-          <path d="M12 17.3l-5.4 3 1-6-4.3-4.2 6-.9L12 4l2.7 5.2 6 .9-4.3 4.2 1 6z" strokeLinejoin="round" />
-        </svg>
-      </button>
-
       <div className="mb-3 flex aspect-square items-center justify-center rounded-xl bg-surface-container text-3xl font-semibold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-600">
         {product.name.charAt(0).toUpperCase()}
       </div>
