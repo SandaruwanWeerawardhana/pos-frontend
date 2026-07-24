@@ -60,11 +60,7 @@ export function Terminal() {
     null,
   );
 
-  // Persisted plugin store rehydrates from localStorage on the client only, so
-  // gate plugin-dependent UI until after mount to keep the first client render
-  // identical to the server render (no hydration mismatch).
   const mounted = useHydrated();
-
   const cart = useCart();
   const { reading } = useScale();
   const { active: activePlugin } = usePlugin();
