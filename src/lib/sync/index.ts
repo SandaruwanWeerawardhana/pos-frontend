@@ -1,11 +1,12 @@
 import { apiClient, type SyncOrderResult } from "@/lib/api";
 import { db, seedProducts, setLastSyncedAt } from "@/lib/db";
 import type { PendingOrder, SyncStatus } from "@/lib/types";
+import { SYNC_CONFIG } from "@/lib/types/sync.config";
 import { useConnectionStore } from "@/lib/store/connection";
 
-const BASE_INTERVAL_MS = 30_000;
-const MAX_BACKOFF_MS = 5 * 60_000; // cap at 5 minutes between retries
-const MAX_BATCH_SIZE = 50;
+const BASE_INTERVAL_MS: number = SYNC_CONFIG.baseIntervalMs;
+const MAX_BACKOFF_MS: number = SYNC_CONFIG.maxBackoffMs;
+const MAX_BATCH_SIZE: number = SYNC_CONFIG.maxBatchSize;
 const SYNCABLE_STATUSES: SyncStatus[] = ["pending", "error"];
 
 // Atomically claims up to maxBatchSize syncable orders by flipping them to

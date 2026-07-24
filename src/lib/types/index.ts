@@ -32,6 +32,9 @@ export interface PendingOrder {
   created_at: number; // epoch milliseconds
   sync_status: SyncStatus;
   server_id: string | null;
+  customer_id?: string;
+  discount_cents?: number; // integer cents, applied before tax
+  refunded?: boolean; // local-only annotation, not synced (no backend refund endpoint yet)
 }
 
 export interface SyncMetaRecord {
@@ -44,3 +47,51 @@ export interface CartTotal {
   tax_total_cents: number;
   total_cents: number;
 }
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  created_at: number;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name?: string;
+  phone?: string;
+  email?: string;
+  created_at: number;
+}
+
+export type DiscountType = "percentage" | "fixed_cents";
+
+export interface Discount {
+  id: string;
+  name: string;
+  type: DiscountType;
+  value: number; // percentage (0-100) or integer cents, depending on type
+  active: boolean;
+  created_at: number;
+}
+
+export interface HeldCart {
+  id: string;
+  label: string;
+  items: CartItem[];
+  created_at: number;
+}
+
+export interface CashReconciliation {
+  id: string;
+  expected_cents: number;
+  counted_cents: number;
+  difference_cents: number;
+  notes?: string;
+  created_at: number;
+}
+
+export * from "./plugin";
+export * from "./hardware";

@@ -1,10 +1,16 @@
 import Dexie, { type Table } from "dexie";
+import { computeCartTotal } from "@/lib/cart-math";
 import type {
   CartItem,
   CartTotal,
+  CashReconciliation,
+  Customer,
+  Discount,
+  HeldCart,
   PaymentMethod,
   PendingOrder,
   Product,
+  Supplier,
   SyncMetaRecord,
 } from "@/lib/types";
 
@@ -15,6 +21,11 @@ export class PosDB extends Dexie {
   cartItems!: Table<CartItem, number>;
   pendingOrders!: Table<PendingOrder, string>;
   syncMeta!: Table<SyncMetaRecord, string>;
+  customers!: Table<Customer, string>;
+  suppliers!: Table<Supplier, string>;
+  discounts!: Table<Discount, string>;
+  heldCarts!: Table<HeldCart, string>;
+  cashReconciliations!: Table<CashReconciliation, string>;
 
   constructor() {
     super("posDB");
@@ -24,6 +35,17 @@ export class PosDB extends Dexie {
       cartItems: "++id, product_id",
       pendingOrders: "client_generated_id, sync_status, created_at",
       syncMeta: "key",
+    });
+    // v2: local-only tables with no server counterpart yet (no sync endpoint
+    // for these exists - see CLAUDE.md / plan notes on this limitation).
+    this.version(2).stores({
+      customers: "id, name",
+      suppliers: "id, name",
+      // "active" is a boolean - not a valid IndexedDB key type, so it's not
+      // indexed here; getActiveDiscounts() filters in JS instead.
+      discounts: "id",
+      heldCarts: "id, created_at",
+      cashReconciliations: "id, created_at",
     });
   }
 }
@@ -95,33 +117,18 @@ export async function clearCart(): Promise<void> {
 }
 
 // Subtotal, tax, and grand total in integer cents. Tax is rounded per line
-// item to avoid float drift.
-export async function getCartTotal(): Promise<CartTotal> {
+// item to avoid float drift. discountCents, if given, reduces the taxable
+// subtotal (tax is reduced proportionally) before totaling.
+export async function getCartTotal(discountCents = 0): Promise<CartTotal> {
   const items = await db.cartItems.toArray();
-  return computeCartTotal(items);
-}
-
-function computeCartTotal(items: CartItem[]): CartTotal {
-  const subtotal_cents = items.reduce(
-    (sum, item) => sum + item.unit_price_cents * item.quantity,
-    0,
-  );
-  const tax_total_cents = items.reduce(
-    (sum, item) =>
-      sum + Math.round(item.unit_price_cents * item.quantity * item.tax_rate),
-    0,
-  );
-  return {
-    subtotal_cents,
-    tax_total_cents,
-    total_cents: subtotal_cents + tax_total_cents,
-  };
+  return computeCartTotal(items, discountCents);
 }
 
 // Moves the current cart into a pendingOrders record, optimistically deducts
 // stock, and clears the cart. Returns the created order.
 export async function createLocalOrder(
   paymentMethod: PaymentMethod,
+  options?: { customerId?: string; discountCents?: number },
 ): Promise<PendingOrder> {
   return db.transaction(
     "rw",
@@ -130,7 +137,10 @@ export async function createLocalOrder(
     db.products,
     async () => {
       const items = await db.cartItems.toArray();
-      const { tax_total_cents, total_cents } = computeCartTotal(items);
+      const { tax_total_cents, total_cents } = computeCartTotal(
+        items,
+        options?.discountCents ?? 0,
+      );
 
       const order: PendingOrder = {
         client_generated_id: crypto.randomUUID(),
@@ -141,6 +151,10 @@ export async function createLocalOrder(
         created_at: Date.now(),
         sync_status: "pending",
         server_id: null,
+        ...(options?.customerId ? { customer_id: options.customerId } : {}),
+        ...(options?.discountCents
+          ? { discount_cents: options.discountCents }
+          : {}),
       };
 
       await db.pendingOrders.add(order);
@@ -178,3 +192,9 @@ export async function getLastSyncedAt(): Promise<number | null> {
 export async function setLastSyncedAt(timestamp: number): Promise<void> {
   await db.syncMeta.put({ key: "last_synced_at", value: timestamp });
 }
+
+export * from "./customers";
+export * from "./suppliers";
+export * from "./discounts";
+export * from "./held-carts";
+export * from "./cash-reconciliation";

@@ -37,3 +37,4 @@ React Compiler is enabled (`next.config.ts` `reactCompiler: true`, `babel-plugin
 ## Code quality
 
 No `sonar-project.properties` in this repo (no local SonarQube config) — if CI runs SonarQube/SonarCloud analysis on this project, treat new blocker/critical issues on changed lines as build-breaking and fix them before considering a change done.
+always follow sonarqube code standed
