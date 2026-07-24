@@ -21,7 +21,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.push(ROUTES.pos.root);
+      router.push(ROUTES.dashboard);
     } catch {
       showToast("Login failed — check email and password", "error");
     } finally {

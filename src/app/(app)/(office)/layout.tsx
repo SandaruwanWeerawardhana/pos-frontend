@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
+import { RequireAuth } from "@/components/shell/require-auth";
 
 const NAV_ITEMS = [
   { href: ROUTES.pos.root, label: "POS Terminal" },
@@ -24,8 +25,9 @@ export default function OfficeLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-1">
-      <aside className="w-48 shrink-0 border-r border-outline-variant p-4 dark:border-zinc-800">
+    <RequireAuth>
+      <div className="flex flex-1">
+        <aside className="w-48 shrink-0 border-r border-outline-variant p-4 dark:border-zinc-800">
         <nav className="flex flex-col gap-1 text-sm">
           {NAV_ITEMS.map((item) => {
             const active = pathname?.startsWith(item.href);
@@ -44,8 +46,9 @@ export default function OfficeLayout({
             );
           })}
         </nav>
-      </aside>
-      <div className="flex-1 p-4">{children}</div>
-    </div>
+        </aside>
+        <div className="flex-1 p-4">{children}</div>
+      </div>
+    </RequireAuth>
   );
 }

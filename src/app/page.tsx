@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LandingHeader } from "@/components/shell/landing-header";
+import { ROUTES } from "@/lib/types/routes";
 
 const features = [
   {
@@ -34,10 +35,10 @@ export default function LandingPage() {
             connectivity comes back.
           </p>
           <Link
-            href="/pos"
+            href={ROUTES.login}
             className="mt-2 rounded-full bg-zinc-900 px-8 py-3 text-base font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Download POS
+            Login
           </Link>
         </section>
 
