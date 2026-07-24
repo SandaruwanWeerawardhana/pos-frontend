@@ -6,9 +6,9 @@ export default function PosLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
       <OfflineBanner />
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }

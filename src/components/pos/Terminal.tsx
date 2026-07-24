@@ -122,7 +122,7 @@ export function Terminal() {
   }
 
   return (
-    <div className="flex flex-1 gap-4 bg-zinc-50 p-4 dark:bg-zinc-950">
+    <div className="flex h-full min-h-0 gap-4 overflow-hidden bg-zinc-50 p-4 dark:bg-zinc-950">
       <CategorySidebar
         totalCount={results.length}
         active={category}
@@ -130,7 +130,7 @@ export function Terminal() {
       />
 
       {/* Product area */}
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex-1">
             <ProductSearch onResults={setResults} />
@@ -158,7 +158,7 @@ export function Terminal() {
       {/* Checkout panel */}
       <div
         suppressHydrationWarning
-        className="hidden w-[360px] shrink-0 flex-col rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:flex"
+        className="hidden h-full min-h-0 w-[360px] shrink-0 flex-col rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 lg:flex"
       >
         <Cart
           items={cart.items}

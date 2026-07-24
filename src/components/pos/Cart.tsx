@@ -66,7 +66,7 @@ export function Cart({
         </button>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         {empty ? (
           <p className="py-10 text-center text-sm text-zinc-400">
             Cart is empty.
