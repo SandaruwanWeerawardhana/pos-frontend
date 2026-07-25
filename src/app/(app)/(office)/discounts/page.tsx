@@ -90,7 +90,7 @@ export default function DiscountsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Discounts
         </h1>
         <Button size="sm" onClick={() => setModalOpen(true)}>
@@ -108,11 +108,11 @@ export default function DiscountsPage() {
         <div className="flex flex-col gap-3">
           <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">Type</span>
+            <span className="font-medium text-on-surface-variant dark:text-zinc-300">Type</span>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as DiscountType)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             >
               <option value="percentage">Percentage</option>
               <option value="fixed_cents">Fixed amount</option>

@@ -22,7 +22,7 @@ export function NumPad({ value, onChange, onSubmit }: NumPadProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="rounded-lg border border-zinc-300 px-3 py-2 text-right text-xl font-semibold tabular-nums dark:border-zinc-700 dark:text-zinc-50">
+      <div className="rounded-lg border border-outline-variant px-3 py-2 text-right text-xl font-semibold tabular-nums dark:border-zinc-700 dark:text-zinc-50">
         {value || "0"}
       </div>
       <div className="grid grid-cols-3 gap-2">

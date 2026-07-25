@@ -28,13 +28,13 @@ export default function ProductDetailPage({
   }, [id]);
 
   if (product === undefined) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-on-surface-variant dark:text-zinc-400">Loading…</p>;
   }
 
   if (product === null) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
           Product not found in the local catalog.
         </p>
         <Link href={ROUTES.inventory.root} className="text-sm hover:underline">
@@ -48,10 +48,10 @@ export default function ProductDetailPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
             {product.name}
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-on-surface-variant dark:text-zinc-400">
             SKU {product.sku} · Barcode {product.barcode}
           </p>
         </div>
@@ -60,16 +60,16 @@ export default function ProductDetailPage({
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-2xl border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+      <div className="grid grid-cols-2 gap-4 rounded-2xl border border-outline-variant p-4 text-sm dark:border-zinc-800">
         <div>
-          <p className="text-zinc-500 dark:text-zinc-400">Price</p>
-          <p className="text-base font-medium text-zinc-900 dark:text-zinc-50">
+          <p className="text-on-surface-variant dark:text-zinc-400">Price</p>
+          <p className="text-base font-medium text-on-surface dark:text-zinc-50">
             {formatCents(product.price_cents)}
           </p>
         </div>
         <div>
-          <p className="text-zinc-500 dark:text-zinc-400">Tax rate</p>
-          <p className="text-base font-medium text-zinc-900 dark:text-zinc-50">
+          <p className="text-on-surface-variant dark:text-zinc-400">Tax rate</p>
+          <p className="text-base font-medium text-on-surface dark:text-zinc-50">
             {(product.tax_rate * 100).toFixed(1)}%
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function ProductDetailPage({
         <Button type="button" variant="secondary" disabled title="Editing requires the backend product-management endpoint, which doesn't exist yet">
           Edit product (not implemented — backend pending)
         </Button>
-        <p className="mt-2 text-xs text-zinc-400">
+        <p className="mt-2 text-xs text-on-surface-variant">
           Products are a read-only cache pulled from the server. Local edits
           aren&apos;t possible until a backend product-management endpoint
           exists — otherwise the next sync would silently overwrite them.

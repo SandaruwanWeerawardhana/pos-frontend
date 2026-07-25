@@ -64,7 +64,7 @@ export default function InventoryPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Inventory
         </h1>
         <Link href={ROUTES.inventory.new}>

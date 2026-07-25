@@ -13,13 +13,13 @@ export function ScaleDisplay() {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-2 dark:border-zinc-800">
+    <div className="flex items-center gap-3 rounded-xl border border-outline-variant px-4 py-2 dark:border-zinc-800">
       <div>
-        <p className="text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+        <p className="text-2xl font-semibold tabular-nums text-on-surface dark:text-zinc-50">
           {kg.toFixed(3)}{" "}
-          <span className="text-sm font-normal text-zinc-500">kg</span>
+          <span className="text-sm font-normal text-on-surface-variant">kg</span>
         </p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400">
           {statusText}
         </p>
       </div>

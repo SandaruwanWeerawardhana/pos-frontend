@@ -30,12 +30,12 @@ export default function NewProductPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Add product
         </h1>
         <Link
           href={ROUTES.inventory.root}
-          className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="text-sm text-on-surface-variant hover:underline dark:text-zinc-400"
         >
           Cancel
         </Link>
@@ -75,7 +75,7 @@ export default function NewProductPage() {
         />
         <Button type="submit">Save product</Button>
       </form>
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-on-surface-variant">
         Product creation isn&apos;t wired to a backend yet (no
         product-management endpoint exists) — this form is ready, submission
         is intentionally a no-op until then.

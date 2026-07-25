@@ -55,13 +55,13 @@ export default function CustomerDetailPage({
   }
 
   if (customer === undefined) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-on-surface-variant dark:text-zinc-400">Loading…</p>;
   }
 
   if (customer === null) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
           Customer not found.
         </p>
         <Link href={ROUTES.customers.root} className="text-sm hover:underline">
@@ -74,12 +74,12 @@ export default function CustomerDetailPage({
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Edit customer
         </h1>
         <Link
           href={ROUTES.customers.root}
-          className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="text-sm text-on-surface-variant hover:underline dark:text-zinc-400"
         >
           Back
         </Link>

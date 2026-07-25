@@ -59,7 +59,7 @@ export default function CustomersPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Customers
         </h1>
         <Button size="sm" onClick={() => setModalOpen(true)}>

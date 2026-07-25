@@ -20,7 +20,7 @@ export function DiscountInput({ selectedId, onSelect }: DiscountInputProps) {
 
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium text-zinc-700 dark:text-zinc-300">
+      <span className="font-medium text-on-surface-variant dark:text-zinc-300">
         Discount
       </span>
       <select
@@ -30,7 +30,7 @@ export function DiscountInput({ selectedId, onSelect }: DiscountInputProps) {
             discounts.find((d) => d.id === event.target.value) ?? null;
           onSelect(discount);
         }}
-        className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+        className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
       >
         <option value="">No discount</option>
         {discounts.map((discount) => (

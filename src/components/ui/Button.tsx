@@ -10,12 +10,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200",
+    "bg-secondary text-on-secondary hover:bg-secondary/90 hover:shadow-elevated dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200",
   secondary:
-    "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
+    "bg-surface-container text-on-surface hover:bg-surface-container-high dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
   ghost:
-    "bg-transparent text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
-  danger: "bg-red-600 text-white hover:bg-red-500",
+    "bg-transparent text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800",
+  danger: "bg-error text-on-error hover:bg-error/90",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -31,7 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-50 disabled:hover:scale-100 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...props}
     />
   );

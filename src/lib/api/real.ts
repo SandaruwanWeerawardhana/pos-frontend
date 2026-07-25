@@ -11,6 +11,9 @@ export const realApi: ApiClient = {
   async login() {
     return notImplemented("login");
   },
+  async register() {
+    return notImplemented("register");
+  },
   async getProducts() {
     return notImplemented("getProducts");
   },

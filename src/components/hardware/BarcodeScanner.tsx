@@ -22,7 +22,6 @@ type BarcodeScannerProps = Readonly<{
 export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   const cameraSupported = useCameraBarcodeSupport();
   const [cameraActive, setCameraActive] = useState(false);
-  const [manualCode, setManualCode] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -86,32 +85,18 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     };
   }, [cameraActive, onScan]);
 
+  if (!cameraSupported) return null;
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <input
-          value={manualCode}
-          onChange={(event) => setManualCode(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && manualCode) {
-              onScan(manualCode);
-              setManualCode("");
-            }
-          }}
-          placeholder="Scan (USB wedge) or type a barcode…"
-          className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-        />
-        {cameraSupported && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setCameraActive((prev) => !prev)}
-          >
-            {cameraActive ? "Stop camera" : "Scan with camera"}
-          </Button>
-        )}
-      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => setCameraActive((prev) => !prev)}
+      >
+        {cameraActive ? "Stop camera" : "Scan with camera"}
+      </Button>
       {cameraActive && (
         <video
           ref={videoRef}
@@ -119,12 +104,6 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
           muted
           playsInline
         />
-      )}
-      {!cameraSupported && (
-        <p className="text-xs text-zinc-400">
-          Camera scanning isn&apos;t supported in this browser — USB scanner
-          (keyboard wedge) still works.
-        </p>
       )}
     </div>
   );

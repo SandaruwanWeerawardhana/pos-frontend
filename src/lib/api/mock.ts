@@ -145,6 +145,23 @@ export const mockApi: ApiClient & {
     return { token: makeFakeJwt(user), user };
   },
 
+  async register(
+    name: string,
+    email: string,
+    password: string,
+  ): Promise<LoginResult> {
+    await delay(200);
+    if (!name || !email || !password) {
+      throw new Error("name, email and password are required");
+    }
+    const user: AuthUser = {
+      id: `user_${encodeBase64Url(email).slice(0, 12)}`,
+      email,
+      name,
+    };
+    return { token: makeFakeJwt(user), user };
+  },
+
   async getProducts(): Promise<Product[]> {
     await delay(150);
     return structuredClone(getState().products);
