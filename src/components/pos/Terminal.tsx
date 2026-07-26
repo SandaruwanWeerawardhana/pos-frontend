@@ -118,7 +118,7 @@ export function Terminal() {
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-4 overflow-hidden bg-background p-4">
+    <div className="flex h-full min-h-0 gap-4 overflow-hidden bg-surface dark:bg-zinc-950 p-4">
       <CategorySidebar
         totalCount={results.length}
         active={category}

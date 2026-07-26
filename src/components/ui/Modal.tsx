@@ -28,10 +28,10 @@ export function Modal({ open, onClose, title, children, glass = false }: ModalPr
       onClick={onClose}
     >
       <div
-        className={`w-full max-w-md rounded-2xl p-6 shadow-xl dark:bg-zinc-900 ${
+        className={`w-full max-w-md rounded-2xl p-6 shadow-xl ${
           glass
-            ? "backdrop-blur-md bg-surface-container-lowest/70"
-            : "bg-surface-container-lowest"
+            ? "backdrop-blur-md bg-surface-container-lowest/80 dark:bg-zinc-900/90 border border-white/10"
+            : "bg-surface-container-lowest dark:bg-zinc-900 border border-outline-variant/30 dark:border-zinc-800"
         }`}
         onClick={(event) => event.stopPropagation()}
       >

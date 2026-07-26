@@ -49,7 +49,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const hasToggle = revealToggle && type === "password";
   const inputType = hasToggle && visible ? "text" : type;
 
-  const inputClass = `${pill ? "rounded-full" : "rounded-lg"} w-full border px-3 py-2 text-sm text-on-surface outline-none focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 ${
+  const inputClass = `${pill ? "rounded-full" : "rounded-lg"} w-full border px-3 py-2 text-sm text-on-surface bg-surface-container-lowest outline-none transition-colors focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 ${
     hasToggle ? "pr-10" : ""
   } ${
     error ? "border-error" : "border-outline-variant dark:border-zinc-700"
