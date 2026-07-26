@@ -100,11 +100,11 @@ function CategoryRow({
   onClick: () => void;
 }>) {
   const buttonClassName = [
-    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+    "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
     collapsed ? "justify-center" : "justify-between",
     active
-      ? "bg-primary text-on-primary"
-      : "text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800",
+      ? "bg-primary text-on-primary font-bold ring-2 ring-primary/30"
+      : "font-medium text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800",
   ].join(" ");
   const countClassName = [
     "text-xs tabular-nums",
