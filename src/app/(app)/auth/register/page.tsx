@@ -9,7 +9,8 @@ import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -21,7 +22,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setSubmitting(true);
     try {
-      await register(name, email, password);
+      await register(ownerName, businessName, email, password);
       router.push(ROUTES.dashboard);
     } catch {
       showToast("Registration failed — check your details", "error");
@@ -42,12 +43,19 @@ export default function RegisterPage() {
       </div>
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <Input
-          label="Full name"
+          label="Owner name"
           type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
+          value={ownerName}
+          onChange={(event) => setOwnerName(event.target.value)}
           required
           autoFocus
+        />
+        <Input
+          label="Business name"
+          type="text"
+          value={businessName}
+          onChange={(event) => setBusinessName(event.target.value)}
+          required
         />
         <Input
           label="Email"

@@ -141,23 +141,26 @@ export const mockApi: ApiClient & {
       id: `user_${encodeBase64Url(email).slice(0, 12)}`,
       email,
       name: email.split("@")[0],
+      businessName: "Demo Business",
     };
     return { token: makeFakeJwt(user), user };
   },
 
   async register(
-    name: string,
+    ownerName: string,
+    businessName: string,
     email: string,
     password: string,
   ): Promise<LoginResult> {
     await delay(200);
-    if (!name || !email || !password) {
-      throw new Error("name, email and password are required");
+    if (!ownerName || !businessName || !email || !password) {
+      throw new Error("owner name, business name, email and password are required");
     }
     const user: AuthUser = {
       id: `user_${encodeBase64Url(email).slice(0, 12)}`,
       email,
-      name,
+      name: ownerName,
+      businessName,
     };
     return { token: makeFakeJwt(user), user };
   },
