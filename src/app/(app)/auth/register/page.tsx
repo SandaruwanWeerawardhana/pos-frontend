@@ -31,35 +31,48 @@ export default function RegisterPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-on-surface dark:text-zinc-50">
-        Register
-      </h1>
-      <Input
-        label="Name"
-        type="text"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        required
-        autoFocus
-      />
-      <Input
-        label="Email"
-        type="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        required
-      />
-      <Input
-        label="Password"
-        type="password"
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-        required
-      />
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Creating account…" : "Create account"}
-      </Button>
-    </form>
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
+          Create an account
+        </h1>
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
+          Sign up and get started in seconds.
+        </p>
+      </div>
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+        <Input
+          label="Full name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          required
+          autoFocus
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
+        <Input
+          label="Password"
+          type="password"
+          revealToggle
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-2 w-full rounded-full"
+          disabled={submitting}
+        >
+          {submitting ? "Creating account…" : "Create account"}
+        </Button>
+      </form>
+    </div>
   );
 }
