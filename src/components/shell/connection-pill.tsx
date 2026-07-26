@@ -7,14 +7,16 @@ export function ConnectionPill() {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
         online
-          ? "bg-tertiary-container/20 text-on-tertiary-container dark:bg-green-900/40 dark:text-green-300"
-          : "bg-error-container text-on-error-container dark:bg-red-900/40 dark:text-red-300"
+          ? "bg-[#004b1e] text-[#bbf7d0] dark:bg-green-900/50 dark:text-green-300"
+          : "bg-error text-on-error dark:bg-red-900/50 dark:text-red-300"
       }`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${online ? "bg-on-tertiary-container" : "bg-error"}`}
+        className={`h-1.5 w-1.5 rounded-full ${
+          online ? "bg-[#4ade80]" : "bg-[#fca5a5]"
+        }`}
       />
       {online ? "Online" : "Offline"}
     </span>

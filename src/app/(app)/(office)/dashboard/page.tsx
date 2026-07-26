@@ -52,7 +52,7 @@ function StatCard({ label, value, icon, accent, trend, sub }: StatCardProps) {
           {icon}
         </span>
         {trend && (
-          <span className="flex items-center gap-1 rounded-full bg-[#004b1e]/20 px-2 py-0.5 text-xs font-medium text-[#22c55e] dark:bg-green-900/30 dark:text-green-400">
+          <span className="flex items-center gap-1 rounded-full bg-[#004b1e] px-2 py-0.5 text-xs font-bold text-[#bbf7d0] dark:bg-green-900/40 dark:text-green-400">
             <TrendingUp size={12} />
             Today
           </span>
@@ -143,7 +143,7 @@ function SyncPanel({
           ? "border-error/30 bg-error-container/10 dark:border-red-800/40 dark:bg-red-950/20"
           : isPending
           ? "border-outline-variant bg-surface-container-lowest dark:border-zinc-800 dark:bg-zinc-900"
-          : "border-[#004b1e]/40 bg-[#004b1e]/5 dark:border-green-800/30 dark:bg-green-950/10"
+          : "border-[#004b1e] bg-[#004b1e]/8 dark:border-green-800/40 dark:bg-green-950/10"
       }`}
     >
       <span
@@ -152,7 +152,7 @@ function SyncPanel({
             ? "bg-error text-on-error"
             : isPending
             ? "bg-primary/10 text-primary dark:bg-blue-900/30 dark:text-blue-400"
-            : "bg-[#004b1e]/30 text-[#22c55e] dark:bg-green-900/30 dark:text-green-400"
+            : "bg-[#004b1e] text-[#4ade80] dark:bg-green-900/40 dark:text-green-400"
         }`}
       >
         {isConflict ? (
