@@ -61,12 +61,12 @@ export default function OfficeLayout({
             type="button"
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-x-0 bottom-0 top-14 z-30 bg-black/30 md:hidden"
+            className="fixed inset-0 z-30 bg-black/30 md:hidden"
           />
         )}
         {/* ── Sidebar ── */}
         <aside
-          className={`fixed left-0 top-14 z-40 flex h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-200 dark:border-zinc-800 dark:bg-zinc-950 md:translate-x-0 ${
+          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-200 dark:border-zinc-800 dark:bg-zinc-950 md:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
