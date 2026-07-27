@@ -8,7 +8,7 @@ export default function AppGroupLayout({
   return (
     <>
       <AppHeader />
-      {children}
+      <div className="flex min-h-0 flex-1 pt-14">{children}</div>
     </>
   );
 }

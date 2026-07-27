@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
@@ -38,6 +39,14 @@ export default function OfficeLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const toggleSidebar = () => setSidebarOpen((open) => !open);
+    window.addEventListener("swiftpos:toggle-sidebar", toggleSidebar);
+    return () =>
+      window.removeEventListener("swiftpos:toggle-sidebar", toggleSidebar);
+  }, []);
 
   function handleLogout() {
     logout();
@@ -46,9 +55,21 @@ export default function OfficeLayout({
 
   return (
     <RequireAuth>
-      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden pl-56">
+      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-56">
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-x-0 bottom-0 top-14 z-30 bg-black/30 md:hidden"
+          />
+        )}
         {/* ── Sidebar ── */}
-        <aside className="fixed left-0 top-0 z-40 flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest dark:border-zinc-800 dark:bg-zinc-950">
+        <aside
+          className={`fixed left-0 top-14 z-40 flex h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-200 dark:border-zinc-800 dark:bg-zinc-950 md:translate-x-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
           {/* Brand */}
           <div className="flex h-14 items-center gap-2.5 border-b border-outline-variant px-4 dark:border-zinc-800">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-on-primary text-xs font-bold select-none">
@@ -71,6 +92,7 @@ export default function OfficeLayout({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                     active
                       ? "bg-primary text-on-primary shadow-sm"
