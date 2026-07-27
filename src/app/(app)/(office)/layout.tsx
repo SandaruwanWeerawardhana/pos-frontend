@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
+import { useAuth } from "@/lib/hooks/use-auth";
 import { RequireAuth } from "@/components/shell/require-auth";
 import {
   Monitor,
@@ -14,6 +15,7 @@ import {
   BarChart2,
   Tag,
   Settings,
+  LogOut,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,12 +36,19 @@ export default function OfficeLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  function handleLogout() {
+    logout();
+    router.replace(ROUTES.auth.login);
+  }
 
   return (
     <RequireAuth>
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden pl-56">
         {/* ── Sidebar ── */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest dark:border-zinc-800 dark:bg-zinc-950">
+        <aside className="fixed left-0 top-0 z-40 flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest dark:border-zinc-800 dark:bg-zinc-950">
           {/* Brand */}
           <div className="flex h-14 items-center gap-2.5 border-b border-outline-variant px-4 dark:border-zinc-800">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-on-primary text-xs font-bold select-none">
@@ -51,7 +60,7 @@ export default function OfficeLayout({
           </div>
 
           {/* Nav */}
-          <nav className="flex flex-col gap-0.5 p-3">
+          <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3">
             <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/50 dark:text-zinc-600">
               Navigation
             </p>
@@ -74,10 +83,21 @@ export default function OfficeLayout({
               );
             })}
           </nav>
+
+          <div className="border-t border-outline-variant p-3 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-all duration-150 hover:bg-error-container/20 hover:text-error dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+            >
+              <LogOut size={16} className="opacity-60" />
+              Logout
+            </button>
+          </div>
         </aside>
 
         {/* ── Main ── */}
-        <main className="flex-1 overflow-y-auto bg-surface dark:bg-zinc-950">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-surface dark:bg-zinc-950">
           <div className="mx-auto max-w-5xl p-6">{children}</div>
         </main>
       </div>
