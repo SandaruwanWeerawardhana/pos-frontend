@@ -331,17 +331,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
-      {/* Hero header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-on-surface dark:text-zinc-50">
-          {todayLabel?.greeting ?? "Welcome back"}
-        </h1>
-        <p className="mt-1 text-sm text-on-surface-variant dark:text-zinc-400">
-          {todayLabel?.dateStr ?? "Loading dashboard"}
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-8 pb-8">      
       {/* KPI grid */}
       <section className="flex flex-col gap-3">
         <SectionHeader title="Today's overview" />

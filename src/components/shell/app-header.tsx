@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { ROUTES } from "@/lib/types/routes";
 import {
   ChevronRight,
@@ -99,6 +100,14 @@ export function AppHeader() {
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          type="button"
+          aria-label="Toggle sidebar"
+          onClick={handleToggleSidebar}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 md:hidden"
+        >
+          <Menu size={18} />
+        </button>
         <ChevronRight
           size={16}
           className="shrink-0 text-on-surface-variant/50 dark:text-zinc-600"
@@ -125,6 +134,7 @@ export function AppHeader() {
           {online ? <Wifi size={13} /> : <WifiOff size={13} />}
           {online ? "Online" : "Offline"}
         </span>
+        <ThemeToggle />
         <span className="hidden min-w-[5.5rem] whitespace-nowrap text-right text-xs font-medium text-on-surface-variant dark:text-zinc-400 sm:block">
           <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
             {formatTime(now)}
