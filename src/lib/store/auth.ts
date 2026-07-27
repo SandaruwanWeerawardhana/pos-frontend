@@ -11,6 +11,7 @@ interface AuthState {
     businessName: string,
     email: string,
     password: string,
+    businessType: string,
   ) => Promise<void>;
   logout: () => void;
 }
@@ -26,12 +27,13 @@ export const useAuthStore = create<AuthState>()(
         const result = await apiClient.login(email, password);
         set({ user: result.user, token: result.token });
       },
-      async register(ownerName, businessName, email, password) {
+      async register(ownerName, businessName, email, password, businessType) {
         const result = await apiClient.register(
           ownerName,
           businessName,
           email,
           password,
+          businessType,
         );
         set({ user: result.user, token: result.token });
       },

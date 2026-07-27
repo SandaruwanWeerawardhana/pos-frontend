@@ -11,6 +11,7 @@ import { ROUTES } from "@/lib/types/routes";
 export default function RegisterPage() {
   const [ownerName, setOwnerName] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [businessType, setBusinessType] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,7 +23,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setSubmitting(true);
     try {
-      await register(ownerName, businessName, email, password);
+      await register(ownerName, businessName, email, password, businessType);
       router.push(ROUTES.dashboard);
     } catch {
       showToast("Registration failed — check your details", "error");
@@ -57,6 +58,27 @@ export default function RegisterPage() {
           onChange={(event) => setBusinessName(event.target.value)}
           required
         />
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="businessType"
+            className="text-sm font-medium text-on-surface-variant dark:text-zinc-300"
+          >
+            Business type
+          </label>
+          <select
+            id="businessType"
+            value={businessType}
+            onChange={(event) => setBusinessType(event.target.value)}
+            required
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          >
+            <option value="" disabled>
+              Select business type
+            </option>
+            <option value="grocery">Grocery</option>
+            <option value="bookshop">Bookshop</option>
+          </select>
+        </div>
         <Input
           label="Email"
           type="email"
