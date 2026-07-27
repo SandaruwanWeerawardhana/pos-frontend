@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db, getTodaysOrderSummary, type TodaysOrderSummary } from "@/lib/db";
 import { useSyncStatus } from "@/lib/sync/use-sync-status";
 import { PluginDashboardWidget } from "@/components/plugin-slots/PluginDashboardWidget";
 import Link from "next/link";
-import { ROUTES } from "@/lib/types/routes";
 import {
   DollarSign,
   ShoppingBag,
@@ -14,17 +13,138 @@ import {
   AlertTriangle,
   TrendingUp,
   ChevronRight,
-  Monitor,
-  List,
-  BarChart2,
-  Users,
   CheckCircle2,
 } from "lucide-react";
 
 const LOW_STOCK_THRESHOLD = 5;
+const DAILY_REVENUE_DAYS = 7;
+
+interface DailyRevenuePoint {
+  date: string;
+  label: string;
+  revenueCents: number;
+}
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function getDefaultDailyRevenue(): DailyRevenuePoint[] {
+  const today = new Date();
+  return Array.from({ length: DAILY_REVENUE_DAYS }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (DAILY_REVENUE_DAYS - 1 - index));
+    return {
+      date: date.toISOString().slice(0, 10),
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      revenueCents: 0,
+    };
+  });
+}
+
+function buildDailyRevenue(
+  orders: { created_at: number; total_cents: number }[],
+): DailyRevenuePoint[] {
+  const points = getDefaultDailyRevenue();
+  const revenueByDate = new Map(points.map((point) => [point.date, 0]));
+
+  for (const order of orders) {
+    const date = new Date(order.created_at).toISOString().slice(0, 10);
+    if (revenueByDate.has(date)) {
+      revenueByDate.set(date, (revenueByDate.get(date) ?? 0) + order.total_cents);
+    }
+  }
+
+  return points.map((point) => ({
+    ...point,
+    revenueCents: revenueByDate.get(point.date) ?? 0,
+  }));
+}
+
+function chartPoints(values: number[], width = 720, height = 150): string {
+  const max = Math.max(...values, 1);
+  return values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * width;
+      const y = height - (value / max) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function DailyRevenueChart({ points }: { points: DailyRevenuePoint[] }) {
+  const values = points.map((point) => point.revenueCents);
+  const coordinates = chartPoints(values)
+    .split(" ")
+    .map((point) => point.split(",").map(Number));
+  const total = values.reduce((sum, value) => sum + value, 0);
+
+  return (
+    <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-on-surface dark:text-zinc-50">
+            Daily revenue
+          </h3>
+          <p className="mt-1 text-xs text-on-surface-variant dark:text-zinc-400">
+            Default view: last {DAILY_REVENUE_DAYS} days sales
+          </p>
+        </div>
+        <p className="text-right text-sm font-semibold text-on-surface dark:text-zinc-50">
+          {formatCents(total)}
+        </p>
+      </div>
+      <svg
+        viewBox="0 0 720 190"
+        className="h-56 w-full overflow-visible"
+        role="img"
+        aria-label={`Daily revenue line chart for last ${DAILY_REVENUE_DAYS} days`}
+      >
+        {[38, 76, 114, 152].map((y) => (
+          <line
+            key={y}
+            x1="0"
+            x2="720"
+            y1={y}
+            y2={y}
+            className="stroke-outline-variant/60 dark:stroke-zinc-800"
+            strokeDasharray="4 6"
+          />
+        ))}
+        <polyline
+          fill="none"
+          points={chartPoints(values)}
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="4"
+          className="text-primary dark:text-blue-400"
+        />
+        {points.map((point, index) => {
+          const [x, y] = coordinates[index];
+          return (
+            <g key={point.date}>
+              <circle
+                cx={x}
+                cy={y}
+                r="4"
+                className="fill-surface-container-lowest stroke-primary dark:fill-zinc-900 dark:stroke-blue-400"
+                strokeWidth="3"
+              />
+              <text
+                x={x}
+                y="185"
+                textAnchor="middle"
+                className="fill-on-surface-variant text-[10px] dark:fill-zinc-400"
+              >
+                {point.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
 }
 
 // ── Stat card ───────────────────────────────────────────────────────────────
@@ -100,28 +220,6 @@ function SectionHeader({
 }
 
 // ── Quick action ────────────────────────────────────────────────────────────
-function QuickAction({
-  label,
-  icon,
-  href,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col items-center gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-surface-container-low hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-700/40 dark:hover:bg-zinc-800"
-    >
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-blue-900/30 dark:text-blue-400">
-        {icon}
-      </span>
-      <span className="text-xs font-medium text-on-surface dark:text-zinc-200">{label}</span>
-    </Link>
-  );
-}
-
 // ── Sync status panel ───────────────────────────────────────────────────────
 function SyncPanel({
   pendingCount,
@@ -198,25 +296,14 @@ function SyncPanel({
 export default function DashboardPage() {
   const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
   const [lowStockCount, setLowStockCount] = useState<number | null>(null);
-  const [todayLabel, setTodayLabel] = useState<{
-    greeting: string;
-    dateStr: string;
-  } | null>(null);
+  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenuePoint[]>(() =>
+    getDefaultDailyRevenue(),
+  );
   const { pendingCount, conflictCount } = useSyncStatus();
-
-  useEffect(() => {
-    getTodaysOrderSummary().then(setSummary);
-    db.products
-      .filter((product) => product.stock_quantity <= LOW_STOCK_THRESHOLD)
-      .count()
-      .then(setLowStockCount);
-  }, []);
-
-  useEffect(() => {
+  const todayLabel = useMemo(() => {
     const now = new Date();
     const hour = now.getHours();
-
-    setTodayLabel({
+    return {
       greeting:
         hour < 12
           ? "Good morning"
@@ -229,6 +316,17 @@ export default function DashboardPage() {
         month: "long",
         day: "numeric",
       }),
+    };
+  }, []);
+
+  useEffect(() => {
+    getTodaysOrderSummary().then(setSummary);
+    db.products
+      .filter((product) => product.stock_quantity <= LOW_STOCK_THRESHOLD)
+      .count()
+      .then(setLowStockCount);
+    db.pendingOrders.toArray().then((orders) => {
+      setDailyRevenue(buildDailyRevenue(orders));
     });
   }, []);
 
@@ -279,23 +377,13 @@ export default function DashboardPage() {
             sub="Records awaiting upload"
           />
         </div>
+        <DailyRevenueChart points={dailyRevenue} />
       </section>
 
       {/* Sync status */}
       <section className="flex flex-col gap-3">
         <SectionHeader title="Sync status" />
         <SyncPanel pendingCount={pendingCount} conflictCount={conflictCount} />
-      </section>
-
-      {/* Quick actions */}
-      <section className="flex flex-col gap-3">
-        <SectionHeader title="Quick access" action="All modules" href={ROUTES.dashboard} />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <QuickAction label="POS Terminal" icon={<Monitor size={20} />} href={ROUTES.pos.root} />
-          <QuickAction label="Inventory" icon={<List size={20} />} href={ROUTES.inventory.root} />
-          <QuickAction label="Reports" icon={<BarChart2 size={20} />} href={ROUTES.reports} />
-          <QuickAction label="Customers" icon={<Users size={20} />} href={ROUTES.customers.root} />
-        </div>
       </section>
 
       {/* Plugin widgets */}
