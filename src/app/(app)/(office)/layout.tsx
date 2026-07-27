@@ -61,7 +61,7 @@ export default function OfficeLayout({
             type="button"
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 z-30 bg-black/30 md:hidden"
+            className="fixed inset-0 z-[75] bg-black/30 md:hidden"
           />
         )}
         {/* ── Sidebar ── */}

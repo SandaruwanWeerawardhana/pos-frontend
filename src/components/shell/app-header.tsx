@@ -27,6 +27,18 @@ const PAGE_LABELS = [
   { href: ROUTES.auth.login, label: "Login" },
 ];
 
+const OFFICE_SIDEBAR_PATHS = [
+  ROUTES.dashboard,
+  ROUTES.inventory.root,
+  ROUTES.sales.root,
+  ROUTES.customers.root,
+  ROUTES.suppliers,
+  ROUTES.reports,
+  ROUTES.discounts,
+  ROUTES.settings.root,
+  ROUTES.admin,
+];
+
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -56,6 +68,9 @@ export function AppHeader() {
   const currentPage =
     PAGE_LABELS.find((link) => pathname?.startsWith(link.href))?.label ??
     "Workspace";
+  const hasOfficeSidebar = OFFICE_SIDEBAR_PATHS.some((href) =>
+    pathname?.startsWith(href),
+  );
 
   useEffect(() => {
     const handleOnline = () => setOnline(navigator.onLine);
@@ -78,22 +93,12 @@ export function AppHeader() {
   }
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <header
+      className={`fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${
+        hasOfficeSidebar ? "md:left-56" : ""
+      }`}
+    >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <button
-          type="button"
-          aria-label="Toggle sidebar"
-          onClick={handleToggleSidebar}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 md:hidden"
-        >
-          <Menu size={18} />
-        </button>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-on-primary">
-          S
-        </span>
-        <span className="shrink-0 text-base font-semibold text-on-surface dark:text-zinc-50">
-          SwiftPOS
-        </span>
         <ChevronRight
           size={16}
           className="shrink-0 text-on-surface-variant/50 dark:text-zinc-600"
