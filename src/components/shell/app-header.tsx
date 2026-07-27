@@ -17,6 +17,7 @@ type SyncStatus = "synced" | "syncing" | "pending" | "error";
 const PAGE_LABELS = [
   { href: ROUTES.dashboard, label: "Dashboard" },
   { href: ROUTES.pos.root, label: "POS Terminal" },
+  { href: ROUTES.products, label: "Product Management" },
   { href: ROUTES.inventory.root, label: "Inventory" },
   { href: ROUTES.sales.root, label: "Sales" },
   { href: ROUTES.customers.root, label: "Customers" },
@@ -30,6 +31,7 @@ const PAGE_LABELS = [
 
 const OFFICE_SIDEBAR_PATHS = [
   ROUTES.dashboard,
+  ROUTES.products,
   ROUTES.inventory.root,
   ROUTES.sales.root,
   ROUTES.customers.root,
@@ -125,7 +127,7 @@ export function AppHeader() {
           {syncStatus}
         </span>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+          className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold capitalize text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ${
             online
               ? "bg-[#004b1e] text-[#bbf7d0] dark:bg-green-900/50 dark:text-green-300"
               : "bg-error text-on-error dark:bg-red-900/50 dark:text-red-300"

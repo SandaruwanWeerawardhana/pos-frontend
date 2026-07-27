@@ -10,6 +10,7 @@ import {
   Monitor,
   LayoutDashboard,
   Package,
+  PackagePlus,
   DollarSign,
   Users,
   Truck,
@@ -22,6 +23,7 @@ import {
 const NAV_ITEMS = [
   { href: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
   { href: ROUTES.pos.root, label: "POS Terminal", icon: Monitor },
+  { href: ROUTES.products, label: "Products", icon: PackagePlus },
   { href: ROUTES.inventory.root, label: "Inventory", icon: Package },
   { href: ROUTES.sales.root, label: "Sales", icon: DollarSign },
   { href: ROUTES.customers.root, label: "Customers", icon: Users },

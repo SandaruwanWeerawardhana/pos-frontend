@@ -14,6 +14,7 @@ export const ROUTES = {
     close: "/pos/close",
   },
   dashboard: "/dashboard",
+  products: "/products",
   inventory: {
     root: "/inventory",
     new: "/inventory/new",
