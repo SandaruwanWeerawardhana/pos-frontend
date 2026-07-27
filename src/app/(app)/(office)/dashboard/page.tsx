@@ -198,6 +198,10 @@ function SyncPanel({
 export default function DashboardPage() {
   const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
   const [lowStockCount, setLowStockCount] = useState<number | null>(null);
+  const [todayLabel, setTodayLabel] = useState<{
+    greeting: string;
+    dateStr: string;
+  } | null>(null);
   const { pendingCount, conflictCount } = useSyncStatus();
 
   useEffect(() => {
@@ -208,24 +212,36 @@ export default function DashboardPage() {
       .then(setLowStockCount);
   }, []);
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const dateStr = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  useEffect(() => {
+    const now = new Date();
+    const hour = now.getHours();
+
+    setTodayLabel({
+      greeting:
+        hour < 12
+          ? "Good morning"
+          : hour < 17
+          ? "Good afternoon"
+          : "Good evening",
+      dateStr: now.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    });
+  }, []);
 
   return (
     <div className="flex flex-col gap-8 pb-8">
       {/* Hero header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-on-surface dark:text-zinc-50">
-          {greeting} 👋
+          {todayLabel?.greeting ?? "Welcome back"}
         </h1>
-        <p className="mt-1 text-sm text-on-surface-variant dark:text-zinc-400">{dateStr}</p>
+        <p className="mt-1 text-sm text-on-surface-variant dark:text-zinc-400">
+          {todayLabel?.dateStr ?? "Loading dashboard"}
+        </p>
       </div>
 
       {/* KPI grid */}
