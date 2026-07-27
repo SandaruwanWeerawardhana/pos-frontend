@@ -1,21 +1,10 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/providers/theme-provider";
 import { Sun, Moon } from "lucide-react";
-import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch — render only after mount
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return (
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg" aria-hidden />
-    );
-  }
 
   const isDark = resolvedTheme === "dark";
 

@@ -142,6 +142,7 @@ export const mockApi: ApiClient & {
       email,
       name: email.split("@")[0],
       businessName: "Demo Business",
+      businessType: "grocery",
     };
     return { token: makeFakeJwt(user), user };
   },
