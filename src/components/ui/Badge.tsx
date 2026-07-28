@@ -5,10 +5,10 @@ type BadgeVariant = "neutral" | "success" | "warning" | "danger";
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   neutral: "bg-surface-container text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-300",
   success:
-    "bg-tertiary-container/20 text-on-tertiary-container dark:bg-green-900/40 dark:text-green-300",
+    "bg-[#004b1e] text-[#bbf7d0] dark:bg-green-900/50 dark:text-green-300",
   warning:
-    "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  danger: "bg-error-container text-on-error-container dark:bg-red-900/40 dark:text-red-300",
+    "bg-amber-600 text-white dark:bg-amber-900/50 dark:text-amber-300",
+  danger: "bg-error text-on-error dark:bg-red-900/50 dark:text-red-300",
 };
 
 export function Badge({

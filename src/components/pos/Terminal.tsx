@@ -118,7 +118,7 @@ export function Terminal() {
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-4 overflow-hidden bg-background p-4">
+    <div className="flex h-full min-h-0 w-full gap-4 overflow-hidden bg-surface p-4 dark:bg-zinc-950">
       <CategorySidebar
         totalCount={results.length}
         active={category}
@@ -126,7 +126,7 @@ export function Terminal() {
       />
 
       {/* Product area */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col gap-4">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex-1">
             <ProductSearch onResults={setResults} />

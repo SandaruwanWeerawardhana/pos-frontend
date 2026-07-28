@@ -45,7 +45,7 @@ export function CartItem({
         >
           −
         </button>
-        <span className="w-7 text-center text-sm font-medium tabular-nums">
+        <span className="w-7 text-center text-sm font-medium tabular-nums text-on-surface dark:text-zinc-50">
           {item.quantity}
         </span>
         <button

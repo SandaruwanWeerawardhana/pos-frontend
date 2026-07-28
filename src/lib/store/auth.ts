@@ -6,7 +6,13 @@ interface AuthState {
   user: AuthUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    ownerName: string,
+    businessName: string,
+    email: string,
+    password: string,
+    businessType: string,
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,8 +27,14 @@ export const useAuthStore = create<AuthState>()(
         const result = await apiClient.login(email, password);
         set({ user: result.user, token: result.token });
       },
-      async register(name, email, password) {
-        const result = await apiClient.register(name, email, password);
+      async register(ownerName, businessName, email, password, businessType) {
+        const result = await apiClient.register(
+          ownerName,
+          businessName,
+          email,
+          password,
+          businessType,
+        );
         set({ user: result.user, token: result.token });
       },
       logout() {

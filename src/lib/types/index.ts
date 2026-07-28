@@ -12,6 +12,7 @@ export interface Product {
   price_cents: number; // integer cents
   tax_rate: number; // fractional rate, e.g. 0.08 = 8%
   stock_quantity: number;
+  _local_only?: boolean; // locally-created product, preserved until product sync exists
 }
 
 export interface CartItem {

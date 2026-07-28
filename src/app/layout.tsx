@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShellInit } from "@/components/shell/app-shell-init";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -21,8 +22,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00236f",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f9ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -34,12 +38,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        <AppShellInit />
-        <QueryProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </QueryProvider>
+      <body className="min-h-full flex flex-col font-sans">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <AppShellInit />
+          <QueryProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

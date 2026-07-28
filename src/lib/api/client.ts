@@ -4,6 +4,8 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  businessName: string;
+  businessType: string;
 }
 
 export interface LoginResult {
@@ -27,9 +29,11 @@ export interface SyncOrdersResponse {
 export interface ApiClient {
   login(email: string, password: string): Promise<LoginResult>;
   register(
-    name: string,
+    ownerName: string,
+    businessName: string,
     email: string,
     password: string,
+    businessType: string,
   ): Promise<LoginResult>;
   getProducts(): Promise<Product[]>;
   syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse>;

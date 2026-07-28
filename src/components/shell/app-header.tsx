@@ -1,39 +1,139 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ConnectionPill } from "./connection-pill";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { ROUTES } from "@/lib/types/routes";
+import {
+  ChevronRight,
+  Menu,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 
-const NAV_LINKS = [
-  { href: ROUTES.pos.root, label: "POS" },
+const PAGE_LABELS = [
+  { href: ROUTES.dashboard, label: "Dashboard" },
+  { href: ROUTES.pos.root, label: "POS Terminal" },
+  { href: ROUTES.products, label: "Product Management" },
+  { href: ROUTES.inventory.root, label: "Inventory" },
+  { href: ROUTES.sales.root, label: "Sales" },
+  { href: ROUTES.customers.root, label: "Customers" },
+  { href: ROUTES.suppliers, label: "Suppliers" },
+  { href: ROUTES.reports, label: "Reports" },
+  { href: ROUTES.discounts, label: "Discounts" },
+  { href: ROUTES.settings.root, label: "Settings" },
   { href: ROUTES.admin, label: "Admin" },
   { href: ROUTES.auth.login, label: "Login" },
 ];
 
+const OFFICE_SIDEBAR_PATHS = [
+  ROUTES.dashboard,
+  ROUTES.products,
+  ROUTES.inventory.root,
+  ROUTES.sales.root,
+  ROUTES.customers.root,
+  ROUTES.suppliers,
+  ROUTES.reports,
+  ROUTES.discounts,
+  ROUTES.settings.root,
+  ROUTES.admin,
+];
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function AppHeader() {
   const pathname = usePathname();
+  const [online, setOnline] = useState(true);
+  const [now, setNow] = useState<Date | null>(null);
+  const currentPage =
+    PAGE_LABELS.find((link) => pathname?.startsWith(link.href))?.label ??
+    "Workspace";
+  const hasOfficeSidebar = OFFICE_SIDEBAR_PATHS.some((href) =>
+    pathname?.startsWith(href),
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    const syncTimerId = window.setTimeout(() => setOnline(navigator.onLine), 0);
+    return () => {
+      window.clearTimeout(syncTimerId);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateClock = () => setNow(new Date());
+    const syncTimerId = window.setTimeout(updateClock, 0);
+    const timerId = window.setInterval(updateClock, 1000);
+    return () => {
+      window.clearTimeout(syncTimerId);
+      window.clearInterval(timerId);
+    };
+  }, []);
+
+  function handleToggleSidebar() {
+    window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
+  }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-outline-variant px-4 dark:border-zinc-800">
-      <div className="flex items-center gap-6">
-        <span className="text-lg font-semibold text-on-surface">POS</span>
-        <nav className="flex gap-4 text-sm text-on-surface-variant">
-          {NAV_LINKS.map((link) => {
-            const active = pathname?.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={active ? "font-medium text-primary" : ""}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+    <header
+      className={`fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${
+        hasOfficeSidebar ? "md:left-56" : ""
+      }`}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          type="button"
+          aria-label="Toggle sidebar"
+          onClick={handleToggleSidebar}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 md:hidden"
+        >
+          <Menu size={18} />
+        </button>
+        <ChevronRight
+          size={16}
+          className="shrink-0 text-on-surface-variant/50 dark:text-zinc-600"
+        />
+        <span className="truncate text-sm font-medium text-on-surface-variant dark:text-zinc-300">
+          {currentPage}
+        </span>
       </div>
-      <ConnectionPill />
+      <div className="ml-4 flex shrink-0 items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold capitalize text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ${
+            online
+              ? "bg-[#004b1e] text-[#bbf7d0] dark:bg-green-900/50 dark:text-green-300"
+              : "bg-error text-on-error dark:bg-red-900/50 dark:text-red-300"
+          }`}
+        >
+          {online ? <Wifi size={13} /> : <WifiOff size={13} />}
+          {online ? "Online" : "Offline"}
+        </span>
+        <ThemeToggle />
+        <span className="hidden min-w-[5.5rem] whitespace-nowrap text-right text-xs font-medium text-on-surface-variant dark:text-zinc-400 sm:block">
+          <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
+            {now ? formatTime(now) : "--:--"}
+          </span>
+          {now ? formatDate(now) : "..."}
+        </span>
+      </div>
     </header>
   );
 }
