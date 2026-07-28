@@ -7,12 +7,9 @@ import { ROUTES } from "@/lib/types/routes";
 import {
   ChevronRight,
   Menu,
-  RefreshCw,
   Wifi,
   WifiOff,
 } from "lucide-react";
-
-type SyncStatus = "synced" | "syncing" | "pending" | "error";
 
 const PAGE_LABELS = [
   { href: ROUTES.dashboard, label: "Dashboard" },
@@ -57,17 +54,10 @@ function formatDate(date: Date): string {
   });
 }
 
-function getSyncStatus(): SyncStatus {
-  return "synced";
-}
-
 export function AppHeader() {
   const pathname = usePathname();
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
-  const [now, setNow] = useState(() => new Date());
-  const syncStatus = getSyncStatus();
+  const [online, setOnline] = useState(true);
+  const [now, setNow] = useState<Date | null>(null);
   const currentPage =
     PAGE_LABELS.find((link) => pathname?.startsWith(link.href))?.label ??
     "Workspace";
@@ -76,19 +66,26 @@ export function AppHeader() {
   );
 
   useEffect(() => {
-    const handleOnline = () => setOnline(navigator.onLine);
-    const handleOffline = () => setOnline(navigator.onLine);
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    const syncTimerId = window.setTimeout(() => setOnline(navigator.onLine), 0);
     return () => {
+      window.clearTimeout(syncTimerId);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
   useEffect(() => {
-    const timerId = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timerId);
+    const updateClock = () => setNow(new Date());
+    const syncTimerId = window.setTimeout(updateClock, 0);
+    const timerId = window.setInterval(updateClock, 1000);
+    return () => {
+      window.clearTimeout(syncTimerId);
+      window.clearInterval(timerId);
+    };
   }, []);
 
   function handleToggleSidebar() {
@@ -132,9 +129,9 @@ export function AppHeader() {
         <ThemeToggle />
         <span className="hidden min-w-[5.5rem] whitespace-nowrap text-right text-xs font-medium text-on-surface-variant dark:text-zinc-400 sm:block">
           <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
-            {formatTime(now)}
+            {now ? formatTime(now) : "--:--"}
           </span>
-          {formatDate(now)}
+          {now ? formatDate(now) : "..."}
         </span>
       </div>
     </header>

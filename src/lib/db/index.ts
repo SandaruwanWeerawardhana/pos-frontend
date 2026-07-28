@@ -52,11 +52,15 @@ export class PosDB extends Dexie {
 
 export const db = new PosDB();
 
-// Bulk-replaces the local product catalog. Used when pulling products from the server.
+// Refreshes server products while preserving locally-created rows until a
+// product-create sync endpoint exists.
 export async function seedProducts(products: Product[]): Promise<void> {
   await db.transaction("rw", db.products, async () => {
+    const localProducts = await db.products
+      .filter((product) => product._local_only === true)
+      .toArray();
     await db.products.clear();
-    await db.products.bulkAdd(products);
+    await db.products.bulkPut([...products, ...localProducts]);
   });
 }
 
@@ -73,6 +77,25 @@ export async function searchProducts(query: string): Promise<Product[]> {
         product.barcode.toLowerCase().includes(needle),
     )
     .toArray();
+}
+
+export async function addProduct(product: Product): Promise<void> {
+  await db.transaction("rw", db.products, async () => {
+    const [existingSku, existingBarcode] = await Promise.all([
+      db.products.where("sku").equals(product.sku).first(),
+      db.products.where("barcode").equals(product.barcode).first(),
+    ]);
+
+    if (existingSku) {
+      throw new Error("SKU already exists");
+    }
+
+    if (existingBarcode) {
+      throw new Error("Barcode already exists");
+    }
+
+    await db.products.add({ ...product, _local_only: true });
+  });
 }
 
 export async function addToCart(product: Product, quantity = 1): Promise<void> {

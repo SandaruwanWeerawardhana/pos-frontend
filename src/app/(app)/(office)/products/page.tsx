@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Barcode,
   Box,
@@ -18,6 +19,7 @@ import type { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ROUTES } from "@/lib/types/routes";
 
 interface CategoryNode {
   name: string;
@@ -270,10 +272,13 @@ export default function ProductsPage() {
             <Barcode size={15} />
             Scan barcode
           </Button>
-          <Button type="button" size="sm">
+          <Link
+            href={ROUTES.productsNew}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary transition-all hover:scale-[1.02] hover:bg-secondary/90 hover:shadow-elevated dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
             <Plus size={15} />
             Add product
-          </Button>
+          </Link>
         </div>
       </div>
 
