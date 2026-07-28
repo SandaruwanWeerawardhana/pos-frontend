@@ -98,6 +98,13 @@ export async function addProduct(product: Product): Promise<void> {
   });
 }
 
+export async function updateProductStock(
+  productId: string,
+  stockQuantity: number,
+): Promise<void> {
+  await db.products.update(productId, { stock_quantity: stockQuantity });
+}
+
 export async function addToCart(product: Product, quantity = 1): Promise<void> {
   await db.transaction("rw", db.cartItems, async () => {
     const existing = await db.cartItems

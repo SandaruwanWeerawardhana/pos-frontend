@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { searchProducts } from "@/lib/db";
+import { Plus } from "lucide-react";
+import { searchProducts, updateProductStock } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -19,6 +22,11 @@ function formatCents(cents: number): string {
 export default function InventoryPage() {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [stockProduct, setStockProduct] = useState<Product | null>(null);
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockError, setStockError] = useState("");
+  const [updatingStock, setUpdatingStock] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -26,6 +34,51 @@ export default function InventoryPage() {
     }, 200);
     return () => clearTimeout(timeout);
   }, [query]);
+
+  function openStockUpdate(product: Product) {
+    setStockProduct(product);
+    setStockQuantity(String(product.stock_quantity));
+    setStockError("");
+  }
+
+  function closeStockUpdate() {
+    if (updatingStock) return;
+    setStockProduct(null);
+    setStockQuantity("");
+    setStockError("");
+  }
+
+  async function handleStockSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextStock = Number(stockQuantity);
+    if (!Number.isInteger(nextStock) || nextStock < 0) {
+      setStockError("Enter a whole stock quantity.");
+      return;
+    }
+
+    if (!stockProduct) return;
+
+    setUpdatingStock(true);
+    try {
+      await updateProductStock(stockProduct.id, nextStock);
+      setProducts((current) =>
+        current.map((product) =>
+          product.id === stockProduct.id
+            ? { ...product, stock_quantity: nextStock }
+            : product,
+        ),
+      );
+      showToast("Stock updated", "success");
+      setStockProduct(null);
+      setStockQuantity("");
+      setStockError("");
+    } catch {
+      showToast("Failed to update stock", "error");
+    } finally {
+      setUpdatingStock(false);
+    }
+  }
 
   const columns: TableColumn<Product>[] = [
     {
@@ -59,6 +112,20 @@ export default function InventoryPage() {
         </Badge>
       ),
     },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (product) => (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => openStockUpdate(product)}
+        >
+          <Plus size={14} />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -67,9 +134,6 @@ export default function InventoryPage() {
         <h1 className="text-lg font-semibold text-on-surface dark:text-zinc-50">
           Inventory
         </h1>
-        <Link href={ROUTES.inventory.new}>
-          <Button size="sm">Add product</Button>
-        </Link>
       </div>
       <Input
         value={query}
@@ -82,6 +146,43 @@ export default function InventoryPage() {
         rowKey={(product) => product.id}
         emptyMessage="No products in the local catalog."
       />
+      <Modal
+        open={stockProduct !== null}
+        onClose={closeStockUpdate}
+        title="Update stock"
+      >
+        <form className="flex flex-col gap-4" onSubmit={handleStockSubmit}>
+          <p className="text-sm font-medium text-on-surface dark:text-zinc-50">
+            {stockProduct?.name}
+          </p>
+          <Input
+            label="Stock quantity"
+            type="number"
+            min={0}
+            step={1}
+            value={stockQuantity}
+            onChange={(event) => {
+              setStockQuantity(event.target.value);
+              setStockError("");
+            }}
+            error={stockError}
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeStockUpdate}
+              disabled={updatingStock}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updatingStock}>
+              {updatingStock ? "Updating..." : "Update stock"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
