@@ -119,13 +119,6 @@ export function AppHeader() {
         </span>
       </div>
       <div className="ml-4 flex shrink-0 items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold capitalize text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-          <RefreshCw
-            size={13}
-            className={syncStatus === "syncing" ? "animate-spin" : ""}
-          />
-          {syncStatus}
-        </span>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold capitalize text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ${
             online
