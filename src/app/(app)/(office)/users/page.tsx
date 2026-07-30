@@ -193,6 +193,17 @@ export default function UsersPage() {
       ),
     },
     {
+      key: "created_at",
+      header: "Added",
+      hideOnMobile: true,
+      sortValue: (user) => user.created_at,
+      render: (user) => (
+        <span className="text-xs text-on-surface-variant dark:text-zinc-400">
+          {new Date(user.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
       key: "actions",
       header: "",
       render: (user) => (
