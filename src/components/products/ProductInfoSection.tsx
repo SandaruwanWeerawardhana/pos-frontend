@@ -83,6 +83,7 @@ export function ProductInfoSection({
       title="Product information"
       icon={<Info size={18} />}
       errorCount={errorCount}
+      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -170,7 +171,6 @@ export function ProductInfoSection({
               options={PRODUCT_UNIT_OPTIONS}
               placeholder="Search units"
               error={errors.unit?.message}
-              hint="How the quantity is entered at the till."
             />
           )}
         />

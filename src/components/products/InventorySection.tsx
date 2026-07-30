@@ -35,6 +35,7 @@ export function InventorySection({
       title="Inventory"
       icon={<Boxes size={18} />}
       errorCount={errorCount}
+      plain
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Controller

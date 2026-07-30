@@ -61,8 +61,6 @@ export function PricingSection({
     name: ["selling_price", "tax_rate", "discount_percent"],
   });
 
-  // Recomputed on every keystroke in these fields — the numbers are what tell
-  // a buyer whether the price they just typed is the one they meant.
   const summary = summarisePricing({
     selling_price: sellingPrice,
     tax_rate: taxRate,
@@ -81,6 +79,7 @@ export function PricingSection({
       title="Pricing"
       icon={<Tags size={18} />}
       errorCount={errorCount}
+      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input

@@ -85,15 +85,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
     {
       id: "grocery",
       label: "Grocery information",
-      fields: [
-        "product_type",
-        "storage_type",
-        "is_weighted",
-        "is_variable_weight",
-        "batch_no",
-        "expiry_date",
-        "manufacturing_date",
-      ],
+      fields: ["batch_no", "expiry_date", "manufacturing_date"],
     },
     { id: "media", label: "Media", fields: ["images"] },
     {
@@ -246,30 +238,32 @@ export default function ProductAddPage() {
           noValidate
           className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
         >
-          <div className="flex min-w-0 flex-col gap-4">
-            <ProductInfoSection
-              form={form}
-              options={options}
-              duplicates={duplicates}
-              errorCount={errorsFor("product-information")}
-            />
-            <PricingSection form={form} errorCount={errorsFor("pricing")} />
-            <InventorySection form={form} errorCount={errorsFor("inventory")} />
-            <Suspense fallback={<SectionFallback />}>
-              <GrocerySection form={form} errorCount={errorsFor("grocery")} />
-            </Suspense>
-            <Suspense fallback={<SectionFallback />}>
-              <MediaSection form={form} errorCount={errorsFor("media")} />
-            </Suspense>
-            <Suspense fallback={<SectionFallback />}>
-              <AdditionalSettingsSection
+          <div className="min-w-0 rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-4 shadow-sm backdrop-blur-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <div className="flex flex-col gap-8">
+              <ProductInfoSection
                 form={form}
-                pluginValues={pluginValues}
-                onPluginChange={(key, value) =>
-                  setPluginValues((current) => ({ ...current, [key]: value }))
-                }
+                options={options}
+                duplicates={duplicates}
+                errorCount={errorsFor("product-information")}
               />
-            </Suspense>
+              <PricingSection form={form} errorCount={errorsFor("pricing")} />
+              <InventorySection form={form} errorCount={errorsFor("inventory")} />
+              <Suspense fallback={<SectionFallback />}>
+                <GrocerySection form={form} errorCount={errorsFor("grocery")} />
+              </Suspense>
+              <Suspense fallback={<SectionFallback />}>
+                <MediaSection form={form} errorCount={errorsFor("media")} />
+              </Suspense>
+              <Suspense fallback={<SectionFallback />}>
+                <AdditionalSettingsSection
+                  form={form}
+                  pluginValues={pluginValues}
+                  onPluginChange={(key, value) =>
+                    setPluginValues((current) => ({ ...current, [key]: value }))
+                  }
+                />
+              </Suspense>
+            </div>
           </div>
 
           <ProductSummaryPanel

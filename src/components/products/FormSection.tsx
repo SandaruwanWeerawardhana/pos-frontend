@@ -13,6 +13,9 @@ interface FormSectionProps {
   /** Number of validation errors inside this section, shown on the header. */
   errorCount?: number;
   defaultOpen?: boolean;
+  /** Renders as a plain in-page heading with no card, border, or collapse —
+   * used when several sections are combined under one outer card. */
+  plain?: boolean;
 }
 
 // Card + disclosure. Sections stay collapsible at every width because a
@@ -26,9 +29,18 @@ export function FormSection({
   children,
   errorCount = 0,
   defaultOpen = true,
+  plain = false,
 }: Readonly<FormSectionProps>) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = `${id}-panel`;
+
+  if (plain) {
+    return (
+      <section id={id} className="scroll-mt-20">
+        {children}
+      </section>
+    );
+  }
 
   return (
     <section

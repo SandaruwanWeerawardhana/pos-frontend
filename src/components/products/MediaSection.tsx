@@ -22,6 +22,7 @@ export function MediaSection({ form, errorCount }: Readonly<MediaSectionProps>) 
       description="Shelf and till imagery — the first image is the primary one"
       icon={<ImageIcon size={18} />}
       errorCount={errorCount}
+      plain
     >
       <Controller
         control={control}
