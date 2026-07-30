@@ -14,18 +14,8 @@ import { useToast } from "@/components/ui/Toast";
 import type { StoreSettings, TaxRateSetting } from "@/lib/types";
 import { ROUTES } from "@/lib/types/routes";
 
-// Common presets so a shop doesn't have to know its own symbol/locale codes.
-const CURRENCIES = [
-  { code: "USD", symbol: "$", locale: "en-US", label: "US Dollar" },
-  { code: "EUR", symbol: "€", locale: "de-DE", label: "Euro" },
-  { code: "GBP", symbol: "£", locale: "en-GB", label: "British Pound" },
-  { code: "LKR", symbol: "Rs", locale: "en-LK", label: "Sri Lankan Rupee" },
-  { code: "INR", symbol: "₹", locale: "en-IN", label: "Indian Rupee" },
-  { code: "AUD", symbol: "$", locale: "en-AU", label: "Australian Dollar" },
-];
-
 export default function SettingsPage() {
-  const { settings, save, money } = useSettings();
+  const { settings, save } = useSettings();
   const { all, active, setActivePlugin } = usePlugin();
   const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
@@ -83,18 +73,6 @@ export default function SettingsPage() {
         ...rate,
         is_default: position === index,
       })),
-    }));
-  }
-
-  function applyCurrency(code: string) {
-    const preset = CURRENCIES.find((entry) => entry.code === code);
-    if (!preset) return;
-    setDirty(true);
-    setDraft((current) => ({
-      ...current,
-      currency_code: preset.code,
-      currency_symbol: preset.symbol,
-      locale: preset.locale,
     }));
   }
 
@@ -160,51 +138,6 @@ export default function SettingsPage() {
                 onChange={(event) => update("tax_id", event.target.value)}
               />
             </div>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHeader title="Currency & locale" />
-          <div className="mt-4 flex flex-col gap-3">
-            <Select
-              label="Currency"
-              value={draft.currency_code}
-              onChange={(event) => applyCurrency(event.target.value)}
-              options={CURRENCIES.map((entry) => ({
-                value: entry.code,
-                label: `${entry.label} (${entry.symbol})`,
-              }))}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label="Symbol"
-                value={draft.currency_symbol}
-                onChange={(event) => update("currency_symbol", event.target.value)}
-              />
-              <Select
-                label="Symbol position"
-                value={draft.currency_position}
-                onChange={(event) =>
-                  update(
-                    "currency_position",
-                    event.target.value as StoreSettings["currency_position"],
-                  )
-                }
-                options={[
-                  { value: "before", label: "Before amount" },
-                  { value: "after", label: "After amount" },
-                ]}
-              />
-            </div>
-            <Input
-              label="Locale"
-              value={draft.locale}
-              onChange={(event) => update("locale", event.target.value)}
-              placeholder="en-US"
-            />
-            <p className="rounded-lg bg-surface-container px-3 py-2 text-sm text-on-surface dark:bg-zinc-800 dark:text-zinc-100">
-              Preview: <strong>{money(123456)}</strong>
-            </p>
           </div>
         </Card>
 

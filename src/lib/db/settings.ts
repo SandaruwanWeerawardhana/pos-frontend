@@ -5,10 +5,10 @@ const SETTINGS_KEY = "store_settings";
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   store_name: "Velocity Grocery",
-  currency_code: "USD",
-  currency_symbol: "$",
+  currency_code: "LKR",
+  currency_symbol: "Rs ",
   currency_position: "before",
-  locale: "en-US",
+  locale: "en-LK",
   prices_include_tax: false,
   tax_rates: [
     { id: "standard", name: "Standard", rate: 0.08, is_default: true },
