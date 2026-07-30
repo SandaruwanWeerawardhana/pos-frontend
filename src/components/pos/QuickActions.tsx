@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ClipboardList, Moon, Printer, Trash2 } from "lucide-react";
-import { ROUTES } from "@/lib/types/routes";
+import { ClipboardList, Printer, Trash2 } from "lucide-react";
 
 interface QuickActionsProps {
   onHold: () => void;
@@ -23,8 +21,7 @@ export function QuickActions({
     <div className="flex flex-wrap justify-center gap-2 pb-16 lg:pb-0">
       <ActionButton
         icon={<ClipboardList size={18} />}
-        label="Hold / Recall"
-        hint="F4"
+        label="Hold"
         onClick={onHold}
       />
       <ActionButton
@@ -35,18 +32,10 @@ export function QuickActions({
       <ActionButton
         icon={<Trash2 size={18} />}
         label="Clear cart"
-        hint="F8"
         onClick={onClear}
         disabled={disabled}
         danger
       />
-      <Link
-        href={ROUTES.pos.close}
-        className="flex min-h-16 min-w-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
-      >
-        <Moon size={18} aria-hidden />
-        <span className="text-center leading-tight">End of day</span>
-      </Link>
     </div>
   );
 }
