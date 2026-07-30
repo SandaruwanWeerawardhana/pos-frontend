@@ -61,6 +61,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
         "name",
         "sku",
         "barcode",
+        "barcode_source",
         "category",
         "subcategory",
         "brand",

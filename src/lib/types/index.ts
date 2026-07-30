@@ -42,6 +42,9 @@ export interface Product {
   name: string;
   sku: string;
   barcode: string;
+  // "package" = GTIN printed by the supplier, "generated" = in-store code we
+  // print ourselves. Absent on rows that predate the field; treat as "package".
+  barcode_source?: "package" | "generated";
   price_cents: number; // integer cents
   tax_rate: number; // fractional rate, e.g. 0.08 = 8%
   stock_quantity: number;

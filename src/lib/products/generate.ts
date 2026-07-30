@@ -34,21 +34,39 @@ export function generateSku(seed: SkuSeed): string {
   return parts.filter(Boolean).join("-");
 }
 
-// Standard EAN-13 modulo-10 check digit: positions alternate weight 1 and 3
-// from the left, and the digit is whatever brings the weighted sum to a
-// multiple of ten.
-export function ean13CheckDigit(twelveDigits: string): number {
+// Every GTIN length (EAN-8, UPC-A, EAN-13, ITF-14) shares one modulo-10 check
+// digit: weights alternate 3 and 1 starting from the rightmost body digit, and
+// the digit is whatever brings the weighted sum to a multiple of ten.
+export function gtinCheckDigit(body: string): number {
   let sum = 0;
-  for (let index = 0; index < 12; index += 1) {
-    const digit = Number(twelveDigits[index]);
-    sum += index % 2 === 0 ? digit : digit * 3;
+  let weight = 3;
+  for (let index = body.length - 1; index >= 0; index -= 1) {
+    sum += Number(body[index]) * weight;
+    weight = weight === 3 ? 1 : 3;
   }
   return (10 - (sum % 10)) % 10;
 }
 
+/** Digit counts that carry a check digit, so a scan can be verified. */
+export const GTIN_LENGTHS: readonly number[] = [8, 12, 13, 14];
+
+export function isGtinLength(barcode: string): boolean {
+  return GTIN_LENGTHS.includes(barcode.length);
+}
+
+// A barcode printed on the package: verifiable only when it is a real GTIN
+// length. Shorter in-store codes have no check digit to test.
+export function isValidGtin(barcode: string): boolean {
+  if (!/^\d+$/.test(barcode) || !isGtinLength(barcode)) return false;
+  return gtinCheckDigit(barcode.slice(0, -1)) === Number(barcode[barcode.length - 1]);
+}
+
+export function ean13CheckDigit(twelveDigits: string): number {
+  return gtinCheckDigit(twelveDigits);
+}
+
 export function isValidEan13(barcode: string): boolean {
-  if (!/^\d{13}$/.test(barcode)) return false;
-  return ean13CheckDigit(barcode.slice(0, 12)) === Number(barcode[12]);
+  return /^\d{13}$/.test(barcode) && isValidGtin(barcode);
 }
 
 // GS1 reserves prefixes 20–29 for in-store items that never leave the

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseMoneyToCents } from "@/lib/format";
 import { MAX_IMAGES } from "./constants";
+import { isGtinLength, isValidEan13, isValidGtin } from "./generate";
 import type { Product, ProductBatch } from "@/lib/types";
 
 // Numeric inputs are held as strings so a half-typed value ("1.", "") is a
@@ -83,6 +84,9 @@ const baseProductSchema = z.object({
     .min(6, "Barcode is required")
     .max(32)
     .regex(/^[0-9]+$/, "Barcode must be digits only"),
+  // Where the barcode came from: "package" is the GTIN already printed on the
+  // supplier's packaging, "generated" is an in-store code we print ourselves.
+  barcode_source: z.enum(["package", "generated"]),
   qr_code: z.string().trim().max(200),
   category: z.string().trim().min(1, "Category is required").max(60),
   subcategory: z.string().trim().max(60),
@@ -144,6 +148,28 @@ function startOfToday(): number {
 }
 
 export const productFormSchema = baseProductSchema.superRefine((values, ctx) => {
+  // An in-store code we print must be a well-formed EAN-13, or the shelf label
+  // will not scan. A package code is only checkable at real GTIN lengths.
+  if (values.barcode_source === "generated" && !isValidEan13(values.barcode)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["barcode"],
+      message: "Use Generate to create a valid EAN-13 in-store barcode",
+    });
+  }
+
+  if (
+    values.barcode_source === "package" &&
+    isGtinLength(values.barcode) &&
+    !isValidGtin(values.barcode)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["barcode"],
+      message: "Check digit does not match — re-scan the package barcode",
+    });
+  }
+
   const minStock = toNumber(values.min_stock_level);
   const reorder = toNumber(values.reorder_level);
   if (minStock !== null && reorder !== null && reorder < minStock) {
@@ -211,12 +237,14 @@ export const productFormSchema = baseProductSchema.superRefine((values, ctx) => 
 });
 
 export type ProductFormValues = z.infer<typeof baseProductSchema>;
+export type BarcodeSource = ProductFormValues["barcode_source"];
 
 export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
   name: "",
   product_code: "",
   sku: "",
   barcode: "",
+  barcode_source: "package",
   qr_code: "",
   category: "",
   subcategory: "",
@@ -322,6 +350,7 @@ export function toProduct(values: ProductFormValues, id: string): Product {
     name: values.name,
     sku: values.sku,
     barcode: values.barcode,
+    barcode_source: values.barcode_source,
     price_cents: priceCents,
     tax_rate: (toNumber(values.tax_rate) ?? 0) / 100,
     stock_quantity: stock,
