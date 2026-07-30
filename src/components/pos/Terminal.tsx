@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { ProductSearch } from "./ProductSearch";
 import { ProductGrid } from "./ProductGrid";
 import { Cart } from "./Cart";
@@ -59,6 +60,7 @@ export function Terminal() {
   const [completedOrder, setCompletedOrder] = useState<PendingOrder | null>(null);
 
   const mounted = useHydrated();
+  const router = useRouter();
   const cart = useCart();
   const { reading } = useScale();
   const { active: activePlugin } = usePlugin();
@@ -190,7 +192,16 @@ export function Terminal() {
       />
 
       {/* Product area */}
-      <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col gap-3 sm:gap-4">
+      <div className="relative flex min-h-0 min-w-0 flex-1 basis-0 flex-col gap-3 sm:gap-4">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={() => router.back()}
+          className="absolute left-0 top-0 z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:bg-zinc-900 dark:hover:text-zinc-50"
+        >
+          <ArrowLeft size={18} />
+        </button>
+
         <div className="mx-auto flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex-1">
             <ProductSearch onResults={setResults} />
