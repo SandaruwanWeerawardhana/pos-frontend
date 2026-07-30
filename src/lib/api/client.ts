@@ -13,6 +13,12 @@ export interface LoginResult {
   user: AuthUser;
 }
 
+export interface ProfileUpdate {
+  name?: string;
+  email?: string;
+  businessName?: string;
+}
+
 export type SyncOrderResult = "synced" | "already_synced" | "conflict" | "error";
 
 export interface SyncOrderOutcome {
@@ -35,6 +41,14 @@ export interface ApiClient {
     password: string,
     businessType: string,
   ): Promise<LoginResult>;
+  // Always resolves, even for an unknown address: telling a caller whether an
+  // email is registered is an account-enumeration leak. The returned token is
+  // the dev-mode convenience the mock backend hands back so the reset screen
+  // can be exercised without a mail server; the real backend returns none.
+  requestPasswordReset(email: string): Promise<{ devToken?: string }>;
+  resetPassword(token: string, newPassword: string): Promise<void>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  updateProfile(update: ProfileUpdate): Promise<AuthUser>;
   getProducts(): Promise<Product[]>;
   syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse>;
 }

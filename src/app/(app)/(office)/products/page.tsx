@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Barcode,
   Box,
-  Image as ImageIcon,
+  Download,
   Layers,
   Package,
   Plus,
@@ -14,96 +14,18 @@ import {
   Tags,
   Wand2,
 } from "lucide-react";
-import { searchProducts } from "@/lib/db";
+import { listBrands, listCategories, searchProducts } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { Card, PageHeader, SectionHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
+import { useSettings } from "@/lib/hooks/use-settings";
+import { exportCsv, exportExcel, type ExportColumn } from "@/lib/export";
 import { ROUTES } from "@/lib/types/routes";
-
-interface CategoryNode {
-  name: string;
-  subcategories: string[];
-  productCount: number;
-}
-
-interface BrandSummary {
-  name: string;
-  vendorCode: string;
-  productCount: number;
-  status: "active" | "review";
-}
-
-interface VariantGroup {
-  name: string;
-  values: string[];
-}
-
-interface BundleItem {
-  name: string;
-  sku: string;
-  items: number;
-  priceCents: number;
-}
-
-const CATEGORY_TREE: CategoryNode[] = [
-  {
-    name: "Fresh Produce",
-    subcategories: ["Fruit", "Vegetables", "Leafy greens"],
-    productCount: 128,
-  },
-  {
-    name: "Dairy and Eggs",
-    subcategories: ["Milk", "Cheese", "Yogurt"],
-    productCount: 84,
-  },
-  {
-    name: "Pantry",
-    subcategories: ["Rice", "Pasta", "Canned goods"],
-    productCount: 212,
-  },
-  {
-    name: "Beverages",
-    subcategories: ["Water", "Juice", "Soft drinks"],
-    productCount: 96,
-  },
-];
-
-const BRANDS: BrandSummary[] = [
-  { name: "Harvest Hill", vendorCode: "HRV", productCount: 42, status: "active" },
-  { name: "Daily Fresh", vendorCode: "DLF", productCount: 37, status: "active" },
-  { name: "Swift Essentials", vendorCode: "SWE", productCount: 64, status: "active" },
-  { name: "Metro Choice", vendorCode: "MTC", productCount: 18, status: "review" },
-];
-
-const VARIANT_GROUPS: VariantGroup[] = [
-  { name: "Size", values: ["250 g", "500 g", "1 kg", "Family pack"] },
-  { name: "Flavour", values: ["Original", "Vanilla", "Strawberry", "Chocolate"] },
-  { name: "Colour", values: ["Red", "Green", "Blue", "Mixed"] },
-];
-
-const BUNDLES: BundleItem[] = [
-  { name: "Breakfast starter pack", sku: "BDL-BRK-001", items: 5, priceCents: 1890 },
-  { name: "Weekly pantry box", sku: "BDL-PAN-014", items: 8, priceCents: 4290 },
-  { name: "School lunch combo", sku: "BDL-LCH-007", items: 4, priceCents: 1250 },
-];
-
-const PRODUCT_TAGS = [
-  "Organic",
-  "Imported",
-  "Local",
-  "Gluten free",
-  "Vegan",
-  "Promo",
-  "Fast moving",
-  "Cold chain",
-];
-
-const IMAGE_SLOTS = ["Front", "Back", "Nutrition", "Shelf"];
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function makeSku(prefix: string, name: string): string {
   const cleanPrefix = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -117,13 +39,22 @@ function makeSku(prefix: string, name: string): string {
   return `${cleanPrefix || "PRD"}-${cleanName || "ITEM"}-${suffix}`;
 }
 
+// EAN-13 style: a 12-digit body plus a modulo-10 check digit, so generated
+// codes scan on real hardware instead of only looking plausible.
 function makeBarcode(seed: string): string {
-  const digits = seed
+  let numeric = "";
+  for (const char of seed) {
+    numeric += String(char.charCodeAt(0) % 10);
+  }
+  const body = `893${numeric}`.padEnd(12, "0").slice(0, 12);
+  const sum = body
     .split("")
-    .reduce((total, char) => total + char.charCodeAt(0), 0)
-    .toString()
-    .padStart(6, "0");
-  return `893${digits}045`;
+    .reduce(
+      (total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 1 : 3),
+      0,
+    );
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return `${body}${checkDigit}`;
 }
 
 function MiniBarcode({ code }: Readonly<{ code: string }>) {
@@ -133,12 +64,12 @@ function MiniBarcode({ code }: Readonly<{ code: string }>) {
     .slice(0, 12);
 
   return (
-    <div aria-label={`Barcode ${code}`} className="flex h-10 items-end gap-0.5">
+    <div aria-label={`Barcode ${code}`} className="flex h-8 items-end gap-0.5">
       {bars.map((bar, index) => (
         <span
           key={`${code}-${index}`}
           className="w-1 rounded-sm bg-on-surface dark:bg-zinc-200"
-          style={{ height: `${14 + (bar % 5) * 5}px` }}
+          style={{ height: `${12 + (bar % 5) * 4}px` }}
         />
       ))}
     </div>
@@ -166,64 +97,25 @@ function MiniQr({ value }: Readonly<{ value: string }>) {
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  value,
-  detail,
-}: Readonly<{
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-  detail: string;
-}>) {
-  return (
-    <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-on-primary">
-          {icon}
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-on-surface dark:text-zinc-50">
-            {title}
-          </p>
-          <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-            {detail}
-          </p>
-        </div>
-      </div>
-      <p className="mt-4 text-2xl font-bold text-on-surface dark:text-zinc-50">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function SectionTitle({
-  title,
-  action,
-}: Readonly<{ title: string; action?: React.ReactNode }>) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant dark:text-zinc-500">
-        {title}
-      </h2>
-      {action}
-    </div>
-  );
-}
-
 export default function ProductsPage() {
+  const { money } = useSettings();
+
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+
   const [productName, setProductName] = useState("Organic apple pack");
   const [skuPrefix, setSkuPrefix] = useState("GRC");
   const [generatedSku, setGeneratedSku] = useState("GRC-ORGANIC-APPLE-A1B2");
-  const [barcodeValue, setBarcodeValue] = useState("893000124045");
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    "Organic",
-    "Fast moving",
-  ]);
+  const [barcodeValue, setBarcodeValue] = useState("8930001240453");
+
+  useEffect(() => {
+    listCategories().then(setCategories);
+    listBrands().then(setBrands);
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -232,18 +124,37 @@ export default function ProductsPage() {
     return () => window.clearTimeout(timeoutId);
   }, [query]);
 
-  const catalogueStats = useMemo(() => {
-    const stockValue = products.reduce(
+  const visible = useMemo(
+    () =>
+      products.filter((product) => {
+        if (category && (product.category ?? "Uncategorised") !== category) {
+          return false;
+        }
+        if (brand && product.brand !== brand) return false;
+        return true;
+      }),
+    [products, category, brand],
+  );
+
+  const stats = useMemo(() => {
+    const stockValue = visible.reduce(
       (total, product) => total + product.price_cents * product.stock_quantity,
       0,
     );
-    const lowStock = products.filter((product) => product.stock_quantity <= 5).length;
-    return {
-      productCount: products.length,
-      stockValue,
-      lowStock,
-    };
-  }, [products]);
+    const withCost = visible.filter((product) => product.cost_cents);
+    const blendedMargin =
+      withCost.length > 0
+        ? withCost.reduce(
+            (total, product) =>
+              total +
+              ((product.price_cents - (product.cost_cents ?? 0)) /
+                product.price_cents) *
+                100,
+            0,
+          ) / withCost.length
+        : 0;
+    return { stockValue, blendedMargin, weighted: visible.filter((p) => p.is_weighted).length };
+  }, [visible]);
 
   function handleGenerateSku() {
     const nextSku = makeSku(skuPrefix, productName);
@@ -251,177 +162,231 @@ export default function ProductsPage() {
     setBarcodeValue(makeBarcode(nextSku));
   }
 
-  function handleTagToggle(tag: string) {
-    setSelectedTags((current) =>
-      current.includes(tag)
-        ? current.filter((item) => item !== tag)
-        : [...current, tag],
-    );
-  }
+  const exportColumns: ExportColumn<Product>[] = [
+    { key: "name", header: "Product", value: (p) => p.name },
+    { key: "sku", header: "SKU", value: (p) => p.sku },
+    { key: "barcode", header: "Barcode", value: (p) => p.barcode },
+    { key: "category", header: "Category", value: (p) => p.category ?? "" },
+    { key: "brand", header: "Brand", value: (p) => p.brand ?? "" },
+    { key: "unit", header: "Unit", value: (p) => p.unit ?? "unit" },
+    { key: "price", header: "Price", value: (p) => (p.price_cents / 100).toFixed(2) },
+    { key: "cost", header: "Cost", value: (p) => ((p.cost_cents ?? 0) / 100).toFixed(2) },
+    { key: "stock", header: "Stock", value: (p) => p.stock_quantity },
+    { key: "shelf", header: "Shelf", value: (p) => p.shelf_location ?? "" },
+  ];
+
+  const columns: DataColumn<Product>[] = [
+    {
+      key: "product",
+      header: "Product",
+      sortValue: (product) => product.name,
+      render: (product) => (
+        <Link
+          href={ROUTES.inventory.detail(product.id)}
+          className="flex items-center gap-3 hover:underline"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container text-sm font-bold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-300">
+            {product.name.charAt(0).toUpperCase()}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{product.name}</span>
+            <span className="block truncate text-xs font-normal text-on-surface-variant dark:text-zinc-400">
+              {product.category ?? "Uncategorised"}
+              {product.brand ? ` · ${product.brand}` : ""}
+            </span>
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: "sku",
+      header: "SKU",
+      hideOnMobile: true,
+      sortValue: (product) => product.sku,
+      render: (product) => (
+        <span className="font-mono text-xs">{product.sku}</span>
+      ),
+    },
+    {
+      key: "barcode",
+      header: "Barcode",
+      hideOnMobile: true,
+      render: (product) => (
+        <span className="flex items-center gap-2">
+          <MiniBarcode code={product.barcode} />
+          <span className="font-mono text-xs text-on-surface-variant dark:text-zinc-400">
+            {product.barcode}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "unit",
+      header: "Unit",
+      hideOnMobile: true,
+      sortValue: (product) => product.unit ?? "unit",
+      render: (product) =>
+        product.is_weighted ? (
+          <Badge variant="warning">per {product.unit ?? "kg"}</Badge>
+        ) : (
+          <span className="text-on-surface-variant">{product.unit ?? "unit"}</span>
+        ),
+    },
+    {
+      key: "price",
+      header: "Price",
+      align: "right",
+      sortValue: (product) => product.price_cents,
+      render: (product) => money(product.price_cents),
+    },
+    {
+      key: "stock",
+      header: "Stock",
+      align: "right",
+      sortValue: (product) => product.stock_quantity,
+      render: (product) => {
+        const threshold = product.reorder_level ?? 5;
+        let variant: "success" | "warning" | "danger" = "success";
+        if (product.stock_quantity <= 0) variant = "danger";
+        else if (product.stock_quantity <= threshold) variant = "warning";
+        return <Badge variant={variant}>{product.stock_quantity}</Badge>;
+      },
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6 pb-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary dark:text-blue-400">
-            Product management
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" size="sm">
-            <Barcode size={15} />
-            Scan barcode
-          </Button>
-          <Link
-            href={ROUTES.productsNew}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary transition-all hover:scale-[1.02] hover:bg-secondary/90 hover:shadow-elevated dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            <Plus size={15} />
-            Add product
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Catalogue"
+        title="Product management"
+        description="Every product in the local catalogue, with SKU and barcode tooling."
+        breadcrumbs={[
+          { label: "Dashboard", href: ROUTES.dashboard },
+          { label: "Products" },
+        ]}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => exportCsv("products", visible, exportColumns)}
+            >
+              <Download size={15} />
+              CSV
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportExcel("products", "Product catalogue", visible, exportColumns)
+              }
+            >
+              <Download size={15} />
+              Excel
+            </Button>
+            <Link
+              href={ROUTES.productsNew}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary transition-all hover:bg-secondary/90 dark:bg-white dark:text-zinc-900"
+            >
+              <Plus size={15} />
+              Add product
+            </Link>
+          </>
+        }
+      />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <FeatureCard
+        <StatCard
+          label="Products"
+          value={String(visible.length)}
           icon={<Package size={20} />}
-          title="Catalogue"
-          value={String(catalogueStats.productCount)}
-          detail="Products in local cache"
+          accent="primary"
+          sub="In the local catalogue"
         />
-        <FeatureCard
+        <StatCard
+          label="Categories"
+          value={String(categories.length)}
           icon={<Layers size={20} />}
-          title="Categories"
-          value={String(CATEGORY_TREE.length)}
-          detail="Primary category groups"
+          accent="secondary"
+          sub="Derived from product data"
         />
-        <FeatureCard
+        <StatCard
+          label="Brands"
+          value={String(brands.length)}
           icon={<Box size={20} />}
-          title="Brands"
-          value={String(BRANDS.length)}
-          detail="Managed supplier brands"
+          accent="secondary"
+          sub={`${stats.weighted} weighed products`}
         />
-        <FeatureCard
+        <StatCard
+          label="Stock value"
+          value={money(stats.stockValue)}
           icon={<Tags size={20} />}
-          title="Stock value"
-          value={formatCents(catalogueStats.stockValue)}
-          detail={`${catalogueStats.lowStock} low-stock products`}
+          accent="success"
+          sub={`${stats.blendedMargin.toFixed(1)}% average margin`}
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="border-b border-outline-variant p-4 dark:border-zinc-800">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <SectionTitle title="Product catalogue" />
-              <div className="relative w-full lg:max-w-sm">
-                <Search
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-zinc-500"
-                />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search name, SKU, barcode..."
-                  className="pl-9"
-                />
-              </div>
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <div className="flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="relative sm:col-span-1">
+              <Search
+                size={16}
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-zinc-500"
+              />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search name, SKU, barcode…"
+                aria-label="Search products"
+                className="pl-9"
+              />
             </div>
+            <Select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              placeholder="All categories"
+              aria-label="Filter by category"
+              options={categories.map((name) => ({ value: name, label: name }))}
+            />
+            <Select
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              placeholder="All brands"
+              aria-label="Filter by brand"
+              options={brands.map((name) => ({ value: name, label: name }))}
+            />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-surface-container-low text-xs uppercase tracking-wide text-on-surface-variant dark:bg-zinc-950 dark:text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Product</th>
-                  <th className="px-4 py-3 font-semibold">SKU</th>
-                  <th className="px-4 py-3 font-semibold">Barcode</th>
-                  <th className="px-4 py-3 font-semibold">Price</th>
-                  <th className="px-4 py-3 font-semibold">Stock</th>
-                  <th className="px-4 py-3 font-semibold">Tags</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/60 dark:divide-zinc-800">
-                {products.map((product, index) => {
-                  const category = CATEGORY_TREE[index % CATEGORY_TREE.length];
-                  const brand = BRANDS[index % BRANDS.length];
-                  const tags = PRODUCT_TAGS.slice(index % 3, index % 3 + 2);
-                  return (
-                    <tr
-                      key={product.id}
-                      className="text-on-surface transition-colors hover:bg-surface-container-low dark:text-zinc-50 dark:hover:bg-zinc-800/60"
-                    >
-                      <td className="min-w-56 px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-container text-sm font-bold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-300">
-                            {product.name.charAt(0).toUpperCase()}
-                          </span>
-                          <div>
-                            <p className="font-semibold">{product.name}</p>
-                            <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-                              {category.name} / {category.subcategories[0]} / {brand.name}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{product.sku}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <MiniBarcode code={product.barcode} />
-                          <span className="font-mono text-xs text-on-surface-variant dark:text-zinc-400">
-                            {product.barcode}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-semibold">
-                        {formatCents(product.price_cents)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            product.stock_quantity <= 0
-                              ? "danger"
-                              : product.stock_quantity <= 5
-                              ? "warning"
-                              : "success"
-                          }
-                        >
-                          {product.stock_quantity}
-                        </Badge>
-                      </td>
-                      <td className="min-w-40 px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {tags.map((tag) => (
-                            <Badge key={`${product.id}-${tag}`} variant="neutral">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {products.length === 0 && (
-              <p className="py-10 text-center text-sm text-on-surface-variant dark:text-zinc-400">
-                No products match current search.
-              </p>
-            )}
-          </div>
+
+          <DataTable
+            columns={columns}
+            rows={visible}
+            rowKey={(product) => product.id}
+            emptyMessage="No products match these filters."
+            caption="Product catalogue"
+          />
         </div>
 
         <div className="flex flex-col gap-5">
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <SectionTitle
+          <Card>
+            <SectionHeader
               title="SKU generation"
               action={
-                <Button type="button" variant="secondary" size="sm" onClick={handleGenerateSku}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleGenerateSku}
+                >
                   <Wand2 size={14} />
                   Generate
                 </Button>
               }
             />
-            <div className="mt-4 grid gap-3 sm:grid-cols-[0.7fr_1.3fr] xl:grid-cols-1">
+            <div className="mt-4 grid gap-3">
               <Input
                 label="SKU prefix"
                 value={skuPrefix}
@@ -441,21 +406,22 @@ export default function ProductsPage() {
                 {generatedSku}
               </p>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <SectionTitle
-              title="Barcode and QR support"
+          <Card>
+            <SectionHeader
+              title="Barcode & QR labels"
               action={
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant dark:text-zinc-400">
-                  <QrCode size={14} />
-                  QR ready
+                  <QrCode size={14} aria-hidden />
+                  EAN-13
                 </span>
               }
             />
             <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-outline-variant p-4 dark:border-zinc-800">
-              <div>
-                <p className="text-sm font-semibold text-on-surface dark:text-zinc-50">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-on-surface dark:text-zinc-50">
+                  <Barcode size={15} aria-hidden />
                   Barcode
                 </p>
                 <p className="mt-1 font-mono text-xs text-on-surface-variant dark:text-zinc-400">
@@ -465,151 +431,11 @@ export default function ProductsPage() {
               </div>
               <MiniQr value={generatedSku} />
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-3">
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <SectionTitle title="Categories and subcategories" />
-          <div className="mt-4 space-y-3">
-            {CATEGORY_TREE.map((category) => (
-              <div
-                key={category.name}
-                className="rounded-xl border border-outline-variant p-3 dark:border-zinc-800"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-on-surface dark:text-zinc-50">
-                    {category.name}
-                  </p>
-                  <Badge variant="neutral">{category.productCount} items</Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {category.subcategories.map((subcategory) => (
-                    <Badge key={subcategory} variant="neutral">
-                      {subcategory}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <SectionTitle title="Brand management" />
-          <div className="mt-4 space-y-3">
-            {BRANDS.map((brand) => (
-              <div
-                key={brand.name}
-                className="flex items-center justify-between rounded-xl border border-outline-variant p-3 dark:border-zinc-800"
-              >
-                <div>
-                  <p className="font-semibold text-on-surface dark:text-zinc-50">
-                    {brand.name}
-                  </p>
-                  <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-                    Vendor code {brand.vendorCode} / {brand.productCount} products
-                  </p>
-                </div>
-                <Badge variant={brand.status === "active" ? "success" : "warning"}>
-                  {brand.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <SectionTitle title="Multiple product images" />
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {IMAGE_SLOTS.map((slot, index) => (
-              <button
-                key={slot}
-                type="button"
-                className={`flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant text-sm font-medium transition hover:border-primary hover:bg-primary/5 dark:border-zinc-700 dark:hover:border-blue-500 ${
-                  index === 0
-                    ? "bg-surface-container text-on-surface dark:bg-zinc-950 dark:text-zinc-50"
-                    : "text-on-surface-variant dark:text-zinc-400"
-                }`}
-              >
-                <ImageIcon size={20} />
-                {slot}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <SectionTitle title="Product variants" />
-          <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-            {VARIANT_GROUPS.map((group) => (
-              <div
-                key={group.name}
-                className="rounded-xl border border-outline-variant p-3 dark:border-zinc-800"
-              >
-                <p className="font-semibold text-on-surface dark:text-zinc-50">
-                  {group.name}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {group.values.map((value) => (
-                    <Badge key={`${group.name}-${value}`} variant="neutral">
-                      {value}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <SectionTitle title="Product bundles" />
-          <div className="mt-4 space-y-3">
-            {BUNDLES.map((bundle) => (
-              <div
-                key={bundle.sku}
-                className="flex items-center justify-between rounded-xl border border-outline-variant p-3 dark:border-zinc-800"
-              >
-                <div>
-                  <p className="font-semibold text-on-surface dark:text-zinc-50">
-                    {bundle.name}
-                  </p>
-                  <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-                    {bundle.sku} / {bundle.items} bundled products
-                  </p>
-                </div>
-                <p className="font-semibold text-on-surface dark:text-zinc-50">
-                  {formatCents(bundle.priceCents)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <SectionTitle title="Product tags" />
-        <div className="mt-4 flex flex-wrap gap-2">
-          {PRODUCT_TAGS.map((tag) => {
-            const selected = selectedTags.includes(tag);
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => handleTagToggle(tag)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  selected
-                    ? "bg-primary text-on-primary"
-                    : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                }`}
-              >
-                {tag}
-              </button>
-            );
-          })}
+            <p className="mt-3 text-xs text-on-surface-variant dark:text-zinc-500">
+              Generated codes carry a valid modulo-10 check digit, so they scan
+              on standard EAN-13 hardware.
+            </p>
+          </Card>
         </div>
       </section>
     </div>

@@ -12,6 +12,7 @@ export type { ApiClient } from "./client";
 export type {
   AuthUser,
   LoginResult,
+  ProfileUpdate,
   SyncOrderOutcome,
   SyncOrderResult,
   SyncOrdersResponse,

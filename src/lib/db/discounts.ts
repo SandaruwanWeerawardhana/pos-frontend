@@ -11,6 +11,26 @@ export async function getActiveDiscounts(): Promise<Discount[]> {
   return db.discounts.filter((discount) => discount.active).toArray();
 }
 
+// Active, inside its campaign window, and above any minimum-spend threshold.
+// The till only ever offers discounts that would actually apply right now.
+export async function getEligibleDiscounts(
+  subtotalCents: number,
+  now = Date.now(),
+): Promise<Discount[]> {
+  const active = await getActiveDiscounts();
+  return active.filter((discount) => {
+    if (discount.starts_at && now < discount.starts_at) return false;
+    if (discount.ends_at && now > discount.ends_at) return false;
+    if (
+      discount.min_subtotal_cents &&
+      subtotalCents < discount.min_subtotal_cents
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export async function getDiscount(id: string): Promise<Discount | undefined> {
   return db.discounts.get(id);
 }

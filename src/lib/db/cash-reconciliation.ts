@@ -26,12 +26,21 @@ export async function getTodaysOrderSummary(): Promise<TodaysOrderSummary> {
   const byPaymentMethod: Record<PaymentMethod, number> = {
     cash: 0,
     card: 0,
+    qr: 0,
     other: 0,
   };
   let totalCents = 0;
 
   for (const order of orders) {
-    byPaymentMethod[order.payment_method] += order.total_cents;
+    // Split-tender orders record each leg separately so the cash drawer
+    // expectation only counts the part actually paid in cash.
+    if (order.payments?.length) {
+      for (const split of order.payments) {
+        byPaymentMethod[split.method] += split.amount_cents;
+      }
+    } else {
+      byPaymentMethod[order.payment_method] += order.total_cents;
+    }
     totalCents += order.total_cents;
   }
 

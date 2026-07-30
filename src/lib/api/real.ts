@@ -14,6 +14,18 @@ export const realApi: ApiClient = {
   async register() {
     return notImplemented("register");
   },
+  async requestPasswordReset() {
+    return notImplemented("requestPasswordReset");
+  },
+  async resetPassword() {
+    return notImplemented("resetPassword");
+  },
+  async changePassword() {
+    return notImplemented("changePassword");
+  },
+  async updateProfile() {
+    return notImplemented("updateProfile");
+  },
   async getProducts() {
     return notImplemented("getProducts");
   },

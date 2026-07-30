@@ -3,6 +3,7 @@ import type {
   ApiClient,
   AuthUser,
   LoginResult,
+  ProfileUpdate,
   SyncOrderOutcome,
   SyncOrderResult,
   SyncOrdersResponse,
@@ -10,40 +11,114 @@ import type {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const STORAGE_KEY = "mock_api_state_v1";
+// Bumped from v1 when the seed catalogue changed shape: an old blob would
+// otherwise keep serving products with no category, cost, or batch data.
+const STORAGE_KEY = "mock_api_state_v2";
 const DEFAULT_SYNC_DELAY_MS = 800;
 
+// Expiry dates are generated relative to "now" so a freshly-cloned repo always
+// demonstrates the near-expiry and expired alert states, rather than showing a
+// catalogue that expired years ago.
+function isoDaysFromNow(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 const DEFAULT_PRODUCTS: Product[] = [
-  { id: "p_espresso", name: "Espresso", sku: "COF-ESP", barcode: "8901000000019", price_cents: 300, tax_rate: 0.08, stock_quantity: 250 },
-  { id: "p_americano", name: "Americano", sku: "COF-AME", barcode: "8901000000026", price_cents: 320, tax_rate: 0.08, stock_quantity: 250 },
-  { id: "p_latte", name: "Latte", sku: "COF-LAT", barcode: "8901000000033", price_cents: 450, tax_rate: 0.08, stock_quantity: 180 },
-  { id: "p_cappuccino", name: "Cappuccino", sku: "COF-CAP", barcode: "8901000000040", price_cents: 450, tax_rate: 0.08, stock_quantity: 180 },
-  { id: "p_mocha", name: "Mocha", sku: "COF-MOC", barcode: "8901000000057", price_cents: 480, tax_rate: 0.08, stock_quantity: 120 },
-  { id: "p_flat_white", name: "Flat White", sku: "COF-FLW", barcode: "8901000000064", price_cents: 460, tax_rate: 0.08, stock_quantity: 90 },
-  { id: "p_cold_brew", name: "Cold Brew", sku: "COF-CBR", barcode: "8901000000071", price_cents: 420, tax_rate: 0.08, stock_quantity: 60 },
-  { id: "p_hot_chocolate", name: "Hot Chocolate", sku: "BEV-HCH", barcode: "8901000000088", price_cents: 400, tax_rate: 0.08, stock_quantity: 75 },
-  { id: "p_chai_latte", name: "Chai Latte", sku: "BEV-CHA", barcode: "8901000000095", price_cents: 430, tax_rate: 0.08, stock_quantity: 3 },
-  { id: "p_orange_juice", name: "Orange Juice", sku: "BEV-OJ", barcode: "8901000000101", price_cents: 350, tax_rate: 0.05, stock_quantity: 40 },
-  { id: "p_still_water", name: "Still Water 500ml", sku: "BEV-WAT", barcode: "8901000000118", price_cents: 150, tax_rate: 0.0, stock_quantity: 300 },
-  { id: "p_croissant", name: "Croissant", sku: "BAK-CRO", barcode: "8901000000125", price_cents: 275, tax_rate: 0.08, stock_quantity: 40 },
-  { id: "p_pain_au_choc", name: "Pain au Chocolat", sku: "BAK-PAC", barcode: "8901000000132", price_cents: 295, tax_rate: 0.08, stock_quantity: 35 },
-  { id: "p_blueberry_muffin", name: "Blueberry Muffin", sku: "BAK-MUF", barcode: "8901000000149", price_cents: 310, tax_rate: 0.08, stock_quantity: 25 },
-  { id: "p_bagel", name: "Plain Bagel", sku: "BAK-BAG", barcode: "8901000000156", price_cents: 260, tax_rate: 0.08, stock_quantity: 0 },
-  { id: "p_cinnamon_roll", name: "Cinnamon Roll", sku: "BAK-CIN", barcode: "8901000000163", price_cents: 325, tax_rate: 0.08, stock_quantity: 15 },
-  { id: "p_avocado_toast", name: "Avocado Toast", sku: "FOD-AVT", barcode: "8901000000170", price_cents: 650, tax_rate: 0.08, stock_quantity: 20 },
-  { id: "p_club_sandwich", name: "Club Sandwich", sku: "FOD-CLB", barcode: "8901000000187", price_cents: 750, tax_rate: 0.08, stock_quantity: 12 },
-  { id: "p_potato_chips", name: "Potato Chips", sku: "SNK-CHP", barcode: "8901000000194", price_cents: 220, tax_rate: 0.08, stock_quantity: 55 },
-  { id: "p_choc_chip_cookie", name: "Chocolate Chip Cookie", sku: "SNK-CKI", barcode: "8901000000200", price_cents: 200, tax_rate: 0.08, stock_quantity: 1 },
-  { id: "p_ceramic_mug", name: "Branded Ceramic Mug", sku: "RTL-MUG", barcode: "8901000000217", price_cents: 1200, tax_rate: 0.08, stock_quantity: 8 },
+  // Fresh produce - weighted, priced per kg
+  { id: "p_banana", name: "Bananas", sku: "PRD-BAN", barcode: "8901100000012", price_cents: 199, cost_cents: 110, tax_rate: 0, stock_quantity: 84, category: "Fresh Produce", brand: "Harvest Hill", unit: "kg", is_weighted: true, reorder_level: 20, shelf_location: "A1-01",
+    batches: [{ batch_no: "BAN-2401", expiry_date: isoDaysFromNow(4), quantity: 84, cost_cents: 110 }] },
+  { id: "p_apple_gala", name: "Gala Apples", sku: "PRD-APG", barcode: "8901100000029", price_cents: 329, cost_cents: 190, tax_rate: 0, stock_quantity: 62, category: "Fresh Produce", brand: "Harvest Hill", unit: "kg", is_weighted: true, reorder_level: 15, shelf_location: "A1-02",
+    batches: [{ batch_no: "APG-2402", expiry_date: isoDaysFromNow(11), quantity: 62, cost_cents: 190 }] },
+  { id: "p_tomato", name: "Vine Tomatoes", sku: "PRD-TOM", barcode: "8901100000036", price_cents: 289, cost_cents: 160, tax_rate: 0, stock_quantity: 9, category: "Fresh Produce", brand: "Daily Fresh", unit: "kg", is_weighted: true, reorder_level: 12, shelf_location: "A1-03",
+    batches: [{ batch_no: "TOM-2403", expiry_date: isoDaysFromNow(2), quantity: 9, cost_cents: 160 }] },
+  { id: "p_potato", name: "Baking Potatoes", sku: "PRD-POT", barcode: "8901100000043", price_cents: 149, cost_cents: 70, tax_rate: 0, stock_quantity: 140, category: "Fresh Produce", brand: "Harvest Hill", unit: "kg", is_weighted: true, reorder_level: 30, shelf_location: "A1-04" },
+  { id: "p_spinach", name: "Baby Spinach 200g", sku: "PRD-SPN", barcode: "8901100000050", price_cents: 219, cost_cents: 135, tax_rate: 0, stock_quantity: 0, category: "Fresh Produce", brand: "Daily Fresh", unit: "pack", reorder_level: 10, shelf_location: "A1-06",
+    batches: [{ batch_no: "SPN-2312", expiry_date: isoDaysFromNow(-2), quantity: 0, cost_cents: 135 }] },
+
+  // Bakery
+  { id: "p_sourdough", name: "Sourdough Loaf", sku: "BAK-SDL", barcode: "8901200000015", price_cents: 349, cost_cents: 180, tax_rate: 0, stock_quantity: 22, category: "Bakery", brand: "Metro Choice", unit: "unit", reorder_level: 8, shelf_location: "B2-01",
+    batches: [{ batch_no: "SDL-D1", expiry_date: isoDaysFromNow(1), quantity: 22, cost_cents: 180 }] },
+  { id: "p_croissant", name: "Butter Croissant", sku: "BAK-CRO", barcode: "8901200000022", price_cents: 175, cost_cents: 82, tax_rate: 0, stock_quantity: 40, category: "Bakery", brand: "Metro Choice", unit: "unit", reorder_level: 12, shelf_location: "B2-02",
+    batches: [{ batch_no: "CRO-D1", expiry_date: isoDaysFromNow(1), quantity: 40, cost_cents: 82 }] },
+  { id: "p_bagel", name: "Plain Bagels 4pk", sku: "BAK-BAG", barcode: "8901200000039", price_cents: 260, cost_cents: 145, tax_rate: 0, stock_quantity: 0, category: "Bakery", brand: "Metro Choice", unit: "pack", reorder_level: 6, shelf_location: "B2-03" },
+  { id: "p_muffin", name: "Blueberry Muffin", sku: "BAK-MUF", barcode: "8901200000046", price_cents: 210, cost_cents: 95, tax_rate: 0, stock_quantity: 25, category: "Bakery", brand: "Metro Choice", unit: "unit", reorder_level: 8, shelf_location: "B2-04" },
+
+  // Dairy and eggs
+  { id: "p_milk_whole", name: "Whole Milk 2L", sku: "DAI-MLK", barcode: "8901300000018", price_cents: 259, cost_cents: 170, tax_rate: 0, stock_quantity: 96, category: "Dairy & Eggs", brand: "Daily Fresh", unit: "unit", reorder_level: 24, shelf_location: "C3-01",
+    batches: [{ batch_no: "MLK-2404", expiry_date: isoDaysFromNow(7), quantity: 96, cost_cents: 170 }] },
+  { id: "p_cheddar", name: "Mature Cheddar 400g", sku: "DAI-CHD", barcode: "8901300000025", price_cents: 549, cost_cents: 340, tax_rate: 0, stock_quantity: 31, category: "Dairy & Eggs", brand: "Daily Fresh", unit: "pack", reorder_level: 10, shelf_location: "C3-02",
+    batches: [{ batch_no: "CHD-2405", expiry_date: isoDaysFromNow(45), quantity: 31, cost_cents: 340 }] },
+  { id: "p_yogurt", name: "Greek Yogurt 500g", sku: "DAI-YOG", barcode: "8901300000032", price_cents: 329, cost_cents: 195, tax_rate: 0, stock_quantity: 4, category: "Dairy & Eggs", brand: "Daily Fresh", unit: "pack", reorder_level: 12, shelf_location: "C3-03",
+    batches: [{ batch_no: "YOG-2403", expiry_date: isoDaysFromNow(9), quantity: 4, cost_cents: 195 }] },
+  { id: "p_eggs", name: "Free Range Eggs 12pk", sku: "DAI-EGG", barcode: "8901300000049", price_cents: 419, cost_cents: 265, tax_rate: 0, stock_quantity: 58, category: "Dairy & Eggs", brand: "Harvest Hill", unit: "pack", reorder_level: 15, shelf_location: "C3-04",
+    batches: [{ batch_no: "EGG-2406", expiry_date: isoDaysFromNow(18), quantity: 58, cost_cents: 265 }] },
+  { id: "p_butter", name: "Salted Butter 250g", sku: "DAI-BUT", barcode: "8901300000056", price_cents: 289, cost_cents: 178, tax_rate: 0, stock_quantity: 44, category: "Dairy & Eggs", brand: "Daily Fresh", unit: "pack", reorder_level: 12, shelf_location: "C3-05" },
+
+  // Meat and seafood - weighted
+  { id: "p_chicken_breast", name: "Chicken Breast", sku: "MET-CHB", barcode: "8901400000011", price_cents: 899, cost_cents: 610, tax_rate: 0, stock_quantity: 27, category: "Meat & Seafood", brand: "Harvest Hill", unit: "kg", is_weighted: true, reorder_level: 10, shelf_location: "D4-01",
+    batches: [{ batch_no: "CHB-2407", expiry_date: isoDaysFromNow(3), quantity: 27, cost_cents: 610 }] },
+  { id: "p_beef_mince", name: "Beef Mince 20% Fat", sku: "MET-BFM", barcode: "8901400000028", price_cents: 1049, cost_cents: 720, tax_rate: 0, stock_quantity: 18, category: "Meat & Seafood", brand: "Harvest Hill", unit: "kg", is_weighted: true, reorder_level: 8, shelf_location: "D4-02",
+    batches: [{ batch_no: "BFM-2408", expiry_date: isoDaysFromNow(2), quantity: 18, cost_cents: 720 }] },
+  { id: "p_salmon", name: "Salmon Fillet", sku: "MET-SLM", barcode: "8901400000035", price_cents: 1899, cost_cents: 1290, tax_rate: 0, stock_quantity: 6, category: "Meat & Seafood", brand: "Swift Essentials", unit: "kg", is_weighted: true, reorder_level: 6, shelf_location: "D4-03",
+    batches: [{ batch_no: "SLM-2409", expiry_date: isoDaysFromNow(1), quantity: 6, cost_cents: 1290 }] },
+
+  // Frozen
+  { id: "p_frozen_peas", name: "Garden Peas 1kg", sku: "FRZ-PEA", barcode: "8901500000014", price_cents: 199, cost_cents: 105, tax_rate: 0, stock_quantity: 73, category: "Frozen", brand: "Swift Essentials", unit: "pack", reorder_level: 20, shelf_location: "E5-01" },
+  { id: "p_frozen_pizza", name: "Margherita Pizza", sku: "FRZ-PIZ", barcode: "8901500000021", price_cents: 449, cost_cents: 265, tax_rate: 0.05, stock_quantity: 38, category: "Frozen", brand: "Metro Choice", unit: "unit", reorder_level: 12, shelf_location: "E5-02",
+    batches: [{ batch_no: "PIZ-2410", expiry_date: isoDaysFromNow(180), quantity: 38, cost_cents: 265 }] },
+  { id: "p_ice_cream", name: "Vanilla Ice Cream 1L", sku: "FRZ-ICE", barcode: "8901500000038", price_cents: 549, cost_cents: 320, tax_rate: 0.05, stock_quantity: 3, category: "Frozen", brand: "Daily Fresh", unit: "unit", reorder_level: 10, shelf_location: "E5-03" },
+
+  // Beverages
+  { id: "p_still_water", name: "Still Water 6x500ml", sku: "BEV-WAT", barcode: "8901600000017", price_cents: 249, cost_cents: 120, tax_rate: 0, stock_quantity: 210, category: "Beverages", brand: "Swift Essentials", unit: "pack", reorder_level: 40, shelf_location: "F6-01" },
+  { id: "p_orange_juice", name: "Orange Juice 1L", sku: "BEV-OJ", barcode: "8901600000024", price_cents: 299, cost_cents: 175, tax_rate: 0, stock_quantity: 47, category: "Beverages", brand: "Daily Fresh", unit: "unit", reorder_level: 15, shelf_location: "F6-02",
+    batches: [{ batch_no: "OJ-2411", expiry_date: isoDaysFromNow(12), quantity: 47, cost_cents: 175 }] },
+  { id: "p_cola", name: "Cola 2L", sku: "BEV-COL", barcode: "8901600000031", price_cents: 219, cost_cents: 115, tax_rate: 0.08, stock_quantity: 132, category: "Beverages", brand: "Metro Choice", unit: "unit", reorder_level: 30, shelf_location: "F6-03" },
+  { id: "p_ground_coffee", name: "Ground Coffee 250g", sku: "BEV-COF", barcode: "8901600000048", price_cents: 649, cost_cents: 395, tax_rate: 0.08, stock_quantity: 29, category: "Beverages", brand: "Swift Essentials", unit: "pack", reorder_level: 10, shelf_location: "F6-04" },
+  { id: "p_tea_bags", name: "Breakfast Tea 80 Bags", sku: "BEV-TEA", barcode: "8901600000055", price_cents: 379, cost_cents: 210, tax_rate: 0.08, stock_quantity: 51, category: "Beverages", brand: "Metro Choice", unit: "box", reorder_level: 15, shelf_location: "F6-05" },
+
+  // Pantry
+  { id: "p_basmati_rice", name: "Basmati Rice 5kg", sku: "PAN-RIC", barcode: "8901700000010", price_cents: 1149, cost_cents: 720, tax_rate: 0, stock_quantity: 34, category: "Pantry", brand: "Swift Essentials", unit: "pack", reorder_level: 10, shelf_location: "G7-01" },
+  { id: "p_pasta", name: "Penne Pasta 500g", sku: "PAN-PAS", barcode: "8901700000027", price_cents: 149, cost_cents: 78, tax_rate: 0, stock_quantity: 118, category: "Pantry", brand: "Metro Choice", unit: "pack", reorder_level: 25, shelf_location: "G7-02" },
+  { id: "p_olive_oil", name: "Olive Oil 1L", sku: "PAN-OIL", barcode: "8901700000034", price_cents: 899, cost_cents: 560, tax_rate: 0, stock_quantity: 26, category: "Pantry", brand: "Harvest Hill", unit: "unit", reorder_level: 8, shelf_location: "G7-03" },
+  { id: "p_chopped_tomatoes", name: "Chopped Tomatoes 400g", sku: "PAN-CTM", barcode: "8901700000041", price_cents: 89, cost_cents: 42, tax_rate: 0, stock_quantity: 204, category: "Pantry", brand: "Metro Choice", unit: "unit", reorder_level: 40, shelf_location: "G7-04" },
+
+  // Snacks
+  { id: "p_potato_chips", name: "Salted Crisps 6pk", sku: "SNK-CHP", barcode: "8901800000013", price_cents: 259, cost_cents: 140, tax_rate: 0.08, stock_quantity: 88, category: "Snacks", brand: "Metro Choice", unit: "pack", reorder_level: 20, shelf_location: "H8-01" },
+  { id: "p_choc_bar", name: "Milk Chocolate Bar", sku: "SNK-CHC", barcode: "8901800000020", price_cents: 129, cost_cents: 62, tax_rate: 0.08, stock_quantity: 2, category: "Snacks", brand: "Swift Essentials", unit: "unit", reorder_level: 25, shelf_location: "H8-02" },
+  { id: "p_biscuits", name: "Digestive Biscuits 400g", sku: "SNK-BIS", barcode: "8901800000037", price_cents: 189, cost_cents: 96, tax_rate: 0.08, stock_quantity: 64, category: "Snacks", brand: "Metro Choice", unit: "pack", reorder_level: 18, shelf_location: "H8-03" },
+
+  // Household
+  { id: "p_dish_soap", name: "Dish Soap 750ml", sku: "HSE-DSH", barcode: "8901900000016", price_cents: 249, cost_cents: 128, tax_rate: 0.08, stock_quantity: 57, category: "Household", brand: "Swift Essentials", unit: "unit", reorder_level: 15, shelf_location: "I9-01" },
+  { id: "p_toilet_roll", name: "Toilet Roll 9pk", sku: "HSE-TRL", barcode: "8901900000023", price_cents: 599, cost_cents: 340, tax_rate: 0.08, stock_quantity: 41, category: "Household", brand: "Metro Choice", unit: "pack", reorder_level: 12, shelf_location: "I9-02" },
+  { id: "p_bin_bags", name: "Bin Bags 30pk", sku: "HSE-BIN", barcode: "8901900000030", price_cents: 329, cost_cents: 175, tax_rate: 0.08, stock_quantity: 5, category: "Household", brand: "Swift Essentials", unit: "pack", reorder_level: 10, shelf_location: "I9-03" },
 ];
+
+interface MockAccount {
+  password: string;
+  user: AuthUser;
+}
 
 interface MockApiState {
   products: Product[];
   syncedOrderIds: string[];
+  // Passwords are stored in cleartext because this is a browser-only fake
+  // with no security boundary. The real backend hashes server-side; nothing
+  // here should ever be reused as a template for that.
+  accounts: Record<string, MockAccount>;
+  resetTokens: Record<string, { email: string; expiresAt: number }>;
+  currentEmail: string | null;
 }
 
 function defaultState(): MockApiState {
-  return { products: structuredClone(DEFAULT_PRODUCTS), syncedOrderIds: [] };
+  return {
+    products: structuredClone(DEFAULT_PRODUCTS),
+    syncedOrderIds: [],
+    accounts: {},
+    resetTokens: {},
+    currentEmail: null,
+  };
 }
 
 function isMockApiState(value: unknown): value is MockApiState {
@@ -68,7 +143,11 @@ function getState(): MockApiState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
-    state = isMockApiState(parsed) ? parsed : defaultState();
+    // Blobs written before the auth fields existed still validate, so merge
+    // over the defaults rather than assuming every key is present.
+    state = isMockApiState(parsed)
+      ? { ...defaultState(), ...parsed }
+      : defaultState();
   } catch {
     state = defaultState();
   }
@@ -137,14 +216,116 @@ export const mockApi: ApiClient & {
     if (!email || !password) {
       throw new Error("email and password are required");
     }
+
+    const apiState = getState();
+    const key = email.trim().toLowerCase();
+    const existing = apiState.accounts[key];
+
+    if (existing) {
+      if (existing.password !== password) {
+        throw new Error("Invalid email or password");
+      }
+      apiState.currentEmail = key;
+      saveState();
+      return { token: makeFakeJwt(existing.user), user: existing.user };
+    }
+
+    // No account yet: the fake backend self-registers on first sign-in so a
+    // fresh dev environment doesn't require a separate seeding step. The real
+    // backend rejects unknown accounts instead.
     const user: AuthUser = {
-      id: `user_${encodeBase64Url(email).slice(0, 12)}`,
+      id: `user_${encodeBase64Url(key).slice(0, 12)}`,
       email,
       name: email.split("@")[0],
       businessName: "Demo Business",
       businessType: "grocery",
     };
+    apiState.accounts[key] = { password, user };
+    apiState.currentEmail = key;
+    saveState();
     return { token: makeFakeJwt(user), user };
+  },
+
+  async requestPasswordReset(email: string): Promise<{ devToken?: string }> {
+    await delay(300);
+    const apiState = getState();
+    const key = email.trim().toLowerCase();
+    // Resolve identically whether or not the account exists — a differing
+    // response would let a caller enumerate registered addresses.
+    if (!apiState.accounts[key]) return {};
+
+    const token = crypto.randomUUID().replaceAll("-", "").slice(0, 24);
+    apiState.resetTokens[token] = {
+      email: key,
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    };
+    saveState();
+    return { devToken: token };
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await delay(300);
+    if (newPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+    const apiState = getState();
+    const entry = apiState.resetTokens[token];
+    if (!entry || entry.expiresAt < Date.now()) {
+      throw new Error("This reset link is invalid or has expired");
+    }
+    const account = apiState.accounts[entry.email];
+    if (!account) throw new Error("This reset link is invalid or has expired");
+
+    account.password = newPassword;
+    // Single-use: burn the token so a leaked link can't be replayed.
+    delete apiState.resetTokens[token];
+    saveState();
+  },
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await delay(300);
+    if (newPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+    const apiState = getState();
+    const account = apiState.currentEmail
+      ? apiState.accounts[apiState.currentEmail]
+      : undefined;
+    if (!account) throw new Error("You are not signed in");
+    if (account.password !== currentPassword) {
+      throw new Error("Current password is incorrect");
+    }
+    account.password = newPassword;
+    saveState();
+  },
+
+  async updateProfile(update: ProfileUpdate): Promise<AuthUser> {
+    await delay(250);
+    const apiState = getState();
+    const account = apiState.currentEmail
+      ? apiState.accounts[apiState.currentEmail]
+      : undefined;
+    if (!account) throw new Error("You are not signed in");
+
+    const nextUser: AuthUser = {
+      ...account.user,
+      ...(update.name ? { name: update.name } : {}),
+      ...(update.email ? { email: update.email } : {}),
+      ...(update.businessName ? { businessName: update.businessName } : {}),
+    };
+
+    // Re-key the account when the address changes so the next sign-in finds it.
+    const nextKey = nextUser.email.trim().toLowerCase();
+    if (nextKey !== apiState.currentEmail) {
+      delete apiState.accounts[apiState.currentEmail!];
+      apiState.currentEmail = nextKey;
+    }
+    apiState.accounts[nextKey] = { ...account, user: nextUser };
+    saveState();
+    return nextUser;
   },
 
   async register(
@@ -158,13 +339,22 @@ export const mockApi: ApiClient & {
     if (!ownerName || !businessName || !email || !password || !businessType) {
       throw new Error("owner name, business name, business type, email and password are required");
     }
+    const apiState = getState();
+    const key = email.trim().toLowerCase();
+    if (apiState.accounts[key]) {
+      throw new Error("An account with that email already exists");
+    }
+
     const user: AuthUser = {
-      id: `user_${encodeBase64Url(email).slice(0, 12)}`,
+      id: `user_${encodeBase64Url(key).slice(0, 12)}`,
       email,
       name: ownerName,
       businessName,
       businessType,
     };
+    apiState.accounts[key] = { password, user };
+    apiState.currentEmail = key;
+    saveState();
     return { token: makeFakeJwt(user), user };
   },
 
