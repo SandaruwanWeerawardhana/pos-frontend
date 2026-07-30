@@ -1,17 +1,17 @@
 "use client";
 
-import { Controller, useWatch } from "react-hook-form";
-import { Apple, CalendarClock, Scale, Snowflake } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
-import { FormSection } from "./FormSection";
 import {
   PRODUCT_TYPE_DEFAULTS,
   PRODUCT_TYPE_OPTIONS,
   STORAGE_TYPE_OPTIONS,
 } from "@/lib/products/constants";
 import type { ProductType, StorageType } from "@/lib/types";
+import { Apple, CalendarClock, Scale, Snowflake } from "lucide-react";
+import { Controller, useWatch } from "react-hook-form";
+import { FormSection } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
 interface GrocerySectionProps extends ProductSectionProps {
@@ -30,8 +30,7 @@ export function GrocerySection({
     name: ["product_type", "is_weighted", "track_batch", "track_expiry"],
   });
 
-  // Changing the type re-seeds handling defaults. It never overwrites anything
-  // the user has typed — only the switches and the storage class.
+
   function applyTypeDefaults(nextType: ProductType) {
     setValue("product_type", nextType, { shouldDirty: true });
     const defaults = PRODUCT_TYPE_DEFAULTS[nextType];

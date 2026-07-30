@@ -80,14 +80,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
     {
       id: "inventory",
       label: "Inventory",
-      fields: [
-        "initial_stock",
-        "min_stock_level",
-        "reorder_level",
-        "shelf_location",
-        "warehouse_id",
-        "branch",
-      ],
+      fields: ["initial_stock", "min_stock_level"],
     },
     {
       id: "grocery",
@@ -261,11 +254,7 @@ export default function ProductAddPage() {
               errorCount={errorsFor("product-information")}
             />
             <PricingSection form={form} errorCount={errorsFor("pricing")} />
-            <InventorySection
-              form={form}
-              options={options}
-              errorCount={errorsFor("inventory")}
-            />
+            <InventorySection form={form} errorCount={errorsFor("inventory")} />
             <Suspense fallback={<SectionFallback />}>
               <GrocerySection form={form} errorCount={errorsFor("grocery")} />
             </Suspense>

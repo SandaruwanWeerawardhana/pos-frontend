@@ -1,13 +1,13 @@
 "use client";
 
-import { Controller, useWatch } from "react-hook-form";
-import { Tags } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
-import { FormSection, RequiredMark } from "./FormSection";
-import { summarisePricing } from "@/lib/products/schema";
-import { useSettings } from "@/lib/hooks/use-settings";
 import { formatPercent } from "@/lib/format";
+import { useSettings } from "@/lib/hooks/use-settings";
+import { summarisePricing } from "@/lib/products/schema";
+import { Tags } from "lucide-react";
+import { Controller, useWatch } from "react-hook-form";
+import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
 interface PricingSectionProps extends ProductSectionProps {
@@ -79,7 +79,6 @@ export function PricingSection({
     <FormSection
       id="pricing"
       title="Pricing"
-      description="Shelf price, tax, and the standing discount"
       icon={<Tags size={18} />}
       errorCount={errorCount}
     >
@@ -95,7 +94,6 @@ export function PricingSection({
           inputMode="decimal"
           autoComplete="off"
           className="text-right tabular-nums"
-          hint="Shelf price before any standing discount."
           error={errors.selling_price?.message}
           {...register("selling_price")}
         />
@@ -114,7 +112,6 @@ export function PricingSection({
               placeholder="Search tax rates"
               allowCustom
               emptyMessage="Type a custom percentage"
-              hint="Percentage. Rates come from Settings; type to override."
               error={errors.tax_rate?.message}
             />
           )}
@@ -126,7 +123,6 @@ export function PricingSection({
           inputMode="decimal"
           autoComplete="off"
           className="text-right tabular-nums"
-          hint="Standing discount applied at the till, 0–100."
           error={errors.discount_percent?.message}
           {...register("discount_percent")}
         />

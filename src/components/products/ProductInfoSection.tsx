@@ -81,7 +81,6 @@ export function ProductInfoSection({
     <FormSection
       id="product-information"
       title="Product information"
-      description="Identity, classification, and how the item is counted"
       icon={<Info size={18} />}
       errorCount={errorCount}
     >
