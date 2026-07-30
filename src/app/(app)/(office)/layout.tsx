@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { RequireAuth } from "@/components/shell/require-auth";
+import { RequireOffice } from "@/components/shell/require-office";
 import {
   BarChart2,
   Bell,
@@ -66,7 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: ROUTES.customers.root, label: "Customers", icon: Users },
       { href: ROUTES.reports, label: "Reports", icon: BarChart2 },
-      { href: ROUTES.users, label: "Users & roles", icon: ShieldCheck },
+      { href: ROUTES.users, label: "Cashiers", icon: ShieldCheck },
       { href: ROUTES.settings.root, label: "Settings", icon: Settings },
     ],
   },
@@ -110,6 +111,7 @@ export default function OfficeLayout({
 
   return (
     <RequireAuth>
+      <RequireOffice>
       <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-56">
         {sidebarOpen && (
           <button
@@ -185,6 +187,7 @@ export default function OfficeLayout({
           <div className="mx-auto max-w-6xl p-4 sm:p-6">{children}</div>
         </main>
       </div>
+      </RequireOffice>
     </RequireAuth>
   );
 }

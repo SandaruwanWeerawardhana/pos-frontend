@@ -314,7 +314,11 @@ export interface StaffUser {
   name: string;
   email: string;
   role_id: string;
-  pin?: string; // till login PIN
+  // Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
+  // fields are absent until a PIN is set; a user without one cannot sign in at
+  // the till. See `setStaffPin` for the (deliberately limited) threat model.
+  pin_hash?: string;
+  pin_salt?: string;
   active: boolean;
   created_at: number;
 }

@@ -19,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { db, searchCustomers, searchProducts } from "@/lib/db";
+import { useAuthStore } from "@/lib/store/auth";
 import { ROUTES } from "@/lib/types/routes";
 import { formatMoney } from "@/lib/format";
 import type { ReactNode } from "react";
@@ -44,7 +45,7 @@ const NAV_COMMANDS: CommandItem[] = [
   { id: "nav-suppliers", label: "Suppliers", group: "Navigate", icon: <Truck size={16} />, href: ROUTES.suppliers },
   { id: "nav-reports", label: "Reports", group: "Navigate", icon: <BarChart2 size={16} />, href: ROUTES.reports },
   { id: "nav-discounts", label: "Discounts & promotions", group: "Navigate", icon: <Tag size={16} />, href: ROUTES.discounts },
-  { id: "nav-users", label: "Users & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
+  { id: "nav-users", label: "Cashiers & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
   { id: "nav-settings", label: "Settings", group: "Navigate", icon: <Settings size={16} />, href: ROUTES.settings.root },
 ];
 
@@ -63,6 +64,9 @@ const RECORD_SEARCH_MIN_LENGTH = 2;
 
 export function CommandPalette() {
   const router = useRouter();
+  // Every command here leads into the back office, so a till-only session gets
+  // no palette at all rather than a list of links it cannot follow.
+  const posOnly = useAuthStore((state) => state.staff?.posOnly ?? false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recordItems, setRecordItems] = useState<CommandItem[]>([]);
@@ -212,7 +216,7 @@ export function CommandPalette() {
     active?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  if (!open) return null;
+  if (posOnly || !open) return null;
 
   return (
     <div className="fixed inset-0 z-[150] flex items-start justify-center bg-black/50 p-4 pt-[10vh] backdrop-blur-sm">
