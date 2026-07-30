@@ -92,8 +92,7 @@ const baseProductSchema = z.object({
   description: z.string().trim().max(1000),
 
   // Pricing
-  cost_price: moneyField("Cost price", false),
-  selling_price: moneyField("Selling price", true),
+  selling_price: moneyField("Price", true),
   tax_rate: quantityField("Tax rate", { required: true, max: 100 }),
   discount_percent: quantityField("Discount", { max: 100 }),
 
@@ -145,19 +144,6 @@ function startOfToday(): number {
 }
 
 export const productFormSchema = baseProductSchema.superRefine((values, ctx) => {
-  const cost = parseMoneyToCents(values.cost_price);
-  const price = parseMoneyToCents(values.selling_price);
-
-  // Selling below cost is nearly always a typo (a decimal in the wrong place),
-  // and it silently poisons every margin report downstream.
-  if (cost !== null && price !== null && values.cost_price && price <= cost) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["selling_price"],
-      message: "Selling price must be greater than the cost price",
-    });
-  }
-
   const minStock = toNumber(values.min_stock_level);
   const reorder = toNumber(values.reorder_level);
   if (minStock !== null && reorder !== null && reorder < minStock) {
@@ -238,7 +224,6 @@ export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
   unit: "unit",
   status: "active",
   description: "",
-  cost_price: "",
   selling_price: "",
   tax_rate: "8",
   discount_percent: "",
@@ -268,42 +253,26 @@ export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
 // ── Derived pricing ────────────────────────────────────────────────────────
 
 export interface PricingSummary {
-  costCents: number | null;
   priceCents: number | null;
   /** Price after the standing discount, which is what the till will charge. */
   netPriceCents: number | null;
   taxCents: number | null;
   grossPriceCents: number | null;
-  profitCents: number | null;
-  /** Profit as a share of the selling price. */
-  marginPercent: number | null;
-  /** Profit as a share of the cost price. */
-  markupPercent: number | null;
 }
 
-// Margin and markup are both quoted from the *discounted* price, because that
-// is the money actually taken at the till.
 export function summarisePricing(
-  values: Pick<
-    ProductFormValues,
-    "cost_price" | "selling_price" | "tax_rate" | "discount_percent"
-  >,
+  values: Pick<ProductFormValues, "selling_price" | "tax_rate" | "discount_percent">,
 ): PricingSummary {
-  const costCents = parseMoneyToCents(values.cost_price);
   const priceCents = parseMoneyToCents(values.selling_price);
   const discount = toNumber(values.discount_percent) ?? 0;
   const taxPercent = toNumber(values.tax_rate) ?? 0;
 
   if (priceCents === null) {
     return {
-      costCents,
       priceCents: null,
       netPriceCents: null,
       taxCents: null,
       grossPriceCents: null,
-      profitCents: null,
-      marginPercent: null,
-      markupPercent: null,
     };
   }
 
@@ -311,29 +280,11 @@ export function summarisePricing(
   const taxCents = Math.round(netPriceCents * (taxPercent / 100));
   const grossPriceCents = netPriceCents + taxCents;
 
-  if (costCents === null || costCents === 0) {
-    return {
-      costCents,
-      priceCents,
-      netPriceCents,
-      taxCents,
-      grossPriceCents,
-      profitCents: null,
-      marginPercent: null,
-      markupPercent: null,
-    };
-  }
-
-  const profitCents = netPriceCents - costCents;
   return {
-    costCents,
     priceCents,
     netPriceCents,
     taxCents,
     grossPriceCents,
-    profitCents,
-    marginPercent: netPriceCents === 0 ? null : (profitCents / netPriceCents) * 100,
-    markupPercent: (profitCents / costCents) * 100,
   };
 }
 
@@ -349,7 +300,6 @@ function optional<T>(value: T | "" | null | undefined): T | undefined {
 // rather than stored as "", which keeps `??` fallbacks working everywhere.
 export function toProduct(values: ProductFormValues, id: string): Product {
   const priceCents = parseMoneyToCents(values.selling_price) ?? 0;
-  const costCents = parseMoneyToCents(values.cost_price);
   const purchaseCents = parseMoneyToCents(values.purchase_price);
   const stock = toNumber(values.initial_stock) ?? 0;
 
@@ -360,7 +310,6 @@ export function toProduct(values: ProductFormValues, id: string): Product {
             batch_no: values.batch_no || `${values.sku}-B1`,
             expiry_date: optional(values.expiry_date) ?? null,
             quantity: stock,
-            ...(costCents !== null ? { cost_cents: costCents } : {}),
             ...(values.manufacturing_date
               ? { manufactured_date: values.manufacturing_date }
               : {}),
@@ -387,7 +336,6 @@ export function toProduct(values: ProductFormValues, id: string): Product {
     allow_returns: values.allow_returns,
     track_expiry: values.track_expiry,
     track_batch: values.track_batch,
-    ...(costCents !== null ? { cost_cents: costCents } : {}),
     ...(purchaseCents !== null ? { purchase_price_cents: purchaseCents } : {}),
     ...(optional(values.brand) ? { brand: values.brand } : {}),
     ...(optional(values.subcategory) ? { subcategory: values.subcategory } : {}),

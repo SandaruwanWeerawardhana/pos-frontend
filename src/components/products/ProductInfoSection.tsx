@@ -2,17 +2,13 @@
 
 import type { ReactNode } from "react";
 import { Controller, useWatch } from "react-hook-form";
-import { Info, QrCode, Sparkles } from "lucide-react";
+import { Info, Sparkles } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormSection, RequiredMark } from "./FormSection";
 import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
-import {
-  generateBarcode,
-  generateQrPayload,
-  generateSku,
-} from "@/lib/products/generate";
+import { generateBarcode, generateSku } from "@/lib/products/generate";
 import type { CatalogueOptions } from "@/lib/hooks/use-product-catalogue-options";
 import type { DuplicateState } from "@/lib/hooks/use-product-duplicates";
 import type { ProductUnit } from "@/lib/types";
@@ -51,7 +47,7 @@ export function ProductInfoSection({
   duplicates,
   errorCount,
 }: Readonly<ProductInfoSectionProps>) {
-  const { control, register, setValue, formState, getValues } = form;
+  const { control, register, setValue, formState } = form;
   const errors = formState.errors;
 
   // Only the fields the generators read are watched, so typing a description
@@ -81,14 +77,6 @@ export function ProductInfoSection({
     });
   }
 
-  function fillQr() {
-    const current = getValues();
-    setValue("qr_code", generateQrPayload(current.sku, current.barcode), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }
-
   return (
     <FormSection
       id="product-information"
@@ -113,15 +101,6 @@ export function ProductInfoSection({
             {...register("name")}
           />
         </div>
-
-        <Input
-          label="Product code"
-          placeholder="Internal code (optional)"
-          autoComplete="off"
-          hint="Your own merchandising reference, separate from the SKU."
-          error={errors.product_code?.message}
-          {...register("product_code")}
-        />
 
         <Input
           label={
@@ -158,26 +137,6 @@ export function ProductInfoSection({
           className="font-mono"
           error={barcodeError}
           {...register("barcode")}
-        />
-
-        <Input
-          label={
-            <span className="flex items-center justify-between gap-2">
-              <span>QR code</span>
-              <GenerateButton
-                onClick={fillQr}
-                label="Generate"
-                icon={<QrCode size={12} />}
-              />
-            </span>
-          }
-          placeholder="POS:PRODUCT:DAI-ANC-MILK-1042"
-          autoComplete="off"
-          spellCheck={false}
-          className="font-mono"
-          hint="Payload printed on the shelf-edge label."
-          error={errors.qr_code?.message}
-          {...register("qr_code")}
         />
 
         <Controller

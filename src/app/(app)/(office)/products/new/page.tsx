@@ -1,25 +1,19 @@
 "use client";
 
-import { Suspense, lazy, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
-import { History, Save, X } from "lucide-react";
+import type { PluginFieldValues } from "@/components/plugin-slots/PluginProductForm";
+import { InventorySection } from "@/components/products/InventorySection";
+import { PricingSection } from "@/components/products/PricingSection";
+import { ProductFormSkeleton } from "@/components/products/ProductFormSkeleton";
+import { ProductInfoSection } from "@/components/products/ProductInfoSection";
+import {
+  ProductSummaryPanel,
+  type SectionStatus,
+} from "@/components/products/ProductSummaryPanel";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import type { PluginFieldValues } from "@/components/plugin-slots/PluginProductForm";
-import { ProductFormSkeleton } from "@/components/products/ProductFormSkeleton";
-import { ProductInfoSection } from "@/components/products/ProductInfoSection";
-import { PricingSection } from "@/components/products/PricingSection";
-import { InventorySection } from "@/components/products/InventorySection";
-import {
-  ProductSummaryPanel,
-  type SectionStatus,
-} from "@/components/products/ProductSummaryPanel";
 import { addProduct } from "@/lib/db";
 import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
@@ -33,18 +27,19 @@ import {
   type ProductFormValues,
 } from "@/lib/products/schema";
 import { ROUTES } from "@/lib/types/routes";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { History, Save, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Suspense, lazy, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
 // Below-the-fold sections are code-split: a cashier adding a quick line often
-// never opens Media or Supplier, so their bundles should not block the first
-// paint of the fields everyone fills in.
+// never opens Media, so its bundle should not block the first paint of the
+// fields everyone fills in.
 const GrocerySection = lazy(() =>
   import("@/components/products/GrocerySection").then((module) => ({
     default: module.GrocerySection,
-  })),
-);
-const SupplierSection = lazy(() =>
-  import("@/components/products/SupplierSection").then((module) => ({
-    default: module.SupplierSection,
   })),
 );
 const MediaSection = lazy(() =>
@@ -67,10 +62,8 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
       label: "Product information",
       fields: [
         "name",
-        "product_code",
         "sku",
         "barcode",
-        "qr_code",
         "category",
         "subcategory",
         "brand",
@@ -82,7 +75,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
     {
       id: "pricing",
       label: "Pricing",
-      fields: ["cost_price", "selling_price", "tax_rate", "discount_percent"],
+      fields: ["selling_price", "tax_rate", "discount_percent"],
     },
     {
       id: "inventory",
@@ -109,11 +102,6 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
         "manufacturing_date",
       ],
     },
-    {
-      id: "supplier",
-      label: "Supplier",
-      fields: ["supplier_id", "purchase_price", "supplier_product_code"],
-    },
     { id: "media", label: "Media", fields: ["images"] },
     {
       id: "additional-settings",
@@ -134,8 +122,6 @@ export default function ProductAddPage() {
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: DEFAULT_PRODUCT_FORM_VALUES,
-    // Validate once a field is left, then keep correcting live — errors that
-    // appear on the first keystroke read as nagging on a form this long.
     mode: "onBlur",
     reValidateMode: "onChange",
   });
@@ -168,8 +154,6 @@ export default function ProductAddPage() {
     sectionStatuses.find((section) => section.id === id)?.errorCount ?? 0;
 
   const onSubmit = handleSubmit(async (submitted) => {
-    // The debounced probe can lag the last keystroke, and another tab may have
-    // created the same code, so the clash is re-checked here as well.
     if (duplicates.skuTaken) {
       setError("sku", { type: "manual", message: "SKU already exists" });
       setFocus("sku");
@@ -218,7 +202,6 @@ export default function ProductAddPage() {
       <PageHeader
         eyebrow="Product management"
         title="Add product"
-        description="Everything the till, the shelf label, and the stock report need."
         breadcrumbs={[
           { label: "Dashboard", href: ROUTES.dashboard },
           { label: "Products", href: ROUTES.products },
@@ -285,13 +268,6 @@ export default function ProductAddPage() {
             />
             <Suspense fallback={<SectionFallback />}>
               <GrocerySection form={form} errorCount={errorsFor("grocery")} />
-            </Suspense>
-            <Suspense fallback={<SectionFallback />}>
-              <SupplierSection
-                form={form}
-                options={options}
-                errorCount={errorsFor("supplier")}
-              />
             </Suspense>
             <Suspense fallback={<SectionFallback />}>
               <MediaSection form={form} errorCount={errorsFor("media")} />

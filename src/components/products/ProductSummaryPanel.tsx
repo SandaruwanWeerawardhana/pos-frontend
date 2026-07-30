@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { summarisePricing } from "@/lib/products/schema";
-import { formatPercent } from "@/lib/format";
 import type { ProductFormValues } from "@/lib/products/schema";
 
 export interface SectionStatus {
@@ -80,14 +79,6 @@ export function ProductSummaryPanel({
               {pricing.grossPriceCents === null
                 ? "—"
                 : money(pricing.grossPriceCents)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-on-surface-variant dark:text-zinc-400">Margin</dt>
-            <dd className="font-semibold tabular-nums text-on-surface dark:text-zinc-50">
-              {pricing.marginPercent === null
-                ? "—"
-                : formatPercent(pricing.marginPercent)}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-2">
