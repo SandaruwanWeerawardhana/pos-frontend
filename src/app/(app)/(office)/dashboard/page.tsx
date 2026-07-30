@@ -21,7 +21,6 @@ import {
   db,
   getInventoryAlerts,
   getTodaysOrderSummary,
-  listStockMovements,
   type InventoryAlerts,
   type TodaysOrderSummary,
 } from "@/lib/db";
@@ -32,7 +31,7 @@ import { Card, SectionHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateTime } from "@/lib/format";
-import type { PendingOrder, StockMovement } from "@/lib/types";
+import type { PendingOrder } from "@/lib/types";
 import { ROUTES } from "@/lib/types/routes";
 
 const DAILY_REVENUE_DAYS = 7;
@@ -229,7 +228,6 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
   const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
   const [recentSales, setRecentSales] = useState<PendingOrder[]>([]);
-  const [activity, setActivity] = useState<StockMovement[]>([]);
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenuePoint[]>(() =>
     getDefaultDailyRevenue(),
   );
@@ -244,7 +242,6 @@ export default function DashboardPage() {
   useEffect(() => {
     getTodaysOrderSummary().then(setSummary);
     getInventoryAlerts().then(setAlerts);
-    listStockMovements({ limit: 8 }).then(setActivity);
     db.pendingOrders
       .orderBy("created_at")
       .reverse()
@@ -329,7 +326,6 @@ export default function DashboardPage() {
         <DailyRevenueChart points={dailyRevenue} money={money} />
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
         <div className="flex flex-col gap-3">
           <SectionHeader
             title="Recent sales"
@@ -387,67 +383,6 @@ export default function DashboardPage() {
             )}
           </Card>
         </div>
-
-        <div className="flex flex-col gap-3">
-          <SectionHeader
-            title="Recent activity"
-            action={
-              <Link
-                href={ROUTES.inventory.movements}
-                className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400"
-              >
-                Full history
-                <ChevronRight size={13} aria-hidden />
-              </Link>
-            }
-          />
-          <Card>
-            {activity.length === 0 ? (
-              <EmptyState
-                icon={<Package size={20} />}
-                title="Nothing has moved yet"
-                description="Stock changes from sales, deliveries, and adjustments show up here."
-              />
-            ) : (
-              <ol className="flex flex-col gap-0">
-                {activity.map((movement, index) => (
-                  <li key={movement.id} className="flex gap-3">
-                    {/* Timeline rail: a dot per event, joined by a line that
-                        stops before the final entry. */}
-                    <div className="flex flex-col items-center">
-                      <span
-                        aria-hidden
-                        className={`mt-2 h-2 w-2 shrink-0 rounded-full ${
-                          movement.quantity_delta >= 0
-                            ? "bg-on-tertiary-container"
-                            : "bg-amber-500"
-                        }`}
-                      />
-                      {index < activity.length - 1 && (
-                        <span
-                          aria-hidden
-                          className="w-px flex-1 bg-outline-variant dark:bg-zinc-800"
-                        />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1 pb-4">
-                      <p className="truncate text-sm font-medium text-on-surface dark:text-zinc-100">
-                        {movement.product_name}
-                      </p>
-                      <p className="text-xs capitalize text-on-surface-variant dark:text-zinc-400">
-                        {movement.type.replace("_", " ")} ·{" "}
-                        {movement.quantity_delta > 0 ? "+" : ""}
-                        {movement.quantity_delta} ·{" "}
-                        {formatDateTime(movement.created_at)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </Card>
-        </div>
-      </section>
 
       <section className="flex flex-col gap-3">
         <SectionHeader title="Cloud sync" />
