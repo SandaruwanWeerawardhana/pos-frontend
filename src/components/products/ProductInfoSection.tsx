@@ -5,13 +5,9 @@ import { Controller, useWatch } from "react-hook-form";
 import { Info, QrCode, Sparkles } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormSection, RequiredMark } from "./FormSection";
-import {
-  PRODUCT_STATUS_OPTIONS,
-  PRODUCT_UNIT_OPTIONS,
-} from "@/lib/products/constants";
+import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
 import {
   generateBarcode,
   generateQrPayload,
@@ -205,42 +201,6 @@ export function ProductInfoSection({
 
         <Controller
           control={control}
-          name="subcategory"
-          render={({ field }) => (
-            <Combobox
-              label="Subcategory"
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              options={toOptions(options.subcategories)}
-              placeholder="Search or add a subcategory"
-              allowCustom
-              emptyMessage="Type to add a new subcategory"
-              error={errors.subcategory?.message}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="brand"
-          render={({ field }) => (
-            <Combobox
-              label="Brand"
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              options={toOptions(options.brands)}
-              placeholder="Search or add a brand"
-              allowCustom
-              emptyMessage="Type to add a new brand"
-              error={errors.brand?.message}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
           name="unit"
           render={({ field }) => (
             <Combobox
@@ -255,19 +215,6 @@ export function ProductInfoSection({
               hint="How the quantity is entered at the till."
             />
           )}
-        />
-
-        <Select
-          label={
-            <>
-              Product status
-              <RequiredMark />
-            </>
-          }
-          options={PRODUCT_STATUS_OPTIONS}
-          error={errors.status?.message}
-          className="min-h-12"
-          {...register("status")}
         />
 
         <div className="sm:col-span-2">
