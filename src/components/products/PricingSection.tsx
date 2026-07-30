@@ -1,12 +1,10 @@
 "use client";
 
-import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
-import { formatPercent } from "@/lib/format";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { summarisePricing } from "@/lib/products/schema";
 import { Tags } from "lucide-react";
-import { Controller, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
@@ -54,7 +52,7 @@ export function PricingSection({
 }: Readonly<PricingSectionProps>) {
   const { control, register, formState } = form;
   const errors = formState.errors;
-  const { settings, money } = useSettings();
+  const { money } = useSettings();
 
   const [sellingPrice, taxRate, discountPercent] = useWatch({
     control,
@@ -66,12 +64,6 @@ export function PricingSection({
     tax_rate: taxRate,
     discount_percent: discountPercent,
   });
-
-  const taxOptions = settings.tax_rates.map((rate) => ({
-    value: String(rate.rate * 100),
-    label: `${rate.name} — ${formatPercent(rate.rate * 100)}`,
-    hint: rate.is_default ? "Store default" : undefined,
-  }));
 
   return (
     <FormSection
@@ -97,23 +89,14 @@ export function PricingSection({
           {...register("selling_price")}
         />
 
-        <Controller
-          control={control}
-          name="tax_rate"
-          render={({ field }) => (
-            <Combobox
-              label="Tax"
-              required
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              options={taxOptions}
-              placeholder="Search tax rates"
-              allowCustom
-              emptyMessage="Type a custom percentage"
-              error={errors.tax_rate?.message}
-            />
-          )}
+        <Input
+          label="Tax"
+          placeholder="0"
+          inputMode="decimal"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.tax_rate?.message}
+          {...register("tax_rate")}
         />
 
         <Input

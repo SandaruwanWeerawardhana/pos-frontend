@@ -93,7 +93,7 @@ const baseProductSchema = z.object({
 
   // Pricing
   selling_price: moneyField("Price", true),
-  tax_rate: quantityField("Tax rate", { required: true, max: 100 }),
+  tax_rate: quantityField("Tax rate", { max: 100 }),
   discount_percent: quantityField("Discount", { max: 100 }),
 
   // Inventory
@@ -225,7 +225,7 @@ export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
   status: "active",
   description: "",
   selling_price: "",
-  tax_rate: "8",
+  tax_rate: "0",
   discount_percent: "",
   initial_stock: "0",
   min_stock_level: "",
