@@ -1,74 +1,78 @@
 "use client";
 
+import { ClipboardList, Printer, Trash2 } from "lucide-react";
+
 interface QuickActionsProps {
   onHold: () => void;
-  onRecall: () => void;
   onClear: () => void;
-  onNotImplemented: (label: string) => void;
+  onPrintLast: () => void;
   disabled: boolean;
 }
 
-type IconName =
-  | "suspend"
-  | "hold"
-  | "recall"
-  | "clear"
-  | "print"
-  | "drawer";
-
-function Icon({ name }: Readonly<{ name: IconName }>) {
-  const paths: Record<IconName, string> = {
-    suspend: "M12 3a9 9 0 100 18 9 9 0 000-18zM5 5l14 14",
-    hold: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
-    recall: "M3 12a9 9 0 109-9 9 9 0 00-9 9zm0 0H1m2 0l3-3m-3 3l3 3M12 7v5l3 2",
-    clear: "M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0l-.5 12a2 2 0 01-2 2H8.5a2 2 0 01-2-2L6 7",
-    print: "M6 9V4h12v5M6 18H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2M6 14h12v6H6z",
-    drawer: "M3 10h18M3 10l2-6h14l2 6M3 10v8a2 2 0 002 2h14a2 2 0 002-2v-8M10 14h4",
-  };
+// Till-side shortcuts. Keyboard equivalents are shown so cashiers on a
+// physical keyboard can learn them without a separate cheat sheet.
+export function QuickActions({
+  onHold,
+  onClear,
+  onPrintLast,
+  disabled,
+}: Readonly<QuickActionsProps>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d={paths[name]} />
-    </svg>
+    <div className="flex flex-wrap justify-center gap-2 pb-16 lg:pb-0">
+      <ActionButton
+        icon={<ClipboardList size={18} />}
+        label="Hold"
+        onClick={onHold}
+      />
+      <ActionButton
+        icon={<Printer size={18} />}
+        label="Reprint receipt"
+        onClick={onPrintLast}
+      />
+      <ActionButton
+        icon={<Trash2 size={18} />}
+        label="Clear cart"
+        onClick={onClear}
+        disabled={disabled}
+        danger
+      />
+    </div>
   );
 }
 
-export function QuickActions({
-  onHold,
-  onRecall,
-  onClear,
-  onNotImplemented,
+function ActionButton({
+  icon,
+  label,
+  hint,
+  onClick,
   disabled,
-}: Readonly<QuickActionsProps>) {
-  const actions: {
-    label: string;
-    icon: IconName;
-    onClick: () => void;
-    danger?: boolean;
-  }[] = [
-    { label: "Hold Order", icon: "hold", onClick: onHold },
-    { label: "Clear Cart", icon: "clear", onClick: onClear, danger: true },
-    { label: "Print Receipt", icon: "print", onClick: () => onNotImplemented("Print Receipt") },
-  ];
-
+  danger,
+}: Readonly<{
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}>) {
   return (
-      <div className="flex flex-wrap justify-center gap-3">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            onClick={action.onClick}
-            disabled={disabled && action.label === "Clear Cart"}
-            className={`flex flex-col items-center gap-2 rounded-lg border border-outline-variant px-2 py-3 text-xs font-medium transition-colors hover:bg-surface-container dark:border-zinc-800 dark:hover:bg-zinc-800 disabled:opacity-40 ${
-              action.danger
-                ? "text-error dark:text-red-400"
-                : "text-on-surface-variant dark:text-zinc-300"
-            }`}
-          >
-            <Icon name={action.icon} />
-            <span className="text-center leading-tight">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex min-h-16 min-w-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 text-xs font-medium transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 dark:border-zinc-800 dark:hover:bg-zinc-800 ${
+        danger
+          ? "text-error dark:text-red-400"
+          : "text-on-surface-variant dark:text-zinc-300"
+      }`}
+    >
+      <span aria-hidden>{icon}</span>
+      <span className="text-center leading-tight">{label}</span>
+      {hint && (
+        <kbd className="rounded border border-outline-variant px-1 text-[10px] opacity-60 dark:border-zinc-700">
+          {hint}
+        </kbd>
+      )}
+    </button>
   );
 }

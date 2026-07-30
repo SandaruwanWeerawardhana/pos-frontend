@@ -1,82 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
+import { listCategories } from "@/lib/db";
 
 interface CategorySidebarProps {
   totalCount: number;
+  /** Product counts keyed by category name, for the badge on each row. */
+  counts: Record<string, number>;
   active: string;
   onSelect: (category: string) => void;
 }
 
-// Product records carry no category field yet, so this list is presentational
-// until the backend exposes categories. "All Products" is the functional item.
-const CATEGORIES = [
-  "Beverages",
-  "Snacks",
-  "Bakery",
-  "Frozen",
-  "Vegetables",
-  "Fruits",
-  "Household",
-  "Health",
-  "Personal Care",
-];
+export const ALL_CATEGORIES = "all";
 
+// Categories are read from the product catalogue rather than hard-coded, so a
+// store's own departments drive the filter instead of a fixed grocery list.
 export function CategorySidebar({
   totalCount,
+  counts,
   active,
   onSelect,
 }: Readonly<CategorySidebarProps>) {
   const [collapsed, setCollapsed] = useState(true);
-  const sidebarClassName = [
-    "hidden shrink-0 flex-col gap-1 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 dark:border-zinc-800 dark:bg-zinc-900 xl:flex",
-    collapsed ? "w-14" : "w-56",
-  ].join(" ");
-  const toggleButtonClassName = [
-    "mb-1 flex items-center rounded-lg p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-zinc-800 dark:hover:text-zinc-300",
-    collapsed ? "justify-center" : "justify-end",
-  ].join(" ");
-  const chevronClassName = [
-    "h-4 w-4 transition-transform",
-    collapsed ? "rotate-180" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    listCategories().then(setCategories);
+  }, []);
 
   return (
     <aside
       suppressHydrationWarning
-      className={sidebarClassName}
+      aria-label="Product categories"
+      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 xl:flex dark:border-zinc-800 dark:bg-zinc-900 ${
+        collapsed ? "w-14" : "w-56"
+      }`}
     >
       <button
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
         aria-label={collapsed ? "Expand categories" : "Collapse categories"}
-        className={toggleButtonClassName}
+        aria-expanded={!collapsed}
+        className={`mb-1 flex items-center rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:hover:bg-zinc-800 ${
+          collapsed ? "justify-center" : "justify-end"
+        }`}
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          className={chevronClassName}
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ChevronLeft
+          size={16}
+          className={collapsed ? "rotate-180 transition-transform" : "transition-transform"}
+          aria-hidden
+        />
       </button>
 
       <CategoryRow
         label="All Products"
         count={totalCount}
-        active={active === "all"}
+        active={active === ALL_CATEGORIES}
         collapsed={collapsed}
-        onClick={() => onSelect("all")}
+        onClick={() => onSelect(ALL_CATEGORIES)}
       />
       <div className="my-1 border-t border-outline-variant/50 dark:border-zinc-800" />
-      {CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <CategoryRow
           key={category}
           label={category}
+          count={counts[category] ?? 0}
           active={active === category}
           collapsed={collapsed}
           onClick={() => onSelect(category)}
@@ -99,24 +88,19 @@ function CategoryRow({
   collapsed: boolean;
   onClick: () => void;
 }>) {
-  const buttonClassName = [
-    "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
-    collapsed ? "justify-center" : "justify-between",
-    active
-      ? "bg-primary text-on-primary font-bold ring-2 ring-primary/30"
-      : "font-medium text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800",
-  ].join(" ");
-  const countClassName = [
-    "text-xs tabular-nums",
-    active ? "text-on-primary/70" : "text-on-surface-variant",
-  ].join(" ");
-
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       title={collapsed ? label : undefined}
-      className={buttonClassName}
+      className={`flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        collapsed ? "justify-center" : "justify-between gap-2"
+      } ${
+        active
+          ? "bg-primary font-bold text-on-primary"
+          : "font-medium text-on-surface-variant hover:bg-surface-container dark:text-zinc-300 dark:hover:bg-zinc-800"
+      }`}
     >
       {collapsed ? (
         <span className="text-xs font-semibold uppercase">
@@ -124,9 +108,13 @@ function CategoryRow({
         </span>
       ) : (
         <>
-          <span>{label}</span>
+          <span className="min-w-0 truncate text-left">{label}</span>
           {count !== undefined && (
-            <span className={countClassName}>
+            <span
+              className={`shrink-0 text-xs tabular-nums ${
+                active ? "text-on-primary/70" : "text-on-surface-variant"
+              }`}
+            >
               {count}
             </span>
           )}

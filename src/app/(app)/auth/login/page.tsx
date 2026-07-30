@@ -1,20 +1,26 @@
 "use client";
 
-import { useState, type SubmitEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type SubmitEvent } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
+
+  // RequireAuth appends ?reason=expired when it ends a stale session, so the
+  // user is told why they landed back here rather than left guessing.
+  const sessionExpired = searchParams.get("reason") === "expired";
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,10 +45,21 @@ export default function LoginPage() {
           Sign in to reach your dashboard.
         </p>
       </div>
+
+      {sessionExpired && (
+        <p
+          role="status"
+          className="rounded-lg border-l-4 border-amber-500 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
+        >
+          Your session expired. Sign in again to continue.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <Input
           label="Email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
@@ -51,20 +68,44 @@ export default function LoginPage() {
         <Input
           label="Password"
           type="password"
+          autoComplete="current-password"
           revealToggle
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
         />
+        <Link
+          href={ROUTES.auth.forgotPassword}
+          className="-mt-1 self-end text-xs font-medium text-primary hover:underline dark:text-blue-400"
+        >
+          Forgot password?
+        </Link>
         <Button
           type="submit"
           size="lg"
-          className="mt-2 w-full rounded-full"
+          fullWidth
+          className="mt-1 rounded-full"
           disabled={submitting}
         >
           {submitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams needs a Suspense boundary so this route can still be
+  // statically prerendered.
+  return (
+    <Suspense
+      fallback={
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
+          Loading…
+        </p>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
