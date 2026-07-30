@@ -1,22 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { AlertCircle, CheckCircle2, CloudUpload, Package, Save } from "lucide-react";
+import { CloudUpload, Package, Save } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { summarisePricing } from "@/lib/products/schema";
 import type { ProductFormValues } from "@/lib/products/schema";
 
-export interface SectionStatus {
-  id: string;
-  label: string;
-  errorCount: number;
-}
-
 interface ProductSummaryPanelProps {
   values: ProductFormValues;
-  sections: SectionStatus[];
   errorCount: number;
   draftSavedAt: number | null;
   saving: boolean;
@@ -29,12 +22,11 @@ function statusVariant(status: ProductFormValues["status"]) {
   return "neutral" as const;
 }
 
-// Desktop's sticky right rail: a live preview of the record being built, a
-// jump list that doubles as an error index, and the primary actions. It is
-// hidden below `lg`, where the bottom action bar takes over.
+// Desktop's sticky right rail: a live preview of the record being built and
+// the primary actions. It is hidden below `lg`, where the bottom action bar
+// takes over.
 export function ProductSummaryPanel({
   values,
-  sections,
   errorCount,
   draftSavedAt,
   saving,
@@ -96,32 +88,6 @@ export function ProductSummaryPanel({
           </div>
         </dl>
       </div>
-
-      <nav
-        aria-label="Form sections"
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-2 shadow-sm backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80"
-      >
-        <ul className="flex flex-col">
-          {sections.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                className="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 text-sm text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-              >
-                {section.label}
-                {section.errorCount > 0 ? (
-                  <AlertCircle size={15} className="shrink-0 text-error" />
-                ) : (
-                  <CheckCircle2
-                    size={15}
-                    className="shrink-0 text-on-tertiary-container dark:text-green-500"
-                  />
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
 
       <div className="flex flex-col gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-4 shadow-sm backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
         {errorCount > 0 && (

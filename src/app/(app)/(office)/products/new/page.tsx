@@ -5,10 +5,7 @@ import { InventorySection } from "@/components/products/InventorySection";
 import { PricingSection } from "@/components/products/PricingSection";
 import { ProductFormSkeleton } from "@/components/products/ProductFormSkeleton";
 import { ProductInfoSection } from "@/components/products/ProductInfoSection";
-import {
-  ProductSummaryPanel,
-  type SectionStatus,
-} from "@/components/products/ProductSummaryPanel";
+import { ProductSummaryPanel } from "@/components/products/ProductSummaryPanel";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -126,7 +123,7 @@ export default function ProductAddPage() {
   });
   const guard = useUnsavedChanges(dirty);
 
-  const sectionStatuses: SectionStatus[] = SECTIONS.map((section) => ({
+  const sectionStatuses = SECTIONS.map((section) => ({
     id: section.id,
     label: section.label,
     errorCount: section.fields.filter((field) => formState.errors[field]).length,
@@ -268,7 +265,6 @@ export default function ProductAddPage() {
 
           <ProductSummaryPanel
             values={values}
-            sections={sectionStatuses}
             errorCount={errorCount}
             draftSavedAt={draft.savedAt}
             saving={saving}
