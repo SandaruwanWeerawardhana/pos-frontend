@@ -266,17 +266,6 @@ export default function UsersPage() {
             onChange={(event) => setUserEmail(event.target.value)}
             hint="Used together with the PIN to sign in at the till."
           />
-          <Select
-            label="Role"
-            value={userRoleId}
-            onChange={(event) => setUserRoleId(event.target.value)}
-            placeholder="Choose a role"
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-          />
-          <p className="-mt-1 text-xs text-on-surface-variant dark:text-zinc-400">
-            Cashier grants the POS terminal only. Admin also reaches the back
-            office.
-          </p>
           <Input
             label="Till PIN"
             type="password"
