@@ -27,7 +27,6 @@ const PAGE_LABELS = [
   { href: ROUTES.inventory.root, label: "Inventory" },
   { href: ROUTES.purchases.root, label: "Purchases" },
   { href: ROUTES.sales.root, label: "Sales" },
-  { href: ROUTES.customers.root, label: "Customers" },
   { href: ROUTES.suppliers, label: "Suppliers" },
   { href: ROUTES.reports, label: "Reports" },
   { href: ROUTES.discounts, label: "Discounts" },
@@ -44,7 +43,6 @@ const OFFICE_SIDEBAR_PATHS = [
   ROUTES.inventory.root,
   ROUTES.purchases.root,
   ROUTES.sales.root,
-  ROUTES.customers.root,
   ROUTES.suppliers,
   ROUTES.reports,
   ROUTES.discounts,
@@ -184,9 +182,6 @@ export function AppHeader() {
         >
           <Search size={13} aria-hidden />
           <span className="flex-1 text-left">Search everything…</span>
-          <kbd className="rounded border border-outline-variant px-1 text-[10px] dark:border-zinc-700">
-            ⌘K
-          </kbd>
         </button>
         )}
       </div>

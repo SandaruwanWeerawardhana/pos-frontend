@@ -137,35 +137,6 @@ export interface CartTotal {
   total_cents: number;
 }
 
-export type MembershipTier = "none" | "silver" | "gold" | "platinum";
-
-export interface Customer {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  created_at: number;
-  loyalty_points?: number;
-  membership_tier?: MembershipTier;
-  credit_limit_cents?: number; // 0 / undefined means no credit account
-  credit_balance_cents?: number; // outstanding amount the customer owes
-}
-
-// Append-only ledger behind `Customer.loyalty_points` and `credit_balance_cents`
-// so the balance is always reconstructable and auditable.
-export type LedgerKind = "loyalty" | "credit";
-
-export interface CustomerLedgerEntry {
-  id: string;
-  customer_id: string;
-  kind: LedgerKind;
-  delta: number; // points for loyalty, integer cents for credit
-  reason: string;
-  order_id?: string;
-  created_at: number;
-}
-
 export interface Supplier {
   id: string;
   name: string;
@@ -292,8 +263,6 @@ export const PERMISSIONS = [
   "inventory.adjust",
   "purchases.view",
   "purchases.manage",
-  "customers.view",
-  "customers.manage",
   "reports.view",
   "settings.manage",
   "users.manage",
@@ -372,7 +341,6 @@ export interface StoreSettings {
   receipt_paper_width: "58mm" | "80mm";
   low_stock_threshold: number;
   expiry_warning_days: number;
-  loyalty_points_per_currency_unit: number; // points earned per 1 unit spent
 }
 
 export interface HeldCart {

@@ -21,7 +21,6 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   receipt_paper_width: "80mm",
   low_stock_threshold: 5,
   expiry_warning_days: 14,
-  loyalty_points_per_currency_unit: 1,
 };
 
 function isPartialSettings(value: unknown): value is Partial<StoreSettings> {

@@ -177,56 +177,6 @@ export async function getInventoryReport(): Promise<InventoryReportRow[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// ── Customers ──────────────────────────────────────────────────────────────
-
-export interface CustomerReportRow {
-  id: string;
-  name: string;
-  orderCount: number;
-  spendCents: number;
-  loyaltyPoints: number;
-  creditBalanceCents: number;
-  lastOrderAt: number | null;
-}
-
-export async function getCustomerReport(
-  range: DateRange,
-): Promise<CustomerReportRow[]> {
-  const [orders, customers] = await Promise.all([
-    ordersInRange(range),
-    db.customers.toArray(),
-  ]);
-
-  const stats = new Map<string, { orderCount: number; spendCents: number; lastOrderAt: number }>();
-  for (const order of orders) {
-    if (!order.customer_id || order.refunded) continue;
-    const entry = stats.get(order.customer_id) ?? {
-      orderCount: 0,
-      spendCents: 0,
-      lastOrderAt: 0,
-    };
-    entry.orderCount += 1;
-    entry.spendCents += order.total_cents;
-    entry.lastOrderAt = Math.max(entry.lastOrderAt, order.created_at);
-    stats.set(order.customer_id, entry);
-  }
-
-  return customers
-    .map((customer): CustomerReportRow => {
-      const entry = stats.get(customer.id);
-      return {
-        id: customer.id,
-        name: customer.name,
-        orderCount: entry?.orderCount ?? 0,
-        spendCents: entry?.spendCents ?? 0,
-        loyaltyPoints: customer.loyalty_points ?? 0,
-        creditBalanceCents: customer.credit_balance_cents ?? 0,
-        lastOrderAt: entry?.lastOrderAt ?? null,
-      };
-    })
-    .sort((a, b) => b.spendCents - a.spendCents);
-}
-
 // ── Suppliers & purchases ──────────────────────────────────────────────────
 
 export interface SupplierReportRow {
@@ -291,15 +241,4 @@ export async function getPurchaseReport(
       createdAt: order.created_at,
     }))
     .sort((a, b) => b.createdAt - a.createdAt);
-}
-
-// ── Customer purchase history (used by the customer profile screen) ────────
-
-export async function getCustomerOrders(
-  customerId: string,
-): Promise<PendingOrder[]> {
-  const orders = await db.pendingOrders.toArray();
-  return orders
-    .filter((order) => order.customer_id === customerId)
-    .sort((a, b) => b.created_at - a.created_at);
 }

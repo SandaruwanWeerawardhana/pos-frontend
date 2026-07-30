@@ -21,7 +21,6 @@ import {
   ShoppingCart,
   Tag,
   Truck,
-  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -65,7 +64,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "People & insight",
     items: [
-      { href: ROUTES.customers.root, label: "Customers", icon: Users },
       { href: ROUTES.reports, label: "Reports", icon: BarChart2 },
       { href: ROUTES.users, label: "Cashiers", icon: ShieldCheck },
       { href: ROUTES.settings.root, label: "Settings", icon: Settings },

@@ -149,8 +149,8 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
-          <SectionHeader title="Stock & loyalty thresholds" />
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SectionHeader title="Stock thresholds" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Input
               label="Low stock threshold"
               type="number"
@@ -169,19 +169,6 @@ export default function SettingsPage() {
               value={String(draft.expiry_warning_days)}
               onChange={(event) =>
                 update("expiry_warning_days", Number(event.target.value))
-              }
-            />
-            <Input
-              label="Points per unit spent"
-              type="number"
-              min="0"
-              step="0.1"
-              value={String(draft.loyalty_points_per_currency_unit)}
-              onChange={(event) =>
-                update(
-                  "loyalty_points_per_currency_unit",
-                  Number(event.target.value),
-                )
               }
             />
           </div>

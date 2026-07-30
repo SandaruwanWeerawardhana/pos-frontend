@@ -19,7 +19,7 @@ const SYSTEM_ROLES: Omit<Role, "created_at">[] = [
   {
     id: CASHIER_ROLE_ID,
     name: "Cashier",
-    permissions: ["pos.sell", "products.view", "inventory.view", "customers.view"],
+    permissions: ["pos.sell", "products.view", "inventory.view"],
     is_system: true,
   },
 ];
@@ -31,7 +31,6 @@ const OFFICE_PERMISSIONS: Permission[] = [
   "inventory.adjust",
   "purchases.view",
   "purchases.manage",
-  "customers.manage",
   "reports.view",
   "settings.manage",
   "users.manage",

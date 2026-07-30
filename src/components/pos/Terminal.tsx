@@ -10,7 +10,6 @@ import { ALL_CATEGORIES, CategorySidebar } from "./CategorySidebar";
 import { QuickActions } from "./QuickActions";
 import { PaymentModal } from "./PaymentModal";
 import { HoldModal } from "./HoldModal";
-import { CustomerSelect } from "./CustomerSelect";
 import { Receipt } from "./Receipt";
 import { BarcodeScanner } from "@/components/hardware/BarcodeScanner";
 import { ScaleDisplay } from "@/components/hardware/ScaleDisplay";
@@ -26,7 +25,6 @@ import { useToast } from "@/components/ui/Toast";
 import { computeDiscountCents } from "@/lib/cart-math";
 import { createLocalOrder, searchProducts } from "@/lib/db";
 import type {
-  Customer,
   Discount,
   PaymentMethod,
   PaymentSplit,
@@ -50,8 +48,6 @@ export function Terminal() {
   const [results, setResults] = useState<Product[]>([]);
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [customerOpen, setCustomerOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [holdOpen, setHoldOpen] = useState(false);
@@ -128,7 +124,6 @@ export function Terminal() {
   async function handleClearCart() {
     await cart.clear();
     setSelectedDiscount(null);
-    setCustomer(null);
     showToast("Cart cleared", "success");
   }
 
@@ -140,14 +135,12 @@ export function Terminal() {
     try {
       const order = await createLocalOrder(method, {
         discountCents: discountCents || undefined,
-        customerId: customer?.id,
         payments: splits,
         cashierId: user?.id,
       });
       setCompletedOrder(order);
       setPaymentOpen(false);
       setSelectedDiscount(null);
-      setCustomer(null);
       showToast("Sale completed", "success");
     } catch {
       showToast("Failed to complete sale", "error");
@@ -158,7 +151,6 @@ export function Terminal() {
 
   useKeyboardShortcuts([
     { key: "F2", label: "Pay", handler: () => handlePay("cash") },
-    { key: "F3", label: "Attach customer", handler: () => setCustomerOpen(true) },
     { key: "F4", label: "Hold / recall", handler: () => setHoldOpen(true) },
     { key: "F8", label: "Clear cart", handler: () => void handleClearCart() },
   ]);
@@ -169,10 +161,7 @@ export function Terminal() {
       total={total}
       discountCents={discountCents}
       selectedDiscount={selectedDiscount}
-      customer={customer}
       onSelectDiscount={setSelectedDiscount}
-      onOpenCustomer={() => setCustomerOpen(true)}
-      onClearCustomer={() => setCustomer(null)}
       onUpdateQuantity={cart.updateQuantity}
       onRemove={cart.remove}
       onHold={() => setHoldOpen(true)}
@@ -283,13 +272,6 @@ export function Terminal() {
       >
         <div className="flex max-h-[70dvh] min-h-0 flex-col">{cartPanel}</div>
       </Modal>
-
-      <CustomerSelect
-        open={customerOpen}
-        selected={customer}
-        onClose={() => setCustomerOpen(false)}
-        onSelect={setCustomer}
-      />
 
       <PaymentModal
         open={paymentOpen}

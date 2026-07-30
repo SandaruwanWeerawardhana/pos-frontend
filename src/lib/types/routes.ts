@@ -38,10 +38,6 @@ export const ROUTES = {
     root: "/sales",
     detail: (id: string) => `/sales/${id}`,
   },
-  customers: {
-    root: "/customers",
-    detail: (id: string) => `/customers/${id}`,
-  },
   suppliers: "/suppliers",
   reports: "/reports",
   discounts: "/discounts",

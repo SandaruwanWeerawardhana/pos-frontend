@@ -5,8 +5,6 @@ import type {
   CartItem,
   CartTotal,
   CashReconciliation,
-  Customer,
-  CustomerLedgerEntry,
   Discount,
   HeldCart,
   PaymentMethod,
@@ -30,7 +28,6 @@ export class PosDB extends Dexie {
   cartItems!: Table<CartItem, number>;
   pendingOrders!: Table<PendingOrder, string>;
   syncMeta!: Table<SyncMetaRecord, string>;
-  customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, string>;
   discounts!: Table<Discount, string>;
   heldCarts!: Table<HeldCart, string>;
@@ -42,7 +39,6 @@ export class PosDB extends Dexie {
   roles!: Table<Role, string>;
   staffUsers!: Table<StaffUser, string>;
   notifications!: Table<AppNotification, string>;
-  customerLedger!: Table<CustomerLedgerEntry, string>;
 
   constructor() {
     super("posDB");
@@ -239,7 +235,6 @@ export async function getCartTotal(discountCents = 0): Promise<CartTotal> {
 // Moves the current cart into a pendingOrders record, optimistically deducts
 // stock, and clears the cart. Returns the created order.
 export interface CreateOrderOptions {
-  customerId?: string;
   discountCents?: number;
   payments?: PaymentSplit[];
   cashierId?: string;
@@ -275,8 +270,6 @@ export async function createLocalOrder(
       db.products,
       db.syncMeta,
       db.stockMovements,
-      db.customers,
-      db.customerLedger,
     ],
     async () => {
       const items = await db.cartItems.toArray();
@@ -296,7 +289,6 @@ export async function createLocalOrder(
         sync_status: "pending",
         server_id: null,
         receipt_no: await nextReceiptNo(),
-        ...(options?.customerId ? { customer_id: options.customerId } : {}),
         ...(options?.discountCents
           ? { discount_cents: options.discountCents }
           : {}),
@@ -323,49 +315,11 @@ export async function createLocalOrder(
         });
       }
 
-      if (options?.customerId) {
-        await accrueLoyaltyForOrder(options.customerId, order);
-      }
-
       await db.cartItems.clear();
 
       return order;
     },
   );
-}
-
-// Awards loyalty points at the configured rate. Runs inside createLocalOrder's
-// transaction, so a failure here rolls the whole sale back rather than
-// leaving points awarded for an order that was never written.
-async function accrueLoyaltyForOrder(
-  customerId: string,
-  order: PendingOrder,
-): Promise<void> {
-  const customer = await db.customers.get(customerId);
-  if (!customer) return;
-
-  const settingsRecord = await db.syncMeta.get("store_settings");
-  const pointsPerUnit =
-    typeof settingsRecord?.value === "object" && settingsRecord.value !== null
-      ? ((settingsRecord.value as Record<string, unknown>)
-          .loyalty_points_per_currency_unit as number | undefined)
-      : undefined;
-  const rate = typeof pointsPerUnit === "number" ? pointsPerUnit : 1;
-  const points = Math.floor((order.total_cents / 100) * rate);
-  if (points <= 0) return;
-
-  await db.customers.update(customerId, {
-    loyalty_points: (customer.loyalty_points ?? 0) + points,
-  });
-  await db.customerLedger.add({
-    id: crypto.randomUUID(),
-    customer_id: customerId,
-    kind: "loyalty",
-    delta: points,
-    reason: "Sale",
-    order_id: order.client_generated_id,
-    created_at: order.created_at,
-  });
 }
 
 // Distinct category names present in the local catalogue, for filter chips.
@@ -448,7 +402,6 @@ export async function setLastSyncedAt(timestamp: number): Promise<void> {
   await db.syncMeta.put({ key: "last_synced_at", value: timestamp });
 }
 
-export * from "./customers";
 export * from "./suppliers";
 export * from "./discounts";
 export * from "./held-carts";

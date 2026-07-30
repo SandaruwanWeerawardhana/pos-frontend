@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileSpreadsheet, FileText, Printer } from "lucide-react";
 import {
-  getCustomerReport,
   getInventoryReport,
   getProfitReport,
   getPurchaseReport,
   getSalesReport,
   getSupplierReport,
   presetToRange,
-  type CustomerReportRow,
   type InventoryReportRow,
   type ProfitRow,
   type PurchaseReportRow,
@@ -37,7 +35,6 @@ type ReportKey =
   | "sales"
   | "profit"
   | "inventory"
-  | "customers"
   | "suppliers"
   | "purchases";
 
@@ -45,7 +42,6 @@ const REPORTS: { value: ReportKey; label: string }[] = [
   { value: "sales", label: "Sales" },
   { value: "profit", label: "Profit & margin" },
   { value: "inventory", label: "Inventory" },
-  { value: "customers", label: "Customers" },
   { value: "suppliers", label: "Suppliers" },
   { value: "purchases", label: "Purchases" },
 ];
@@ -64,7 +60,6 @@ type ReportData =
   | { key: "sales"; rows: SalesRow[] }
   | { key: "profit"; rows: ProfitRow[] }
   | { key: "inventory"; rows: InventoryReportRow[] }
-  | { key: "customers"; rows: CustomerReportRow[] }
   | { key: "suppliers"; rows: SupplierReportRow[] }
   | { key: "purchases"; rows: PurchaseReportRow[] };
 
@@ -85,9 +80,6 @@ export default function ReportsPage() {
         break;
       case "inventory":
         setData({ key: "inventory", rows: await getInventoryReport() });
-        break;
-      case "customers":
-        setData({ key: "customers", rows: await getCustomerReport(range) });
         break;
       case "suppliers":
         setData({ key: "suppliers", rows: await getSupplierReport() });
@@ -181,25 +173,6 @@ export default function ReportsPage() {
           { key: "price", header: "Price", value: (r) => (r.priceCents / 100).toFixed(2) },
           { key: "value", header: "Stock value", value: (r) => (r.stockValueCents / 100).toFixed(2) },
           { key: "status", header: "Status", value: (r) => r.status },
-        ];
-        return { table: table as DataColumn<never>[], exports: exports as ExportColumn<never>[] };
-      }
-      case "customers": {
-        const table: DataColumn<CustomerReportRow>[] = [
-          { key: "name", header: "Customer", sortValue: (r) => r.name, render: (r) => r.name },
-          { key: "orders", header: "Orders", align: "right", sortValue: (r) => r.orderCount, render: (r) => String(r.orderCount) },
-          { key: "spend", header: "Spend", align: "right", sortValue: (r) => r.spendCents, render: (r) => cents(r.spendCents) },
-          { key: "points", header: "Points", align: "right", hideOnMobile: true, sortValue: (r) => r.loyaltyPoints, render: (r) => String(r.loyaltyPoints) },
-          { key: "credit", header: "Credit owed", align: "right", hideOnMobile: true, sortValue: (r) => r.creditBalanceCents, render: (r) => cents(r.creditBalanceCents) },
-          { key: "last", header: "Last order", hideOnMobile: true, sortValue: (r) => r.lastOrderAt ?? 0, render: (r) => (r.lastOrderAt ? formatDate(r.lastOrderAt, settings.locale) : "—") },
-        ];
-        const exports: ExportColumn<CustomerReportRow>[] = [
-          { key: "name", header: "Customer", value: (r) => r.name },
-          { key: "orders", header: "Orders", value: (r) => r.orderCount },
-          { key: "spend", header: "Spend", value: (r) => (r.spendCents / 100).toFixed(2) },
-          { key: "points", header: "Loyalty points", value: (r) => r.loyaltyPoints },
-          { key: "credit", header: "Credit owed", value: (r) => (r.creditBalanceCents / 100).toFixed(2) },
-          { key: "last", header: "Last order", value: (r) => (r.lastOrderAt ? new Date(r.lastOrderAt).toISOString() : "") },
         ];
         return { table: table as DataColumn<never>[], exports: exports as ExportColumn<never>[] };
       }
