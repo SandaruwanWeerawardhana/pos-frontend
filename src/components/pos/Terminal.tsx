@@ -8,7 +8,6 @@ import { ProductGrid } from "./ProductGrid";
 import { Cart } from "./Cart";
 import { ALL_CATEGORIES, CategorySidebar } from "./CategorySidebar";
 import { QuickActions } from "./QuickActions";
-import { PaymentModal } from "./PaymentModal";
 import { HoldModal } from "./HoldModal";
 import { Receipt } from "./Receipt";
 import { BarcodeScanner } from "@/components/hardware/BarcodeScanner";
@@ -48,8 +47,6 @@ export function Terminal() {
   const [results, setResults] = useState<Product[]>([]);
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [holdOpen, setHoldOpen] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -116,9 +113,10 @@ export function Terminal() {
       showToast("Cart is empty", "warning");
       return;
     }
-    setPaymentMethod(method);
     setCartSheetOpen(false);
-    setPaymentOpen(true);
+    void handleConfirmPayment(method, [
+      { method, amount_cents: total.total_cents },
+    ]);
   }
 
   async function handleClearCart() {
@@ -139,7 +137,6 @@ export function Terminal() {
         cashierId: user?.id,
       });
       setCompletedOrder(order);
-      setPaymentOpen(false);
       setSelectedDiscount(null);
       showToast("Sale completed", "success");
     } catch {
@@ -272,15 +269,6 @@ export function Terminal() {
       >
         <div className="flex max-h-[70dvh] min-h-0 flex-col">{cartPanel}</div>
       </Modal>
-
-      <PaymentModal
-        open={paymentOpen}
-        totalCents={total.total_cents}
-        initialMethod={paymentMethod}
-        onClose={() => setPaymentOpen(false)}
-        onConfirm={handleConfirmPayment}
-        submitting={submitting}
-      />
 
       <HoldModal
         open={holdOpen}
