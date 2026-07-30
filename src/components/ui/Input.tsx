@@ -2,11 +2,15 @@ import {
   forwardRef,
   useState,
   type InputHTMLAttributes,
+  type ReactNode,
 } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  // ReactNode rather than string so callers can append a required marker or
+  // a unit chip without losing the built-in label/`htmlFor` wiring.
+  label?: ReactNode;
   error?: string;
+  hint?: string;
   pill?: boolean;
   revealToggle?: boolean;
 }
@@ -40,7 +44,17 @@ function EyeIcon({ open }: Readonly<{ open: boolean }>) {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, pill = false, revealToggle = false, className = "", id, type, ...props },
+  {
+    label,
+    error,
+    hint,
+    pill = false,
+    revealToggle = false,
+    className = "",
+    id,
+    type,
+    ...props
+  },
   ref,
 ) {
   const inputId = id ?? props.name;
@@ -70,6 +84,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           id={inputId}
           type={inputType}
+          aria-invalid={error ? true : undefined}
           className={inputClass}
           {...props}
         />
@@ -85,6 +100,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
       </div>
       {error && <span className="text-xs text-error">{error}</span>}
+      {!error && hint && (
+        <span className="text-xs text-on-surface-variant dark:text-zinc-500">
+          {hint}
+        </span>
+      )}
     </div>
   );
 });

@@ -378,6 +378,48 @@ export async function listCategories(): Promise<string[]> {
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
+// Distinct subcategory names, optionally narrowed to one parent category so
+// the subcategory picker only offers siblings of the chosen category.
+export async function listSubcategories(category?: string): Promise<string[]> {
+  const products = await db.products.toArray();
+  const names = new Set<string>();
+  for (const product of products) {
+    if (!product.subcategory?.trim()) continue;
+    if (category && (product.category ?? "") !== category) continue;
+    names.add(product.subcategory.trim());
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+export async function listBranches(): Promise<string[]> {
+  const products = await db.products.toArray();
+  const names = new Set<string>();
+  for (const product of products) {
+    if (product.branch?.trim()) names.add(product.branch.trim());
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+// Uniqueness probes for the product form. `addProduct` re-checks inside its
+// transaction — these exist so the form can report a clash inline while the
+// user is still typing, rather than only on submit.
+export async function isSkuTaken(sku: string, exceptId?: string): Promise<boolean> {
+  const needle = sku.trim();
+  if (!needle) return false;
+  const match = await db.products.where("sku").equals(needle).first();
+  return match !== undefined && match.id !== exceptId;
+}
+
+export async function isBarcodeTaken(
+  barcode: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const needle = barcode.trim();
+  if (!needle) return false;
+  const match = await db.products.where("barcode").equals(needle).first();
+  return match !== undefined && match.id !== exceptId;
+}
+
 export async function listBrands(): Promise<string[]> {
   const products = await db.products.toArray();
   const names = new Set<string>();

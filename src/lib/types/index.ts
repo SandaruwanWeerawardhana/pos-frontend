@@ -14,7 +14,28 @@ export interface ProductBatch {
   expiry_date: string | null; // ISO yyyy-mm-dd, null when not perishable
   quantity: number;
   cost_cents?: number; // landed cost for this batch
+  manufactured_date?: string | null; // ISO yyyy-mm-dd
 }
+
+// Whether a product is sellable at the till. "draft" rows are saved but
+// hidden from the POS product grid.
+export type ProductStatus = "active" | "inactive" | "draft";
+
+// Merchandising group. Drives the storage/expiry defaults a grocer expects
+// (frozen goods default to frozen storage and expiry tracking, and so on).
+export type ProductType =
+  | "regular"
+  | "fresh_produce"
+  | "frozen"
+  | "dairy"
+  | "bakery"
+  | "beverage"
+  | "meat"
+  | "seafood"
+  | "household"
+  | "personal_care";
+
+export type StorageType = "ambient" | "chilled" | "frozen";
 
 export interface Product {
   id: string;
@@ -36,6 +57,30 @@ export interface Product {
   shelf_location?: string; // e.g. "A3-04"
   supplier_id?: string;
   batches?: ProductBatch[]; // batch/expiry tracking for perishables
+  // ── Catalogue metadata captured by the product form. Optional for the same
+  // reason as the fields above: older cached rows predate them. ──
+  product_code?: string; // internal merchandising code, distinct from SKU
+  qr_code?: string; // payload encoded on the shelf-edge QR label
+  subcategory?: string;
+  description?: string;
+  status?: ProductStatus; // defaults to "active" when absent
+  discount_percent?: number; // standing line discount, 0-100
+  min_stock_level?: number; // hard floor; `reorder_level` is the alert trigger
+  warehouse_id?: string;
+  branch?: string;
+  product_type?: ProductType;
+  is_variable_weight?: boolean; // weight differs per pack, read at the till
+  storage_type?: StorageType;
+  allow_discount?: boolean;
+  allow_returns?: boolean;
+  track_expiry?: boolean;
+  track_batch?: boolean;
+  supplier_product_code?: string;
+  purchase_price_cents?: number; // supplier list price, may differ from cost_cents
+  images?: string[]; // data URLs; `image_url` mirrors images[0] for older UI
+  // Values for the active business-type plugin's declared fields, keyed by
+  // PluginField.key. Opaque to the core app.
+  plugin_data?: Record<string, string | number | boolean>;
   _local_only?: boolean; // locally-created product, preserved until product sync exists
 }
 
