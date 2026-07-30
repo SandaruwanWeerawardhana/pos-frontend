@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Save } from "lucide-react";
 import { usePlugin } from "@/lib/hooks/use-plugin";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useTheme } from "@/components/providers/theme-provider";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card, PageHeader, SectionHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
-import type { StoreSettings, TaxRateSetting } from "@/lib/types";
+import type { StoreSettings } from "@/lib/types";
 import { ROUTES } from "@/lib/types/routes";
 
 export default function SettingsPage() {
@@ -24,8 +24,6 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Settings arrive from a liveQuery, so the local draft is re-seeded whenever
-  // the stored value changes — unless the user has unsaved edits in progress.
   useEffect(() => {
     if (!dirty) setDraft(settings);
   }, [settings, dirty]);
@@ -33,47 +31,6 @@ export default function SettingsPage() {
   function update<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
     setDirty(true);
     setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  function updateTaxRate(index: number, changes: Partial<TaxRateSetting>) {
-    setDirty(true);
-    setDraft((current) => ({
-      ...current,
-      tax_rates: current.tax_rates.map((rate, position) =>
-        position === index ? { ...rate, ...changes } : rate,
-      ),
-    }));
-  }
-
-  function addTaxRate() {
-    setDirty(true);
-    setDraft((current) => ({
-      ...current,
-      tax_rates: [
-        ...current.tax_rates,
-        { id: crypto.randomUUID(), name: "New rate", rate: 0 },
-      ],
-    }));
-  }
-
-  function removeTaxRate(index: number) {
-    setDirty(true);
-    setDraft((current) => ({
-      ...current,
-      tax_rates: current.tax_rates.filter((_, position) => position !== index),
-    }));
-  }
-
-  function setDefaultTaxRate(index: number) {
-    setDirty(true);
-    setDraft((current) => ({
-      ...current,
-      // Exactly one rate carries the default flag, so clear the others.
-      tax_rates: current.tax_rates.map((rate, position) => ({
-        ...rate,
-        is_default: position === index,
-      })),
-    }));
   }
 
   async function handleSave() {
@@ -94,7 +51,6 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="Administration"
         title="Settings"
-        description="Store identity, tax, currency, receipts, and appearance."
         breadcrumbs={[
           { label: "Dashboard", href: ROUTES.dashboard },
           { label: "Settings" },
@@ -138,77 +94,6 @@ export default function SettingsPage() {
                 onChange={(event) => update("tax_id", event.target.value)}
               />
             </div>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHeader
-            title="Tax rates"
-            action={
-              <Button type="button" variant="outline" size="sm" onClick={addTaxRate}>
-                <Plus size={14} />
-                Add rate
-              </Button>
-            }
-          />
-          <div className="mt-4 flex flex-col gap-3">
-            <label className="flex items-center gap-2 text-sm text-on-surface dark:text-zinc-100">
-              <input
-                type="checkbox"
-                checked={draft.prices_include_tax}
-                onChange={(event) =>
-                  update("prices_include_tax", event.target.checked)
-                }
-                className="h-4 w-4 rounded border-outline-variant"
-              />
-              Shelf prices already include tax
-            </label>
-
-            {draft.tax_rates.map((rate, index) => (
-              <div
-                key={rate.id}
-                className="flex items-end gap-2 rounded-xl border border-outline-variant p-3 dark:border-zinc-800"
-              >
-                <Input
-                  label="Name"
-                  value={rate.name}
-                  onChange={(event) =>
-                    updateTaxRate(index, { name: event.target.value })
-                  }
-                  className="flex-1"
-                />
-                <Input
-                  label="Rate (%)"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={(rate.rate * 100).toString()}
-                  onChange={(event) =>
-                    updateTaxRate(index, { rate: Number(event.target.value) / 100 })
-                  }
-                  className="w-24"
-                />
-                <button
-                  type="button"
-                  onClick={() => setDefaultTaxRate(index)}
-                  className={`min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold transition-colors ${
-                    rate.is_default
-                      ? "bg-primary text-on-primary"
-                      : "border border-outline-variant text-on-surface-variant hover:bg-surface-container dark:border-zinc-700"
-                  }`}
-                >
-                  {rate.is_default ? "Default" : "Set default"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeTaxRate(index)}
-                  aria-label={`Remove ${rate.name}`}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:text-error"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
           </div>
         </Card>
 
@@ -300,10 +185,6 @@ export default function SettingsPage() {
               }
             />
           </div>
-          <p className="mt-2 text-xs text-on-surface-variant dark:text-zinc-500">
-            A product&apos;s own reorder level overrides the store-wide low stock
-            threshold when it is set.
-          </p>
         </Card>
 
         <Card>
@@ -321,10 +202,6 @@ export default function SettingsPage() {
                 { value: "system", label: "Match system" },
               ]}
             />
-            <p className="text-xs text-on-surface-variant dark:text-zinc-500">
-              Theme is stored per device, so a shared back-office machine and a
-              till can differ.
-            </p>
           </div>
         </Card>
 
