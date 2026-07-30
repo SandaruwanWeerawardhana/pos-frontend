@@ -2,18 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Barcode,
-  Box,
-  Download,
-  Layers,
-  Package,
-  Plus,
-  QrCode,
-  Search,
-  Tags,
-  Wand2,
-} from "lucide-react";
+import { Box, Download, Layers, Package, Plus, Search, Tags } from "lucide-react";
 import { listBrands, listCategories, searchProducts } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
@@ -21,41 +10,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
-import { Card, PageHeader, SectionHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { exportCsv, exportExcel, type ExportColumn } from "@/lib/export";
 import { ROUTES } from "@/lib/types/routes";
-
-function makeSku(prefix: string, name: string): string {
-  const cleanPrefix = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const cleanName = name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 12);
-  const suffix = Date.now().toString(36).slice(-4).toUpperCase();
-  return `${cleanPrefix || "PRD"}-${cleanName || "ITEM"}-${suffix}`;
-}
-
-// EAN-13 style: a 12-digit body plus a modulo-10 check digit, so generated
-// codes scan on real hardware instead of only looking plausible.
-function makeBarcode(seed: string): string {
-  let numeric = "";
-  for (const char of seed) {
-    numeric += String(char.charCodeAt(0) % 10);
-  }
-  const body = `893${numeric}`.padEnd(12, "0").slice(0, 12);
-  const sum = body
-    .split("")
-    .reduce(
-      (total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 1 : 3),
-      0,
-    );
-  const checkDigit = (10 - (sum % 10)) % 10;
-  return `${body}${checkDigit}`;
-}
 
 function MiniBarcode({ code }: Readonly<{ code: string }>) {
   const bars = code
@@ -76,27 +35,6 @@ function MiniBarcode({ code }: Readonly<{ code: string }>) {
   );
 }
 
-function MiniQr({ value }: Readonly<{ value: string }>) {
-  const cells = Array.from({ length: 25 }, (_, index) => {
-    const charCode = value.charCodeAt(index % Math.max(value.length, 1)) || 0;
-    return (charCode + index) % 3 !== 0;
-  });
-
-  return (
-    <div
-      aria-label={`QR code for ${value}`}
-      className="grid h-16 w-16 grid-cols-5 gap-0.5 rounded-lg border border-outline-variant bg-surface-container-lowest p-1 dark:border-zinc-700 dark:bg-zinc-950"
-    >
-      {cells.map((filled, index) => (
-        <span
-          key={`${value}-${index}`}
-          className={filled ? "rounded-[2px] bg-on-surface dark:bg-zinc-100" : ""}
-        />
-      ))}
-    </div>
-  );
-}
-
 export default function ProductsPage() {
   const { money } = useSettings();
 
@@ -106,11 +44,6 @@ export default function ProductsPage() {
   const [brands, setBrands] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [brand, setBrand] = useState("");
-
-  const [productName, setProductName] = useState("Organic apple pack");
-  const [skuPrefix, setSkuPrefix] = useState("GRC");
-  const [generatedSku, setGeneratedSku] = useState("GRC-ORGANIC-APPLE-A1B2");
-  const [barcodeValue, setBarcodeValue] = useState("8930001240453");
 
   useEffect(() => {
     listCategories().then(setCategories);
@@ -155,12 +88,6 @@ export default function ProductsPage() {
         : 0;
     return { stockValue, blendedMargin, weighted: visible.filter((p) => p.is_weighted).length };
   }, [visible]);
-
-  function handleGenerateSku() {
-    const nextSku = makeSku(skuPrefix, productName);
-    setGeneratedSku(nextSku);
-    setBarcodeValue(makeBarcode(nextSku));
-  }
 
   const exportColumns: ExportColumn<Product>[] = [
     { key: "name", header: "Product", value: (p) => p.name },
@@ -257,9 +184,7 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col gap-6 pb-8">
       <PageHeader
-        eyebrow="Catalogue"
         title="Product management"
-        description="Every product in the local catalogue, with SKU and barcode tooling."
         breadcrumbs={[
           { label: "Dashboard", href: ROUTES.dashboard },
           { label: "Products" },
@@ -328,115 +253,45 @@ export default function ProductsPage() {
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="relative sm:col-span-1">
-              <Search
-                size={16}
-                aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-zinc-500"
-              />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search name, SKU, barcode…"
-                aria-label="Search products"
-                className="pl-9"
-              />
-            </div>
-            <Select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              placeholder="All categories"
-              aria-label="Filter by category"
-              options={categories.map((name) => ({ value: name, label: name }))}
+      <section className="flex flex-col gap-3">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="relative sm:col-span-1">
+            <Search
+              size={16}
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-zinc-500"
             />
-            <Select
-              value={brand}
-              onChange={(event) => setBrand(event.target.value)}
-              placeholder="All brands"
-              aria-label="Filter by brand"
-              options={brands.map((name) => ({ value: name, label: name }))}
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search name, SKU, barcode…"
+              aria-label="Search products"
+              className="pl-9"
             />
           </div>
-
-          <DataTable
-            columns={columns}
-            rows={visible}
-            rowKey={(product) => product.id}
-            emptyMessage="No products match these filters."
-            caption="Product catalogue"
+          <Select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            placeholder="All categories"
+            aria-label="Filter by category"
+            options={categories.map((name) => ({ value: name, label: name }))}
+          />
+          <Select
+            value={brand}
+            onChange={(event) => setBrand(event.target.value)}
+            placeholder="All brands"
+            aria-label="Filter by brand"
+            options={brands.map((name) => ({ value: name, label: name }))}
           />
         </div>
 
-        <div className="flex flex-col gap-5">
-          <Card>
-            <SectionHeader
-              title="SKU generation"
-              action={
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleGenerateSku}
-                >
-                  <Wand2 size={14} />
-                  Generate
-                </Button>
-              }
-            />
-            <div className="mt-4 grid gap-3">
-              <Input
-                label="SKU prefix"
-                value={skuPrefix}
-                onChange={(event) => setSkuPrefix(event.target.value)}
-              />
-              <Input
-                label="Product name"
-                value={productName}
-                onChange={(event) => setProductName(event.target.value)}
-              />
-            </div>
-            <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant dark:text-zinc-500">
-                Generated SKU
-              </p>
-              <p className="mt-2 break-all font-mono text-lg font-bold text-on-surface dark:text-zinc-50">
-                {generatedSku}
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHeader
-              title="Barcode & QR labels"
-              action={
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant dark:text-zinc-400">
-                  <QrCode size={14} aria-hidden />
-                  EAN-13
-                </span>
-              }
-            />
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-outline-variant p-4 dark:border-zinc-800">
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-on-surface dark:text-zinc-50">
-                  <Barcode size={15} aria-hidden />
-                  Barcode
-                </p>
-                <p className="mt-1 font-mono text-xs text-on-surface-variant dark:text-zinc-400">
-                  {barcodeValue}
-                </p>
-                <MiniBarcode code={barcodeValue} />
-              </div>
-              <MiniQr value={generatedSku} />
-            </div>
-            <p className="mt-3 text-xs text-on-surface-variant dark:text-zinc-500">
-              Generated codes carry a valid modulo-10 check digit, so they scan
-              on standard EAN-13 hardware.
-            </p>
-          </Card>
-        </div>
+        <DataTable
+          columns={columns}
+          rows={visible}
+          rowKey={(product) => product.id}
+          emptyMessage="No products match these filters."
+          caption="Product catalogue"
+        />
       </section>
     </div>
   );
