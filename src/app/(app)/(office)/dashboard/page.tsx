@@ -8,14 +8,9 @@ import {
   CheckCircle2,
   ChevronRight,
   DollarSign,
-  Monitor,
-  Moon,
   Package,
-  PackagePlus,
   RefreshCw,
   ShoppingBag,
-  ShoppingCart,
-  Users,
 } from "lucide-react";
 import {
   db,
@@ -162,14 +157,6 @@ function DailyRevenueChart({
   );
 }
 
-const QUICK_ACTIONS = [
-  { href: ROUTES.pos.root, label: "Open till", icon: Monitor },
-  { href: ROUTES.productsNew, label: "Add product", icon: PackagePlus },
-  { href: ROUTES.purchases.new, label: "New purchase order", icon: ShoppingCart },
-  { href: ROUTES.customers.root, label: "Customers", icon: Users },
-  { href: ROUTES.pos.close, label: "End of day", icon: Moon },
-];
-
 function SyncPanel({
   pendingCount,
   conflictCount,
@@ -271,25 +258,6 @@ export default function DashboardPage() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <SectionHeader title="Quick actions" />
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:border-primary/40 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              >
-                <Icon size={16} className="opacity-60" aria-hidden />
-                {action.label}
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
         <SectionHeader title="Today's overview" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
@@ -297,21 +265,18 @@ export default function DashboardPage() {
             value={summary ? money(summary.totalCents) : "—"}
             icon={<DollarSign size={20} />}
             accent="primary"
-            sub="All completed orders"
           />
           <StatCard
             label="Orders today"
             value={summary ? String(summary.orderCount) : "—"}
             icon={<ShoppingBag size={20} />}
             accent="secondary"
-            sub="Processed at the till"
           />
           <StatCard
             label="Stock alerts"
             value={lowStockCount === null ? "—" : String(lowStockCount)}
             icon={<Package size={20} />}
             accent={lowStockCount ? "warning" : "secondary"}
-            sub="Low or out of stock"
             href={ROUTES.inventory.alerts}
           />
           <StatCard
@@ -319,7 +284,6 @@ export default function DashboardPage() {
             value={expiryCount === null ? "—" : String(expiryCount)}
             icon={<AlertTriangle size={20} />}
             accent={expiryCount ? "warning" : "secondary"}
-            sub="Near or past expiry"
             href={ROUTES.inventory.alerts}
           />
         </div>
