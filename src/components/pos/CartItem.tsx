@@ -73,19 +73,15 @@ export function CartItem({
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
         style={{ transform: `translateX(${offsetX}px)` }}
-        className="relative flex touch-pan-y items-center gap-3 rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-2.5 transition-transform dark:border-zinc-800 dark:bg-zinc-900"
+        className="relative flex touch-pan-y items-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-2 transition-transform dark:border-zinc-800 dark:bg-zinc-900"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-container text-base font-semibold text-on-surface-variant dark:bg-zinc-800">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-container text-xs font-semibold text-on-surface-variant dark:bg-zinc-800">
           {item.name.charAt(0).toUpperCase()}
         </div>
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-on-surface dark:text-zinc-50">
             {item.name}
-          </p>
-          <p className="text-xs text-on-surface-variant">
-            {money(item.unit_price_cents)}
-            {item.unit && item.unit !== "unit" ? ` / ${item.unit}` : ""}
           </p>
           <PluginCartRow item={item} />
         </div>
@@ -95,24 +91,24 @@ export function CartItem({
             type="button"
             aria-label={`Decrease quantity of ${item.name}`}
             onClick={() => changeQuantity(-step)}
-            className="flex h-9 w-9 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
+            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
           >
-            <Minus size={14} />
+            <Minus size={12} />
           </button>
-          <span className="min-w-10 text-center text-sm font-medium tabular-nums text-on-surface dark:text-zinc-50">
+          <span className="min-w-9 text-center text-xs font-medium tabular-nums text-on-surface dark:text-zinc-50">
             {formatQuantity(item.quantity)}
           </span>
           <button
             type="button"
             aria-label={`Increase quantity of ${item.name}`}
             onClick={() => changeQuantity(step)}
-            className="flex h-9 w-9 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
+            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
           >
-            <Plus size={14} />
+            <Plus size={12} />
           </button>
         </div>
 
-        <span className="w-16 text-right text-sm font-semibold tabular-nums text-on-surface dark:text-zinc-50">
+        <span className="w-14 text-right text-sm font-semibold tabular-nums text-on-surface dark:text-zinc-50">
           {money(Math.round(item.unit_price_cents * item.quantity))}
         </span>
 
@@ -120,9 +116,9 @@ export function CartItem({
           type="button"
           aria-label={`Remove ${item.name}`}
           onClick={() => item.id !== undefined && onRemove(item.id)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-outline-variant transition-colors hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-600"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-outline-variant transition-colors hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-600"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>
