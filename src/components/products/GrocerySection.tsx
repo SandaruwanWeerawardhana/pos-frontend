@@ -31,15 +31,7 @@ export function GrocerySection({
       errorCount={errorCount}
       plain
     >
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Input
-          label="Batch number"
-          placeholder={trackBatch ? "Required" : "Optional"}
-          autoComplete="off"
-          className="font-mono"
-          error={errors.batch_no?.message}
-          {...register("batch_no")}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Manufacturing date"
           type="date"

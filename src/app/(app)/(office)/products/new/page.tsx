@@ -85,7 +85,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
     {
       id: "grocery",
       label: "Grocery information",
-      fields: ["batch_no", "expiry_date", "manufacturing_date"],
+      fields: ["expiry_date", "manufacturing_date"],
     },
     { id: "media", label: "Media", fields: ["images"] },
     {

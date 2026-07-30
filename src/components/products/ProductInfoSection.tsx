@@ -1,17 +1,17 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Controller, useWatch } from "react-hook-form";
-import { Info, Sparkles } from "lucide-react";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { FormSection, RequiredMark } from "./FormSection";
-import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
-import { generateBarcode, generateSku } from "@/lib/products/generate";
 import type { CatalogueOptions } from "@/lib/hooks/use-product-catalogue-options";
 import type { DuplicateState } from "@/lib/hooks/use-product-duplicates";
+import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
+import { generateBarcode, generateSku } from "@/lib/products/generate";
 import type { ProductUnit } from "@/lib/types";
+import { Info, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
+import { Controller, useWatch } from "react-hook-form";
+import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
 interface ProductInfoSectionProps extends ProductSectionProps {
