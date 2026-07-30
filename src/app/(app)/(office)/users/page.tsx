@@ -72,11 +72,11 @@ export default function UsersPage() {
       return;
     }
     if (!PIN_PATTERN.test(userPin)) {
-      setUserError("PIN must be 4 to 6 digits.");
+      setUserError("Password must be 4 to 6 digits.");
       return;
     }
     if (userPin !== userPinConfirm) {
-      setUserError("The two PINs do not match.");
+      setUserError("The two passwords do not match.");
       return;
     }
     try {
@@ -101,14 +101,14 @@ export default function UsersPage() {
     if (!pinTarget) return;
     setPinError("");
     if (!PIN_PATTERN.test(newPin)) {
-      setPinError("PIN must be 4 to 6 digits.");
+      setPinError("Password must be 4 to 6 digits.");
       return;
     }
     await setStaffPin(pinTarget.id, newPin);
     setPinTarget(null);
     setNewPin("");
     await refresh();
-    showToast(`New PIN set for ${pinTarget.name}`, "success");
+    showToast(`New password set for ${pinTarget.name}`, "success");
   }
 
   async function handleToggleActive(user: StaffUser) {
@@ -157,7 +157,7 @@ export default function UsersPage() {
     },
     {
       key: "pin",
-      header: "Till PIN",
+      header: "Password",
       hideOnMobile: true,
       render: (user) => (
         <span className="flex items-center gap-2">
@@ -264,10 +264,10 @@ export default function UsersPage() {
             type="email"
             value={userEmail}
             onChange={(event) => setUserEmail(event.target.value)}
-            hint="Used together with the PIN to sign in at the till."
+            hint="Used together with the password to sign in at the till."
           />
           <Input
-            label="Till PIN"
+            label="Password"
             type="password"
             inputMode="numeric"
             maxLength={6}
@@ -297,11 +297,11 @@ export default function UsersPage() {
       <Modal
         open={pinTarget !== null}
         onClose={() => setPinTarget(null)}
-        title={pinTarget ? `Till PIN for ${pinTarget.name}` : "Till PIN"}
+        title={pinTarget ? `Password for ${pinTarget.name}` : "Password"}
       >
         <div className="flex flex-col gap-3">
           <Input
-            label="New PIN"
+            label="New password"
             type="password"
             inputMode="numeric"
             maxLength={6}
@@ -310,11 +310,11 @@ export default function UsersPage() {
               setNewPin(event.target.value.replace(/\D/g, "").slice(0, 6))
             }
             error={pinError}
-            hint="4 to 6 digits. The old PIN stops working immediately."
+            hint="4 to 6 digits. The old password stops working immediately."
             autoFocus
           />
           <Button type="button" onClick={handleResetPin}>
-            Save PIN
+            Save password
           </Button>
         </div>
       </Modal>
