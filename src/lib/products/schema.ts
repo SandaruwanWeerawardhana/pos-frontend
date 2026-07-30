@@ -365,7 +365,9 @@ export function toProduct(values: ProductFormValues, id: string): Product {
     allow_returns: values.allow_returns,
     track_expiry: values.track_expiry,
     track_batch: values.track_batch,
-    ...(purchaseCents !== null ? { purchase_price_cents: purchaseCents } : {}),
+    ...(purchaseCents !== null
+      ? { purchase_price_cents: purchaseCents, cost_cents: purchaseCents }
+      : {}),
     ...(optional(values.brand) ? { brand: values.brand } : {}),
     ...(optional(values.subcategory) ? { subcategory: values.subcategory } : {}),
     ...(optional(values.product_code) ? { product_code: values.product_code } : {}),
