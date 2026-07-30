@@ -157,8 +157,6 @@ export function Terminal() {
       items={cart.items}
       total={total}
       discountCents={discountCents}
-      selectedDiscount={selectedDiscount}
-      onSelectDiscount={setSelectedDiscount}
       onUpdateQuantity={cart.updateQuantity}
       onRemove={cart.remove}
       onHold={() => setHoldOpen(true)}

@@ -2,13 +2,11 @@
 
 import { ShoppingCart } from "lucide-react";
 import { CartItem } from "./CartItem";
-import { DiscountInput } from "./DiscountInput";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { formatQuantity } from "@/lib/format";
 import type {
   CartItem as CartItemType,
   CartTotal,
-  Discount,
   PaymentMethod,
 } from "@/lib/types";
 
@@ -16,8 +14,6 @@ interface CartProps {
   items: CartItemType[];
   total: CartTotal;
   discountCents: number;
-  selectedDiscount: Discount | null;
-  onSelectDiscount: (discount: Discount | null) => void;
   onUpdateQuantity: (id: number, quantity: number) => void;
   onRemove: (id: number) => void;
   onHold: () => void;
@@ -30,8 +26,6 @@ export function Cart({
   items,
   total,
   discountCents,
-  selectedDiscount,
-  onSelectDiscount,
   onUpdateQuantity,
   onRemove,
   onHold,
@@ -80,11 +74,6 @@ export function Cart({
 
       {/* Totals */}
       <div className="mt-3 space-y-2 border-t border-outline-variant pt-3 dark:border-zinc-800">
-        <DiscountInput
-          selectedId={selectedDiscount?.id ?? null}
-          subtotalCents={total.subtotal_cents + discountCents}
-          onSelect={onSelectDiscount}
-        />
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           <Row label="Items" value={formatQuantity(itemCount)} />
           <Row label="Subtotal" value={money(total.subtotal_cents)} />
