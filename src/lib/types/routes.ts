@@ -19,7 +19,6 @@ export const ROUTES = {
   dashboard: "/dashboard",
   products: "/products",
   productsNew: "/products/new",
-  productDetail: (id: string) => `/products/${id}`,
   inventory: {
     root: "/inventory",
     new: "/inventory/new",
@@ -37,10 +36,6 @@ export const ROUTES = {
   sales: {
     root: "/sales",
     detail: (id: string) => `/sales/${id}`,
-  },
-  customers: {
-    root: "/customers",
-    detail: (id: string) => `/customers/${id}`,
   },
   suppliers: "/suppliers",
   reports: "/reports",

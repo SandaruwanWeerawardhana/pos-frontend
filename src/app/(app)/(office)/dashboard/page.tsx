@@ -8,20 +8,14 @@ import {
   CheckCircle2,
   ChevronRight,
   DollarSign,
-  Monitor,
-  Moon,
   Package,
-  PackagePlus,
   RefreshCw,
   ShoppingBag,
-  ShoppingCart,
-  Users,
 } from "lucide-react";
 import {
   db,
   getInventoryAlerts,
   getTodaysOrderSummary,
-  listStockMovements,
   type InventoryAlerts,
   type TodaysOrderSummary,
 } from "@/lib/db";
@@ -32,7 +26,7 @@ import { Card, SectionHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateTime } from "@/lib/format";
-import type { PendingOrder, StockMovement } from "@/lib/types";
+import type { PendingOrder } from "@/lib/types";
 import { ROUTES } from "@/lib/types/routes";
 
 const DAILY_REVENUE_DAYS = 7;
@@ -163,14 +157,6 @@ function DailyRevenueChart({
   );
 }
 
-const QUICK_ACTIONS = [
-  { href: ROUTES.pos.root, label: "Open till", icon: Monitor },
-  { href: ROUTES.productsNew, label: "Add product", icon: PackagePlus },
-  { href: ROUTES.purchases.new, label: "New purchase order", icon: ShoppingCart },
-  { href: ROUTES.customers.root, label: "Customers", icon: Users },
-  { href: ROUTES.pos.close, label: "End of day", icon: Moon },
-];
-
 function SyncPanel({
   pendingCount,
   conflictCount,
@@ -229,7 +215,6 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
   const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
   const [recentSales, setRecentSales] = useState<PendingOrder[]>([]);
-  const [activity, setActivity] = useState<StockMovement[]>([]);
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenuePoint[]>(() =>
     getDefaultDailyRevenue(),
   );
@@ -244,7 +229,6 @@ export default function DashboardPage() {
   useEffect(() => {
     getTodaysOrderSummary().then(setSummary);
     getInventoryAlerts().then(setAlerts);
-    listStockMovements({ limit: 8 }).then(setActivity);
     db.pendingOrders
       .orderBy("created_at")
       .reverse()
@@ -274,25 +258,6 @@ export default function DashboardPage() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <SectionHeader title="Quick actions" />
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:border-primary/40 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              >
-                <Icon size={16} className="opacity-60" aria-hidden />
-                {action.label}
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
         <SectionHeader title="Today's overview" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
@@ -300,21 +265,18 @@ export default function DashboardPage() {
             value={summary ? money(summary.totalCents) : "—"}
             icon={<DollarSign size={20} />}
             accent="primary"
-            sub="All completed orders"
           />
           <StatCard
             label="Orders today"
             value={summary ? String(summary.orderCount) : "—"}
             icon={<ShoppingBag size={20} />}
             accent="secondary"
-            sub="Processed at the till"
           />
           <StatCard
             label="Stock alerts"
             value={lowStockCount === null ? "—" : String(lowStockCount)}
             icon={<Package size={20} />}
             accent={lowStockCount ? "warning" : "secondary"}
-            sub="Low or out of stock"
             href={ROUTES.inventory.alerts}
           />
           <StatCard
@@ -322,14 +284,12 @@ export default function DashboardPage() {
             value={expiryCount === null ? "—" : String(expiryCount)}
             icon={<AlertTriangle size={20} />}
             accent={expiryCount ? "warning" : "secondary"}
-            sub="Near or past expiry"
             href={ROUTES.inventory.alerts}
           />
         </div>
         <DailyRevenueChart points={dailyRevenue} money={money} />
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
         <div className="flex flex-col gap-3">
           <SectionHeader
             title="Recent sales"
@@ -387,67 +347,6 @@ export default function DashboardPage() {
             )}
           </Card>
         </div>
-
-        <div className="flex flex-col gap-3">
-          <SectionHeader
-            title="Recent activity"
-            action={
-              <Link
-                href={ROUTES.inventory.movements}
-                className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400"
-              >
-                Full history
-                <ChevronRight size={13} aria-hidden />
-              </Link>
-            }
-          />
-          <Card>
-            {activity.length === 0 ? (
-              <EmptyState
-                icon={<Package size={20} />}
-                title="Nothing has moved yet"
-                description="Stock changes from sales, deliveries, and adjustments show up here."
-              />
-            ) : (
-              <ol className="flex flex-col gap-0">
-                {activity.map((movement, index) => (
-                  <li key={movement.id} className="flex gap-3">
-                    {/* Timeline rail: a dot per event, joined by a line that
-                        stops before the final entry. */}
-                    <div className="flex flex-col items-center">
-                      <span
-                        aria-hidden
-                        className={`mt-2 h-2 w-2 shrink-0 rounded-full ${
-                          movement.quantity_delta >= 0
-                            ? "bg-on-tertiary-container"
-                            : "bg-amber-500"
-                        }`}
-                      />
-                      {index < activity.length - 1 && (
-                        <span
-                          aria-hidden
-                          className="w-px flex-1 bg-outline-variant dark:bg-zinc-800"
-                        />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1 pb-4">
-                      <p className="truncate text-sm font-medium text-on-surface dark:text-zinc-100">
-                        {movement.product_name}
-                      </p>
-                      <p className="text-xs capitalize text-on-surface-variant dark:text-zinc-400">
-                        {movement.type.replace("_", " ")} ·{" "}
-                        {movement.quantity_delta > 0 ? "+" : ""}
-                        {movement.quantity_delta} ·{" "}
-                        {formatDateTime(movement.created_at)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </Card>
-        </div>
-      </section>
 
       <section className="flex flex-col gap-3">
         <SectionHeader title="Cloud sync" />

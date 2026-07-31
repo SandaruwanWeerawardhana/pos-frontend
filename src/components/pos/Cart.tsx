@@ -1,15 +1,12 @@
 "use client";
 
-import { ShoppingCart, UserPlus, X } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { CartItem } from "./CartItem";
-import { DiscountInput } from "./DiscountInput";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { formatQuantity } from "@/lib/format";
 import type {
   CartItem as CartItemType,
   CartTotal,
-  Customer,
-  Discount,
   PaymentMethod,
 } from "@/lib/types";
 
@@ -17,11 +14,6 @@ interface CartProps {
   items: CartItemType[];
   total: CartTotal;
   discountCents: number;
-  selectedDiscount: Discount | null;
-  customer: Customer | null;
-  onSelectDiscount: (discount: Discount | null) => void;
-  onOpenCustomer: () => void;
-  onClearCustomer: () => void;
   onUpdateQuantity: (id: number, quantity: number) => void;
   onRemove: (id: number) => void;
   onHold: () => void;
@@ -34,11 +26,6 @@ export function Cart({
   items,
   total,
   discountCents,
-  selectedDiscount,
-  customer,
-  onSelectDiscount,
-  onOpenCustomer,
-  onClearCustomer,
   onUpdateQuantity,
   onRemove,
   onHold,
@@ -68,37 +55,6 @@ export function Cart({
         </button>
       </div>
 
-      {/* Customer attachment drives loyalty accrual and purchase history. */}
-      {customer ? (
-        <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-          <span className="min-w-0">
-            <span className="block truncate text-xs font-semibold text-on-surface dark:text-zinc-100">
-              {customer.name}
-            </span>
-            <span className="block text-[11px] text-on-surface-variant dark:text-zinc-400">
-              {customer.loyalty_points ?? 0} points
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={onClearCustomer}
-            aria-label="Detach customer"
-            className="rounded p-1 text-on-surface-variant hover:text-error"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={onOpenCustomer}
-          className="mb-2 flex items-center justify-center gap-2 rounded-lg border border-dashed border-outline-variant py-2 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400"
-        >
-          <UserPlus size={14} aria-hidden />
-          Attach customer
-        </button>
-      )}
-
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         {empty ? (
           <p className="py-10 text-center text-sm text-on-surface-variant">
@@ -118,11 +74,6 @@ export function Cart({
 
       {/* Totals */}
       <div className="mt-3 space-y-2 border-t border-outline-variant pt-3 dark:border-zinc-800">
-        <DiscountInput
-          selectedId={selectedDiscount?.id ?? null}
-          subtotalCents={total.subtotal_cents + discountCents}
-          onSelect={onSelectDiscount}
-        />
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           <Row label="Items" value={formatQuantity(itemCount)} />
           <Row label="Subtotal" value={money(total.subtotal_cents)} />

@@ -1,22 +1,18 @@
 import type { Product } from "@/lib/types";
 import {
   addToCart,
-  createCustomer,
   createDiscount,
   createLocalOrder,
   createSupplier,
   db,
-  deleteCustomer,
   getActiveDiscounts,
   getCartTotal,
   getTodaysOrderSummary,
   holdCart,
-  listCustomers,
   listHeldCarts,
   recordCashReconciliation,
   resumeHeldCart,
   seedProducts,
-  updateCustomer,
 } from "@/lib/db";
 
 const espresso: Product = {
@@ -44,26 +40,11 @@ beforeEach(async () => {
     db.products.clear(),
     db.cartItems.clear(),
     db.pendingOrders.clear(),
-    db.customers.clear(),
     db.suppliers.clear(),
     db.discounts.clear(),
     db.heldCarts.clear(),
     db.cashReconciliations.clear(),
   ]);
-});
-
-describe("customers", () => {
-  it("creates, updates, lists, and deletes a customer", async () => {
-    const customer = await createCustomer({ name: "Ada Lovelace" });
-    expect(customer.id).toEqual(expect.any(String));
-
-    await updateCustomer(customer.id, { phone: "555-0100" });
-    const [listed] = await listCustomers();
-    expect(listed.phone).toBe("555-0100");
-
-    await deleteCustomer(customer.id);
-    expect(await listCustomers()).toEqual([]);
-  });
 });
 
 describe("suppliers", () => {
@@ -99,28 +80,23 @@ describe("getCartTotal with a discount", () => {
   });
 });
 
-describe("createLocalOrder with discount/customer options", () => {
+describe("createLocalOrder with discount options", () => {
   beforeEach(async () => {
     await seedProducts([espresso, latte]);
   });
 
-  it("stamps discount_cents and customer_id onto the order", async () => {
+  it("stamps discount_cents onto the order", async () => {
     await addToCart(espresso, 2);
-    const order = await createLocalOrder("cash", {
-      customerId: "cust_1",
-      discountCents: 100,
-    });
+    const order = await createLocalOrder("cash", { discountCents: 100 });
 
-    expect(order.customer_id).toBe("cust_1");
     expect(order.discount_cents).toBe(100);
     expect(order.total_cents).toBeLessThan(648);
   });
 
-  it("omits discount_cents/customer_id when not provided", async () => {
+  it("omits discount_cents when not provided", async () => {
     await addToCart(espresso, 1);
     const order = await createLocalOrder("cash");
 
-    expect(order.customer_id).toBeUndefined();
     expect(order.discount_cents).toBeUndefined();
   });
 });

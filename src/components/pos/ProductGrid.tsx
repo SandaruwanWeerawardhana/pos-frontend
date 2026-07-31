@@ -56,7 +56,13 @@ function ProductCard({
   const disabled = product.stock_quantity <= 0;
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-shadow hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      disabled={disabled}
+      aria-label={`Add ${product.name} to cart`}
+      className="group relative flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 text-left transition-shadow hover:shadow-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-900"
+    >
       <div className="relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-surface-container text-3xl font-semibold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-600">
         {product.image_url ? (
           // Product images come from arbitrary supplier URLs, so a plain <img>
@@ -97,17 +103,14 @@ function ProductCard({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <StockBadge product={product} threshold={settings.low_stock_threshold} />
-        <button
-          type="button"
-          onClick={() => onAdd(product)}
-          disabled={disabled}
-          aria-label={`Add ${product.name} to cart`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-on-secondary transition-colors hover:bg-secondary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-95 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
+        <span
+          aria-hidden
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-on-secondary transition-colors group-hover:bg-secondary/90 group-active:scale-95 group-disabled:bg-zinc-300 dark:group-disabled:bg-zinc-700"
         >
           <Plus size={20} aria-hidden />
-        </button>
+        </span>
       </div>
-    </div>
+    </button>
   );
 }
 

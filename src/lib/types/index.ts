@@ -14,6 +14,7 @@ export interface ProductBatch {
   expiry_date: string | null; // ISO yyyy-mm-dd, null when not perishable
   quantity: number;
   cost_cents?: number; // landed cost for this batch
+  manufactured_date?: string | null; // ISO yyyy-mm-dd
 }
 
 export interface Product {
@@ -21,6 +22,9 @@ export interface Product {
   name: string;
   sku: string;
   barcode: string;
+  // "package" = GTIN printed by the supplier, "generated" = in-store code we
+  // print ourselves. Absent on rows that predate the field; treat as "package".
+  barcode_source?: "package" | "generated";
   price_cents: number; // integer cents
   tax_rate: number; // fractional rate, e.g. 0.08 = 8%
   stock_quantity: number;
@@ -36,7 +40,36 @@ export interface Product {
   shelf_location?: string; // e.g. "A3-04"
   supplier_id?: string;
   batches?: ProductBatch[]; // batch/expiry tracking for perishables
-  _local_only?: boolean; // locally-created product, preserved until product sync exists
+  // ── Catalogue metadata captured by the product form. Optional for the same
+  // reason as the fields above: older cached rows predate them. ──
+  description?: string;
+  discount_percent?: number; // standing line discount, 0-100
+  min_stock_level?: number; // hard floor; `reorder_level` is the alert trigger
+  images?: string[]; // data URLs; `image_url` mirrors images[0] for older UI
+  // Values for the active business-type plugin's declared fields, keyed by
+  // PluginField.key. Opaque to the core app.
+  plugin_data?: Record<string, string | number | boolean>;
+  // Created on this device and not yet accepted by the server. Cleared by the
+  // sync manager once POST /products has stored it, so a pull can safely
+  // replace the row with the server's canonical copy.
+  _local_only?: boolean;
+  // Edited on this device since the last successful push. Set by updateProduct
+  // and cleared once PUT /products/{id} has stored the edit; a pull leaves
+  // flagged rows alone so an edit made offline is not undone by the server's
+  // older copy. Never set on a row that is still `_local_only` — that one is
+  // pushed by its create, edits and all.
+  _pending_update?: boolean;
+}
+
+// A product deleted on this device whose DELETE has not reached the server yet.
+//
+// Kept as its own table rather than a flag on the product, so the row can leave
+// `products` immediately: a deleted product must vanish from the till, the
+// catalogue and every report at once, and a tombstone in the products table
+// would mean auditing every read path for it.
+export interface DeletedProductRecord {
+  id: string;
+  deleted_at: number; // epoch milliseconds
 }
 
 export interface CartItem {
@@ -87,35 +120,6 @@ export interface CartTotal {
   subtotal_cents: number;
   tax_total_cents: number;
   total_cents: number;
-}
-
-export type MembershipTier = "none" | "silver" | "gold" | "platinum";
-
-export interface Customer {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  created_at: number;
-  loyalty_points?: number;
-  membership_tier?: MembershipTier;
-  credit_limit_cents?: number; // 0 / undefined means no credit account
-  credit_balance_cents?: number; // outstanding amount the customer owes
-}
-
-// Append-only ledger behind `Customer.loyalty_points` and `credit_balance_cents`
-// so the balance is always reconstructable and auditable.
-export type LedgerKind = "loyalty" | "credit";
-
-export interface CustomerLedgerEntry {
-  id: string;
-  customer_id: string;
-  kind: LedgerKind;
-  delta: number; // points for loyalty, integer cents for credit
-  reason: string;
-  order_id?: string;
-  created_at: number;
 }
 
 export interface Supplier {
@@ -244,8 +248,6 @@ export const PERMISSIONS = [
   "inventory.adjust",
   "purchases.view",
   "purchases.manage",
-  "customers.view",
-  "customers.manage",
   "reports.view",
   "settings.manage",
   "users.manage",
@@ -266,7 +268,11 @@ export interface StaffUser {
   name: string;
   email: string;
   role_id: string;
-  pin?: string; // till login PIN
+  // Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
+  // fields are absent until a PIN is set; a user without one cannot sign in at
+  // the till. See `setStaffPin` for the (deliberately limited) threat model.
+  pin_hash?: string;
+  pin_salt?: string;
   active: boolean;
   created_at: number;
 }
@@ -320,7 +326,6 @@ export interface StoreSettings {
   receipt_paper_width: "58mm" | "80mm";
   low_stock_threshold: number;
   expiry_warning_days: number;
-  loyalty_points_per_currency_unit: number; // points earned per 1 unit spent
 }
 
 export interface HeldCart {

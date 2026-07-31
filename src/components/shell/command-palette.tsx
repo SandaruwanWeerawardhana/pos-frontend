@@ -16,9 +16,9 @@ import {
   ShoppingCart,
   Tag,
   Truck,
-  Users,
 } from "lucide-react";
-import { db, searchCustomers, searchProducts } from "@/lib/db";
+import { db, searchProducts } from "@/lib/db";
+import { useAuthStore } from "@/lib/store/auth";
 import { ROUTES } from "@/lib/types/routes";
 import { formatMoney } from "@/lib/format";
 import type { ReactNode } from "react";
@@ -27,7 +27,7 @@ interface CommandItem {
   id: string;
   label: string;
   hint?: string;
-  group: "Navigate" | "Products" | "Customers" | "Sales";
+  group: "Navigate" | "Products" | "Sales";
   icon: ReactNode;
   href: string;
 }
@@ -40,18 +40,16 @@ const NAV_COMMANDS: CommandItem[] = [
   { id: "nav-alerts", label: "Stock alerts", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.inventory.alerts },
   { id: "nav-purchases", label: "Purchase orders", group: "Navigate", icon: <ShoppingCart size={16} />, href: ROUTES.purchases.root },
   { id: "nav-sales", label: "Sales", group: "Navigate", icon: <DollarSign size={16} />, href: ROUTES.sales.root },
-  { id: "nav-customers", label: "Customers", group: "Navigate", icon: <Users size={16} />, href: ROUTES.customers.root },
   { id: "nav-suppliers", label: "Suppliers", group: "Navigate", icon: <Truck size={16} />, href: ROUTES.suppliers },
   { id: "nav-reports", label: "Reports", group: "Navigate", icon: <BarChart2 size={16} />, href: ROUTES.reports },
   { id: "nav-discounts", label: "Discounts & promotions", group: "Navigate", icon: <Tag size={16} />, href: ROUTES.discounts },
-  { id: "nav-users", label: "Users & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
+  { id: "nav-users", label: "Cashiers & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
   { id: "nav-settings", label: "Settings", group: "Navigate", icon: <Settings size={16} />, href: ROUTES.settings.root },
 ];
 
 const GROUP_ORDER: CommandItem["group"][] = [
   "Navigate",
   "Products",
-  "Customers",
   "Sales",
 ];
 
@@ -63,6 +61,9 @@ const RECORD_SEARCH_MIN_LENGTH = 2;
 
 export function CommandPalette() {
   const router = useRouter();
+  // Every command here leads into the back office, so a till-only session gets
+  // no palette at all rather than a list of links it cannot follow.
+  const posOnly = useAuthStore((state) => state.staff?.posOnly ?? false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recordItems, setRecordItems] = useState<CommandItem[]>([]);
@@ -118,9 +119,8 @@ export function CommandPalette() {
     const timeout = window.setTimeout(() => {
       void Promise.all([
         searchProducts(needle),
-        searchCustomers(needle),
         db.pendingOrders.toArray(),
-      ]).then(([products, customers, orders]) => {
+      ]).then(([products, orders]) => {
         if (cancelled) return;
 
         const lowered = needle.toLowerCase();
@@ -133,16 +133,6 @@ export function CommandPalette() {
               group: "Products",
               icon: <Package size={16} />,
               href: ROUTES.inventory.detail(product.id),
-            }),
-          ),
-          ...customers.slice(0, 5).map(
-            (customer): CommandItem => ({
-              id: `customer-${customer.id}`,
-              label: customer.name,
-              hint: customer.phone ?? customer.email ?? "Customer",
-              group: "Customers",
-              icon: <Users size={16} />,
-              href: ROUTES.customers.detail(customer.id),
             }),
           ),
           ...orders
@@ -212,7 +202,7 @@ export function CommandPalette() {
     active?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  if (!open) return null;
+  if (posOnly || !open) return null;
 
   return (
     <div className="fixed inset-0 z-[150] flex items-start justify-center bg-black/50 p-4 pt-[10vh] backdrop-blur-sm">
@@ -236,7 +226,7 @@ export function CommandPalette() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search products, customers, receipts, or jump to a page…"
+            placeholder="Search products, receipts, or jump to a page…"
             aria-label="Search"
             aria-controls="command-palette-results"
             className="min-w-0 flex-1 bg-transparent py-4 text-sm text-on-surface outline-none placeholder:text-on-surface-variant dark:text-zinc-50"

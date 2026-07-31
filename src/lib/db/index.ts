@@ -5,8 +5,7 @@ import type {
   CartItem,
   CartTotal,
   CashReconciliation,
-  Customer,
-  CustomerLedgerEntry,
+  DeletedProductRecord,
   Discount,
   HeldCart,
   PaymentMethod,
@@ -30,7 +29,6 @@ export class PosDB extends Dexie {
   cartItems!: Table<CartItem, number>;
   pendingOrders!: Table<PendingOrder, string>;
   syncMeta!: Table<SyncMetaRecord, string>;
-  customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, string>;
   discounts!: Table<Discount, string>;
   heldCarts!: Table<HeldCart, string>;
@@ -42,7 +40,7 @@ export class PosDB extends Dexie {
   roles!: Table<Role, string>;
   staffUsers!: Table<StaffUser, string>;
   notifications!: Table<AppNotification, string>;
-  customerLedger!: Table<CustomerLedgerEntry, string>;
+  deletedProducts!: Table<DeletedProductRecord, string>;
 
   constructor() {
     super("posDB");
@@ -65,8 +63,8 @@ export class PosDB extends Dexie {
       cashReconciliations: "id, created_at",
     });
     // v3: grocery catalogue, purchasing, staff, and notification tables.
-    // Products gains `category`/`supplier_id` indexes so the POS category
-    // filter and supplier drill-downs are index-backed rather than full scans.
+    // The `category`/`supplier_id` product indexes added here turned out never
+    // to be queried and are dropped again in v5.
     this.version(3)
       .stores({
         products: "id, name, sku, barcode, category, supplier_id",
@@ -93,21 +91,118 @@ export class PosDB extends Dexie {
             product.reorder_level ??= 5;
           });
       });
+    // v4: the delete outbox. Products deleted offline leave the products table
+    // straight away and are recorded here until DELETE /products/{id} lands,
+    // which also stops the next catalogue pull from resurrecting them.
+    this.version(4).stores({
+      deletedProducts: "id, deleted_at",
+    });
+    // v5: trims the products table to what the code actually uses.
+    //
+    // Indexes: only `sku` and `barcode` are ever queried by key (the uniqueness
+    // probes and addProduct). `name`, `category` and `supplier_id` were indexed
+    // for filters that were then written as in-memory scans over the full
+    // table, so they only cost write time. Dropping them leaves every read path
+    // unchanged — none of them opened a cursor on those indexes.
+    //
+    // Columns: `status` was declared but never written by the form and never
+    // read by the till or reports, so cached rows carrying it are cleaned up
+    // here rather than left as a field with no type behind it.
+    this.version(5)
+      .stores({
+        products: "id, sku, barcode",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Record<string, unknown>>("products")
+          .toCollection()
+          .modify((product) => {
+            delete product.status;
+          });
+      });
   }
 }
 
 export const db = new PosDB();
 
-// Refreshes server products while preserving locally-created rows until a
-// product-create sync endpoint exists.
+// Refreshes server products while protecting local work the server has not
+// acknowledged yet:
+//
+//   - `_local_only` rows (created here) and `_pending_update` rows (edited
+//     here) win over the server's copy, so an offline change is not undone by
+//     an older row arriving in the pull.
+//   - products in the delete outbox are dropped from the incoming list, so one
+//     deleted offline does not reappear on every cycle until its DELETE lands.
+//
+// Each flag clears as soon as its push succeeds, so a row stays local-wins for
+// at most one cycle after the server agrees.
 export async function seedProducts(products: Product[]): Promise<void> {
-  await db.transaction("rw", db.products, async () => {
-    const localProducts = await db.products
-      .filter((product) => product._local_only === true)
+  await db.transaction("rw", db.products, db.deletedProducts, async () => {
+    const unpushed = await db.products
+      .filter(
+        (product) =>
+          product._local_only === true || product._pending_update === true,
+      )
       .toArray();
+    const deletedIds = new Set(await db.deletedProducts.toCollection().primaryKeys());
+
     await db.products.clear();
-    await db.products.bulkPut([...products, ...localProducts]);
+    // Unpushed rows go last so they overwrite the server's copy of the same id.
+    await db.products.bulkPut([
+      ...products.filter((product) => !deletedIds.has(product.id)),
+      ...unpushed,
+    ]);
   });
+}
+
+// Products created on this device that POST /products has not stored yet.
+export async function listUnpushedProducts(): Promise<Product[]> {
+  return db.products.filter((product) => product._local_only === true).toArray();
+}
+
+// Products edited on this device since their last successful push. `_local_only`
+// rows are excluded: their create carries the edits already, and pushing an
+// update for a product the server has never seen would only 404.
+export async function listEditedProducts(): Promise<Product[]> {
+  return db.products
+    .filter(
+      (product) =>
+        product._pending_update === true && product._local_only !== true,
+    )
+    .toArray();
+}
+
+export async function listPendingProductDeletes(): Promise<
+  DeletedProductRecord[]
+> {
+  return db.deletedProducts.orderBy("deleted_at").toArray();
+}
+
+export async function clearPendingProductDelete(id: string): Promise<void> {
+  await db.deletedProducts.delete(id);
+}
+
+// Clears a push flag once the server has the change. Read-modify-put rather
+// than delete-and-insert so a sale that adjusted stock in the meantime is not
+// rolled back to the pushed figure.
+async function clearProductFlag(
+  id: string,
+  flag: "_local_only" | "_pending_update",
+): Promise<void> {
+  await db.transaction("rw", db.products, async () => {
+    const product = await db.products.get(id);
+    if (!product) return;
+    delete product[flag];
+    await db.products.put(product);
+  });
+}
+
+export async function markProductPushed(id: string): Promise<void> {
+  await clearProductFlag(id, "_local_only");
+}
+
+export async function markProductUpdatePushed(id: string): Promise<void> {
+  await clearProductFlag(id, "_pending_update");
 }
 
 // Searches name, sku, and barcode against the local table. Works fully offline.
@@ -174,15 +269,37 @@ export async function getProduct(id: string): Promise<Product | undefined> {
   return db.products.get(id);
 }
 
+// Applies a catalogue edit and queues it for the next sync. A product still
+// waiting on its create keeps only `_local_only`: that push sends the whole row,
+// edits included, so flagging it for an update as well would send a second
+// request for a product the server has only just been told about.
 export async function updateProduct(
   productId: string,
   changes: Partial<Omit<Product, "id">>,
 ): Promise<void> {
-  await db.products.update(productId, changes);
+  await db.transaction("rw", db.products, async () => {
+    const product = await db.products.get(productId);
+    if (!product) return;
+    await db.products.update(productId, {
+      ...changes,
+      ...(product._local_only ? {} : { _pending_update: true }),
+    });
+  });
 }
 
+// Removes the product locally and records a tombstone for the sync manager.
+//
+// The row leaves `products` immediately so it disappears from the till and
+// every report at once. A product the server has never seen (`_local_only`)
+// needs no tombstone — there is nothing to delete server-side.
 export async function deleteProduct(productId: string): Promise<void> {
-  await db.products.delete(productId);
+  await db.transaction("rw", db.products, db.deletedProducts, async () => {
+    const product = await db.products.get(productId);
+    if (!product) return;
+    await db.products.delete(productId);
+    if (product._local_only) return;
+    await db.deletedProducts.put({ id: productId, deleted_at: Date.now() });
+  });
 }
 
 export async function addToCart(product: Product, quantity = 1): Promise<void> {
@@ -239,7 +356,6 @@ export async function getCartTotal(discountCents = 0): Promise<CartTotal> {
 // Moves the current cart into a pendingOrders record, optimistically deducts
 // stock, and clears the cart. Returns the created order.
 export interface CreateOrderOptions {
-  customerId?: string;
   discountCents?: number;
   payments?: PaymentSplit[];
   cashierId?: string;
@@ -275,8 +391,6 @@ export async function createLocalOrder(
       db.products,
       db.syncMeta,
       db.stockMovements,
-      db.customers,
-      db.customerLedger,
     ],
     async () => {
       const items = await db.cartItems.toArray();
@@ -296,7 +410,6 @@ export async function createLocalOrder(
         sync_status: "pending",
         server_id: null,
         receipt_no: await nextReceiptNo(),
-        ...(options?.customerId ? { customer_id: options.customerId } : {}),
         ...(options?.discountCents
           ? { discount_cents: options.discountCents }
           : {}),
@@ -323,49 +436,11 @@ export async function createLocalOrder(
         });
       }
 
-      if (options?.customerId) {
-        await accrueLoyaltyForOrder(options.customerId, order);
-      }
-
       await db.cartItems.clear();
 
       return order;
     },
   );
-}
-
-// Awards loyalty points at the configured rate. Runs inside createLocalOrder's
-// transaction, so a failure here rolls the whole sale back rather than
-// leaving points awarded for an order that was never written.
-async function accrueLoyaltyForOrder(
-  customerId: string,
-  order: PendingOrder,
-): Promise<void> {
-  const customer = await db.customers.get(customerId);
-  if (!customer) return;
-
-  const settingsRecord = await db.syncMeta.get("store_settings");
-  const pointsPerUnit =
-    typeof settingsRecord?.value === "object" && settingsRecord.value !== null
-      ? ((settingsRecord.value as Record<string, unknown>)
-          .loyalty_points_per_currency_unit as number | undefined)
-      : undefined;
-  const rate = typeof pointsPerUnit === "number" ? pointsPerUnit : 1;
-  const points = Math.floor((order.total_cents / 100) * rate);
-  if (points <= 0) return;
-
-  await db.customers.update(customerId, {
-    loyalty_points: (customer.loyalty_points ?? 0) + points,
-  });
-  await db.customerLedger.add({
-    id: crypto.randomUUID(),
-    customer_id: customerId,
-    kind: "loyalty",
-    delta: points,
-    reason: "Sale",
-    order_id: order.client_generated_id,
-    created_at: order.created_at,
-  });
 }
 
 // Distinct category names present in the local catalogue, for filter chips.
@@ -376,6 +451,26 @@ export async function listCategories(): Promise<string[]> {
     names.add(product.category?.trim() || "Uncategorised");
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+// Uniqueness probes for the product form. `addProduct` re-checks inside its
+// transaction — these exist so the form can report a clash inline while the
+// user is still typing, rather than only on submit.
+export async function isSkuTaken(sku: string, exceptId?: string): Promise<boolean> {
+  const needle = sku.trim();
+  if (!needle) return false;
+  const match = await db.products.where("sku").equals(needle).first();
+  return match !== undefined && match.id !== exceptId;
+}
+
+export async function isBarcodeTaken(
+  barcode: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const needle = barcode.trim();
+  if (!needle) return false;
+  const match = await db.products.where("barcode").equals(needle).first();
+  return match !== undefined && match.id !== exceptId;
 }
 
 export async function listBrands(): Promise<string[]> {
@@ -406,7 +501,6 @@ export async function setLastSyncedAt(timestamp: number): Promise<void> {
   await db.syncMeta.put({ key: "last_synced_at", value: timestamp });
 }
 
-export * from "./customers";
 export * from "./suppliers";
 export * from "./discounts";
 export * from "./held-carts";

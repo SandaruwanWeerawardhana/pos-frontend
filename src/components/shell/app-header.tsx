@@ -27,11 +27,10 @@ const PAGE_LABELS = [
   { href: ROUTES.inventory.root, label: "Inventory" },
   { href: ROUTES.purchases.root, label: "Purchases" },
   { href: ROUTES.sales.root, label: "Sales" },
-  { href: ROUTES.customers.root, label: "Customers" },
   { href: ROUTES.suppliers, label: "Suppliers" },
   { href: ROUTES.reports, label: "Reports" },
   { href: ROUTES.discounts, label: "Discounts" },
-  { href: ROUTES.users, label: "Users & Roles" },
+  { href: ROUTES.users, label: "Cashiers" },
   { href: ROUTES.settings.root, label: "Settings" },
   { href: ROUTES.profile, label: "My Profile" },
   { href: ROUTES.admin, label: "Admin" },
@@ -44,7 +43,6 @@ const OFFICE_SIDEBAR_PATHS = [
   ROUTES.inventory.root,
   ROUTES.purchases.root,
   ROUTES.sales.root,
-  ROUTES.customers.root,
   ROUTES.suppliers,
   ROUTES.reports,
   ROUTES.discounts,
@@ -81,7 +79,7 @@ function openCommandPalette() {
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, staff, isAuthenticated, posOnly, logout } = useAuth();
   const { pendingCount, conflictCount } = useSyncStatus();
   const [online, setOnline] = useState(true);
   const [now, setNow] = useState<Date | null>(null);
@@ -91,9 +89,10 @@ export function AppHeader() {
   const currentPage =
     PAGE_LABELS.find((link) => pathname?.startsWith(link.href))?.label ??
     "Workspace";
-  const hasOfficeSidebar = OFFICE_SIDEBAR_PATHS.some((href) =>
-    pathname?.startsWith(href),
-  );
+  // A till-only session never reaches an office route, so the sidebar toggle,
+  // global search, and profile links are dropped rather than left as dead ends.
+  const hasOfficeSidebar =
+    !posOnly && OFFICE_SIDEBAR_PATHS.some((href) => pathname?.startsWith(href));
 
   useEffect(() => {
     const handleOnline = () => setOnline(true);
@@ -156,6 +155,7 @@ export function AppHeader() {
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        {!posOnly && (
         <button
           type="button"
           aria-label="Toggle sidebar"
@@ -164,6 +164,7 @@ export function AppHeader() {
         >
           <Menu size={18} />
         </button>
+        )}
         <ChevronRight
           size={16}
           aria-hidden
@@ -173,6 +174,7 @@ export function AppHeader() {
           {currentPage}
         </span>
 
+        {!posOnly && (
         <button
           type="button"
           onClick={openCommandPalette}
@@ -180,13 +182,12 @@ export function AppHeader() {
         >
           <Search size={13} aria-hidden />
           <span className="flex-1 text-left">Search everything…</span>
-          <kbd className="rounded border border-outline-variant px-1 text-[10px] dark:border-zinc-700">
-            ⌘K
-          </kbd>
         </button>
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        {!posOnly && (
         <button
           type="button"
           onClick={openCommandPalette}
@@ -195,6 +196,7 @@ export function AppHeader() {
         >
           <Search size={15} />
         </button>
+        )}
 
         {/* Cloud sync state, kept separate from raw connectivity: online with a
             backlog is a different situation from being offline. */}
@@ -219,7 +221,7 @@ export function AppHeader() {
           <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
         </span>
 
-        <NotificationPanel />
+        {/* <NotificationPanel /> */}
         <ThemeToggle />
 
         {isAuthenticated && (
@@ -246,25 +248,34 @@ export function AppHeader() {
                   <p className="truncate text-xs text-on-surface-variant dark:text-zinc-400">
                     {user?.email}
                   </p>
+                  {staff && (
+                    <p className="mt-1 text-xs font-semibold text-primary dark:text-blue-400">
+                      {staff.roleName}
+                    </p>
+                  )}
                 </div>
-                <Link
-                  href={ROUTES.profile}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface transition-colors hover:bg-surface-container dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  <UserIcon size={15} className="opacity-60" aria-hidden />
-                  My profile
-                </Link>
-                <Link
-                  href={`${ROUTES.profile}#password`}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface transition-colors hover:bg-surface-container dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  <KeyRound size={15} className="opacity-60" aria-hidden />
-                  Change password
-                </Link>
+                {!posOnly && (
+                  <>
+                    <Link
+                      href={ROUTES.profile}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface transition-colors hover:bg-surface-container dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <UserIcon size={15} className="opacity-60" aria-hidden />
+                      My profile
+                    </Link>
+                    <Link
+                      href={`${ROUTES.profile}#password`}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface transition-colors hover:bg-surface-container dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <KeyRound size={15} className="opacity-60" aria-hidden />
+                      Change password
+                    </Link>
+                  </>
+                )}
                 <button
                   type="button"
                   role="menuitem"

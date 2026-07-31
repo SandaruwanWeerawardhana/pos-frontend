@@ -1,5 +1,15 @@
 import { apiClient, type SyncOrderResult } from "@/lib/api";
-import { db, seedProducts, setLastSyncedAt } from "@/lib/db";
+import {
+  clearPendingProductDelete,
+  db,
+  listEditedProducts,
+  listPendingProductDeletes,
+  listUnpushedProducts,
+  markProductPushed,
+  markProductUpdatePushed,
+  seedProducts,
+  setLastSyncedAt,
+} from "@/lib/db";
 import type { PendingOrder, SyncStatus } from "@/lib/types";
 import { SYNC_CONFIG } from "@/lib/types/sync.config";
 import { useConnectionStore } from "@/lib/store/connection";
@@ -139,6 +149,13 @@ export class SyncManager {
     try {
       await this.pushPendingOrders();
       this.failureStreak = 0;
+      // Push before pull, and in this order: a create must land before the
+      // edit that refers to it, and a delete last so it is not undone by an
+      // update pushed in the same cycle. The pull then overwrites the local
+      // catalogue with a server copy that already reflects all three.
+      await this.pushNewProducts();
+      await this.pushEditedProducts();
+      await this.pushDeletedProducts();
       await this.pullProducts();
       await setLastSyncedAt(Date.now());
     } catch {
@@ -174,6 +191,67 @@ export class SyncManager {
         })),
       );
       throw error;
+    }
+  }
+
+  // Pushes products created on this device to the server, one request each —
+  // the catalogue endpoint takes a single product, and a shop adds them a few
+  // at a time rather than in the batches order sync is built for.
+  //
+  // A rejected product (duplicate SKU or barcode against a different row) is
+  // left flagged so it stays visible on this till and keeps selling. Retrying it
+  // is harmless: the push is idempotent on the product id, and the clash needs
+  // an operator to rename the product before it can ever succeed.
+  private async pushNewProducts(): Promise<void> {
+    const unpushed = await listUnpushedProducts();
+
+    for (const product of unpushed) {
+      try {
+        await apiClient.createProduct(product);
+        await markProductPushed(product.id);
+      } catch {
+        // Transport failure or a clash the server will not accept. Either way
+        // the row stays local; the next pull leaves it alone because it is
+        // still flagged.
+      }
+    }
+  }
+
+  // Pushes catalogue edits made on this device. A row keeps its flag until the
+  // server accepts it, which both retries it next cycle and stops the pull from
+  // replacing it with the server's older copy.
+  //
+  // A rejected edit (its SKU or barcode now belongs to another product) stays
+  // flagged too. Retrying is harmless — the write is a replacement, so a repeat
+  // is the same request — and the clash needs an operator to rename the product
+  // before it can succeed.
+  private async pushEditedProducts(): Promise<void> {
+    const edited = await listEditedProducts();
+
+    for (const product of edited) {
+      try {
+        await apiClient.updateProduct(product);
+        await markProductUpdatePushed(product.id);
+      } catch {
+        // Transport failure or a clash the server will not accept; leave the
+        // flag on so the next cycle tries again.
+      }
+    }
+  }
+
+  // Drains the delete outbox. The tombstone is removed only once the server has
+  // confirmed, so a failed delete is retried and the pull keeps filtering the
+  // product out in the meantime rather than resurrecting it.
+  private async pushDeletedProducts(): Promise<void> {
+    const tombstones = await listPendingProductDeletes();
+
+    for (const { id } of tombstones) {
+      try {
+        await apiClient.deleteProduct(id);
+        await clearPendingProductDelete(id);
+      } catch {
+        // Server unreachable. The tombstone stays; retried next cycle.
+      }
     }
   }
 
