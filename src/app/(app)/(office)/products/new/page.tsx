@@ -52,6 +52,7 @@ const AdditionalSettingsSection = lazy(() =>
 
 const DRAFT_KEY = "pos:draft:product-new";
 
+
 const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[] }[] =
   [
     {
@@ -63,17 +64,14 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
         "barcode",
         "barcode_source",
         "category",
-        "subcategory",
-        "brand",
         "unit",
-        "status",
         "description",
       ],
     },
     {
       id: "pricing",
       label: "Pricing",
-      fields: ["selling_price", "tax_rate", "discount_percent"],
+      fields: ["selling_price", "cost_price", "tax_rate", "discount_percent"],
     },
     {
       id: "inventory",
@@ -86,11 +84,7 @@ const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[]
       fields: ["expiry_date", "manufacturing_date"],
     },
     { id: "media", label: "Media", fields: ["images"] },
-    {
-      id: "additional-settings",
-      label: "Additional settings",
-      fields: ["allow_discount", "allow_returns", "track_expiry", "track_batch"],
-    },
+    { id: "additional-settings", label: "Additional settings", fields: [] },
   ];
 
 function SectionFallback() {
@@ -115,7 +109,7 @@ export default function ProductAddPage() {
   const [draftPromptOpen, setDraftPromptOpen] = useState(true);
 
   const values = useWatch({ control }) as ProductFormValues;
-  const options = useProductCatalogueOptions(values.category ?? "");
+  const options = useProductCatalogueOptions();
   const duplicates = useProductDuplicates(values.sku ?? "", values.barcode ?? "");
 
   const dirty = formState.isDirty && !saving;

@@ -17,10 +17,13 @@ export function GrocerySection({
   const { control, register, formState } = form;
   const errors = formState.errors;
 
-  const [trackBatch, trackExpiry] = useWatch({
+  // Either date filled in means the opening stock is written as a batch, which
+  // is what the expiry and batch reports read from. See toProduct().
+  const [expiryDate, manufacturingDate] = useWatch({
     control,
-    name: ["track_batch", "track_expiry"],
+    name: ["expiry_date", "manufacturing_date"],
   });
+  const opensBatch = Boolean(expiryDate || manufacturingDate);
 
   return (
     <FormSection
@@ -43,13 +46,12 @@ export function GrocerySection({
           label="Expiry date"
           type="date"
           className="min-h-12"
-          hint={trackExpiry ? "Required while expiry tracking is on." : undefined}
           error={errors.expiry_date?.message}
           {...register("expiry_date")}
         />
       </div>
 
-      {(trackBatch || trackExpiry) && (
+      {opensBatch && (
         <p className="mt-3 rounded-xl bg-surface-container-low px-3 py-2 text-xs text-on-surface-variant dark:bg-zinc-800/60 dark:text-zinc-400">
           The opening stock will be recorded as the first batch, so expiry and
           batch reports have something to report on from day one.

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { CloudUpload, Package, Save } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { summarisePricing } from "@/lib/products/schema";
@@ -14,12 +13,6 @@ interface ProductSummaryPanelProps {
   draftSavedAt: number | null;
   saving: boolean;
   onCancel: () => void;
-}
-
-function statusVariant(status: ProductFormValues["status"]) {
-  if (status === "active") return "success" as const;
-  if (status === "draft") return "warning" as const;
-  return "neutral" as const;
 }
 
 // Desktop's sticky right rail: a live preview of the record being built and
@@ -78,12 +71,6 @@ export function ProductSummaryPanel({
             <dd className="font-semibold tabular-nums text-on-surface dark:text-zinc-50">
               {values.initial_stock || "0"}
               {values.unit === "unit" ? "" : ` ${values.unit}`}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-on-surface-variant dark:text-zinc-400">Status</dt>
-            <dd>
-              <Badge variant={statusVariant(values.status)}>{values.status}</Badge>
             </dd>
           </div>
         </dl>

@@ -18,5 +18,8 @@ export const realApi: ApiClient = {
     authService.changePassword(currentPassword, newPassword),
   updateProfile: (update) => authService.updateProfile(update),
   getProducts: () => productService.getProducts(),
+  createProduct: (product) => productService.createProduct(product),
+  updateProduct: (product) => productService.updateProduct(product),
+  deleteProduct: (id) => productService.deleteProduct(id),
   syncOrders: (orders) => orderService.syncOrders(orders),
 };

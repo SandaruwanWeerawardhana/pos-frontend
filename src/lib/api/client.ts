@@ -50,5 +50,17 @@ export interface ApiClient {
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   updateProfile(update: ProfileUpdate): Promise<AuthUser>;
   getProducts(): Promise<Product[]>;
+  // Pushes a product created offline. The product carries the id the till
+  // assigned it, so replaying a push whose response was lost returns the stored
+  // product rather than creating a second one. Returns the server's canonical
+  // copy, which the caller writes back over the local row.
+  createProduct(product: Product): Promise<Product>;
+  // Replaces a product's catalogue fields. Stock and batches are owned by the
+  // server and are not part of the request, so the returned product is the
+  // authoritative copy the caller writes back over its local row.
+  updateProduct(product: Product): Promise<Product>;
+  // Deletes a product server-side. Resolves for a product the server does not
+  // have: the outcome the caller wants is "gone", and a 404 means it already is.
+  deleteProduct(id: string): Promise<void>;
   syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse>;
 }

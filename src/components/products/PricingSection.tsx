@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/Input";
+import { parseMoneyToCents } from "@/lib/format";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { summarisePricing } from "@/lib/products/schema";
 import { Tags } from "lucide-react";
@@ -54,9 +55,9 @@ export function PricingSection({
   const errors = formState.errors;
   const { money } = useSettings();
 
-  const [sellingPrice, taxRate, discountPercent] = useWatch({
+  const [sellingPrice, costPrice, taxRate, discountPercent] = useWatch({
     control,
-    name: ["selling_price", "tax_rate", "discount_percent"],
+    name: ["selling_price", "cost_price", "tax_rate", "discount_percent"],
   });
 
   const summary = summarisePricing({
@@ -64,6 +65,19 @@ export function PricingSection({
     tax_rate: taxRate,
     discount_percent: discountPercent,
   });
+
+  // Margin is measured against the net price — what the till actually charges
+  // after the standing discount — not the list price, so a product discounted
+  // below cost reads as the loss it is.
+  const costCents = parseMoneyToCents(costPrice);
+  const marginCents =
+    costCents === null || summary.netPriceCents === null
+      ? null
+      : summary.netPriceCents - costCents;
+  const marginPercent =
+    marginCents === null || !summary.netPriceCents
+      ? null
+      : (marginCents / summary.netPriceCents) * 100;
 
   return (
     <FormSection
@@ -90,6 +104,17 @@ export function PricingSection({
         />
 
         <Input
+          label="Cost price"
+          placeholder="0.00"
+          hint="What the shop pays. Drives the margin and profit reports."
+          inputMode="decimal"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.cost_price?.message}
+          {...register("cost_price")}
+        />
+
+        <Input
           label="Tax"
           placeholder="0"
           inputMode="decimal"
@@ -107,6 +132,30 @@ export function PricingSection({
           className="text-right tabular-nums"
           error={errors.discount_percent?.message}
           {...register("discount_percent")}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <Metric
+          label="Charged at the till"
+          value={
+            summary.grossPriceCents === null
+              ? "—"
+              : money(summary.grossPriceCents)
+          }
+          hint="After discount, including tax"
+        />
+        <Metric
+          label="Tax"
+          value={summary.taxCents === null ? "—" : money(summary.taxCents)}
+        />
+        <Metric
+          label="Margin"
+          value={marginCents === null ? "—" : money(marginCents)}
+          tone={marginCents !== null && marginCents < 0 ? "bad" : "good"}
+          hint={
+            marginPercent === null ? undefined : `${marginPercent.toFixed(1)}%`
+          }
         />
       </div>
     </FormSection>

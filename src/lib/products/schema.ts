@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { parseMoneyToCents } from "@/lib/format";
-import { MAX_IMAGES } from "./constants";
+import { MAX_IMAGES, WEIGHT_UNITS } from "./constants";
 import { isGtinLength, isValidEan13, isValidGtin } from "./generate";
 import type { Product, ProductBatch } from "@/lib/types";
+
+// Every field below is backed by a rendered input. Fields the form once
+// declared but never rendered a control for (product_code, qr_code,
+// subcategory, brand, status, reorder_level, shelf_location, warehouse_id,
+// branch, product_type, storage_type, is_variable_weight, batch_no,
+// allow_discount, allow_returns, track_expiry, track_batch, supplier_id,
+// supplier_product_code) were removed: they could only ever be saved at their
+// default, which made two of the superRefine rules below unreachable and the
+// catalogue's brand/weighted/margin figures permanently empty. Add the input
+// and the field back together if one is ever needed.
 
 // Numeric inputs are held as strings so a half-typed value ("1.", "") is a
 // legal intermediate state rather than NaN. Conversion to integer cents /
@@ -71,7 +81,6 @@ const isoDate = z
 const baseProductSchema = z.object({
   // Product information
   name: z.string().trim().min(2, "Product name is required").max(120),
-  product_code: z.string().trim().max(40),
   sku: z
     .string()
     .trim()
@@ -87,55 +96,23 @@ const baseProductSchema = z.object({
   // Where the barcode came from: "package" is the GTIN already printed on the
   // supplier's packaging, "generated" is an in-store code we print ourselves.
   barcode_source: z.enum(["package", "generated"]),
-  qr_code: z.string().trim().max(200),
   category: z.string().trim().min(1, "Category is required").max(60),
-  subcategory: z.string().trim().max(60),
-  brand: z.string().trim().max(60),
   unit: z.enum(["unit", "kg", "g", "l", "ml", "pack", "box"]),
-  status: z.enum(["active", "inactive", "draft"]),
   description: z.string().trim().max(1000),
 
   // Pricing
   selling_price: moneyField("Price", true),
+  cost_price: moneyField("Cost price", false),
   tax_rate: quantityField("Tax rate", { max: 100 }),
   discount_percent: quantityField("Discount", { max: 100 }),
 
   // Inventory
   initial_stock: quantityField("Initial stock", { required: true }),
   min_stock_level: quantityField("Minimum stock", { integer: true }),
-  reorder_level: quantityField("Reorder level", { integer: true }),
-  shelf_location: z.string().trim().max(40),
-  warehouse_id: z.string().trim(),
-  branch: z.string().trim().max(60),
 
   // Grocery
-  product_type: z.enum([
-    "regular",
-    "fresh_produce",
-    "frozen",
-    "dairy",
-    "bakery",
-    "beverage",
-    "meat",
-    "seafood",
-    "household",
-    "personal_care",
-  ]),
-  storage_type: z.enum(["ambient", "chilled", "frozen"]),
-  is_weighted: z.boolean(),
-  is_variable_weight: z.boolean(),
-  batch_no: z.string().trim().max(40),
   expiry_date: isoDate,
   manufacturing_date: isoDate,
-  allow_discount: z.boolean(),
-  allow_returns: z.boolean(),
-  track_expiry: z.boolean(),
-  track_batch: z.boolean(),
-
-  // Supplier
-  supplier_id: z.string().trim(),
-  purchase_price: moneyField("Purchase price", false),
-  supplier_product_code: z.string().trim().max(60),
 
   // Media — data URLs, already size/type checked at upload time.
   images: z.array(z.string()).max(MAX_IMAGES, `Up to ${MAX_IMAGES} images`),
@@ -170,32 +147,6 @@ export const productFormSchema = baseProductSchema.superRefine((values, ctx) => 
     });
   }
 
-  const minStock = toNumber(values.min_stock_level);
-  const reorder = toNumber(values.reorder_level);
-  if (minStock !== null && reorder !== null && reorder < minStock) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["reorder_level"],
-      message: "Reorder level must be at or above the minimum stock level",
-    });
-  }
-
-  if (values.track_batch && !values.batch_no) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["batch_no"],
-      message: "Batch number is required when batch tracking is on",
-    });
-  }
-
-  if (values.track_expiry && !values.expiry_date) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["expiry_date"],
-      message: "Expiry date is required when expiry tracking is on",
-    });
-  }
-
   if (values.expiry_date && Date.parse(values.expiry_date) < startOfToday()) {
     ctx.addIssue({
       code: "custom",
@@ -227,11 +178,15 @@ export const productFormSchema = baseProductSchema.superRefine((values, ctx) => 
     });
   }
 
-  if (values.is_variable_weight && !values.is_weighted) {
+  // A cost above the selling price is a margin the till would book as a loss on
+  // every sale — almost always a typo or a cents/units slip.
+  const priceCents = parseMoneyToCents(values.selling_price);
+  const costCents = parseMoneyToCents(values.cost_price);
+  if (priceCents !== null && costCents !== null && costCents > priceCents) {
     ctx.addIssue({
       code: "custom",
-      path: ["is_variable_weight"],
-      message: "Variable weight only applies to weight-based products",
+      path: ["cost_price"],
+      message: "Cost price is above the selling price",
     });
   }
 });
@@ -241,40 +196,20 @@ export type BarcodeSource = ProductFormValues["barcode_source"];
 
 export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
   name: "",
-  product_code: "",
   sku: "",
   barcode: "",
   barcode_source: "package",
-  qr_code: "",
   category: "",
-  subcategory: "",
-  brand: "",
   unit: "unit",
-  status: "active",
   description: "",
   selling_price: "",
+  cost_price: "",
   tax_rate: "0",
   discount_percent: "",
   initial_stock: "0",
   min_stock_level: "",
-  reorder_level: "5",
-  shelf_location: "",
-  warehouse_id: "",
-  branch: "",
-  product_type: "regular",
-  storage_type: "ambient",
-  is_weighted: false,
-  is_variable_weight: false,
-  batch_no: "",
   expiry_date: "",
   manufacturing_date: "",
-  allow_discount: true,
-  allow_returns: true,
-  track_expiry: false,
-  track_batch: false,
-  supplier_id: "",
-  purchase_price: "",
-  supplier_product_code: "",
   images: [],
 };
 
@@ -328,19 +263,24 @@ function optional<T>(value: T | "" | null | undefined): T | undefined {
 // rather than stored as "", which keeps `??` fallbacks working everywhere.
 export function toProduct(values: ProductFormValues, id: string): Product {
   const priceCents = parseMoneyToCents(values.selling_price) ?? 0;
-  const purchaseCents = parseMoneyToCents(values.purchase_price);
+  const costCents = parseMoneyToCents(values.cost_price);
   const stock = toNumber(values.initial_stock) ?? 0;
 
+  // An opening batch is written whenever either date is filled in, since those
+  // are the only two facts a batch would carry at creation time. Its number is
+  // derived from the SKU: batch numbering proper belongs to goods-receiving,
+  // not to first entry of the product.
   const batches: ProductBatch[] | undefined =
-    values.track_batch || values.track_expiry
+    values.expiry_date || values.manufacturing_date
       ? [
           {
-            batch_no: values.batch_no || `${values.sku}-B1`,
+            batch_no: `${values.sku}-B1`,
             expiry_date: optional(values.expiry_date) ?? null,
             quantity: stock,
             ...(values.manufacturing_date
               ? { manufactured_date: values.manufacturing_date }
               : {}),
+            ...(costCents !== null ? { cost_cents: costCents } : {}),
           },
         ]
       : undefined;
@@ -356,40 +296,17 @@ export function toProduct(values: ProductFormValues, id: string): Product {
     stock_quantity: stock,
     category: values.category,
     unit: values.unit,
-    status: values.status,
-    is_weighted: values.is_weighted,
-    is_variable_weight: values.is_variable_weight,
-    product_type: values.product_type,
-    storage_type: values.storage_type,
-    allow_discount: values.allow_discount,
-    allow_returns: values.allow_returns,
-    track_expiry: values.track_expiry,
-    track_batch: values.track_batch,
-    ...(purchaseCents !== null
-      ? { purchase_price_cents: purchaseCents, cost_cents: purchaseCents }
-      : {}),
-    ...(optional(values.brand) ? { brand: values.brand } : {}),
-    ...(optional(values.subcategory) ? { subcategory: values.subcategory } : {}),
-    ...(optional(values.product_code) ? { product_code: values.product_code } : {}),
-    ...(optional(values.qr_code) ? { qr_code: values.qr_code } : {}),
+    // Derived from the unit rather than asked for separately: choosing kg/g/l/ml
+    // *is* the statement that the item is weighed, and a second control that
+    // could contradict it only creates rows the till cannot price.
+    is_weighted: WEIGHT_UNITS.includes(values.unit),
+    ...(costCents !== null ? { cost_cents: costCents } : {}),
     ...(optional(values.description) ? { description: values.description } : {}),
-    ...(optional(values.shelf_location)
-      ? { shelf_location: values.shelf_location }
-      : {}),
-    ...(optional(values.warehouse_id) ? { warehouse_id: values.warehouse_id } : {}),
-    ...(optional(values.branch) ? { branch: values.branch } : {}),
-    ...(optional(values.supplier_id) ? { supplier_id: values.supplier_id } : {}),
-    ...(optional(values.supplier_product_code)
-      ? { supplier_product_code: values.supplier_product_code }
-      : {}),
     ...(toNumber(values.discount_percent) !== null
       ? { discount_percent: toNumber(values.discount_percent) as number }
       : {}),
     ...(toNumber(values.min_stock_level) !== null
       ? { min_stock_level: toNumber(values.min_stock_level) as number }
-      : {}),
-    ...(toNumber(values.reorder_level) !== null
-      ? { reorder_level: toNumber(values.reorder_level) as number }
       : {}),
     ...(values.images.length > 0
       ? { images: values.images, image_url: values.images[0] }

@@ -97,9 +97,9 @@ export function ProductInfoSection({
 
   // Only the fields the generators read are watched, so typing a description
   // does not re-render this section's derived bits.
-  const [name, category, brand, sku, barcode, barcodeSource] = useWatch({
+  const [name, category, sku, barcode, barcodeSource] = useWatch({
     control,
-    name: ["name", "category", "brand", "sku", "barcode", "barcode_source"],
+    name: ["name", "category", "sku", "barcode", "barcode_source"],
   });
   const [scanning, setScanning] = useState(false);
 
@@ -110,7 +110,7 @@ export function ProductInfoSection({
     (duplicates.barcodeTaken ? "Barcode already exists" : undefined);
 
   function fillSku() {
-    setValue("sku", generateSku({ name: name || "item", category, brand }), {
+    setValue("sku", generateSku({ name: name || "item", category }), {
       shouldDirty: true,
       shouldValidate: true,
     });

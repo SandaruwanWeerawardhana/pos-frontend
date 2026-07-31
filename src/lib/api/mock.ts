@@ -363,6 +363,78 @@ export const mockApi: ApiClient & {
     return structuredClone(getState().products);
   },
 
+  // Mirrors the real endpoint's idempotency: the product carries the id the
+  // till assigned it, so a replayed push returns the stored copy instead of
+  // adding a duplicate. A clash on SKU or barcode with a *different* product is
+  // the one case that fails, and it fails permanently.
+  async createProduct(product: Product): Promise<Product> {
+    await delay(150);
+    const apiState = getState();
+
+    const stored = apiState.products.find((p) => p.id === product.id);
+    if (stored) return structuredClone(stored);
+
+    const clash = apiState.products.find(
+      (p) => p.sku === product.sku || p.barcode === product.barcode,
+    );
+    if (clash) {
+      throw new Error(
+        clash.sku === product.sku
+          ? "a product with this SKU already exists"
+          : "a product with this barcode already exists",
+      );
+    }
+
+    const saved = structuredClone(product);
+    delete saved._local_only;
+    delete saved._pending_update;
+    apiState.products.push(saved);
+    saveState();
+    return structuredClone(saved);
+  },
+
+  // Replaces the catalogue fields, keeping the server's stock and batches — the
+  // same carve-out the real endpoint makes, so a stale local stock figure gets
+  // dropped here too rather than only in production.
+  async updateProduct(product: Product): Promise<Product> {
+    await delay(150);
+    const apiState = getState();
+
+    const index = apiState.products.findIndex((p) => p.id === product.id);
+    if (index === -1) throw new Error("product not found");
+
+    const clash = apiState.products.find(
+      (p) =>
+        p.id !== product.id &&
+        (p.sku === product.sku || p.barcode === product.barcode),
+    );
+    if (clash) {
+      throw new Error(
+        clash.sku === product.sku
+          ? "a product with this SKU already exists"
+          : "a product with this barcode already exists",
+      );
+    }
+
+    const stored = apiState.products[index];
+    const saved = structuredClone(product);
+    delete saved._local_only;
+    delete saved._pending_update;
+    saved.stock_quantity = stored.stock_quantity;
+    saved.batches = stored.batches;
+
+    apiState.products[index] = saved;
+    saveState();
+    return structuredClone(saved);
+  },
+
+  async deleteProduct(id: string): Promise<void> {
+    await delay(150);
+    const apiState = getState();
+    apiState.products = apiState.products.filter((p) => p.id !== id);
+    saveState();
+  },
+
   async syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse> {
     await delay(syncDelayMs);
     const apiState = getState();

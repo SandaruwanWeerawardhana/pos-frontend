@@ -5,6 +5,7 @@ import type {
   CartItem,
   CartTotal,
   CashReconciliation,
+  DeletedProductRecord,
   Discount,
   HeldCart,
   PaymentMethod,
@@ -39,6 +40,7 @@ export class PosDB extends Dexie {
   roles!: Table<Role, string>;
   staffUsers!: Table<StaffUser, string>;
   notifications!: Table<AppNotification, string>;
+  deletedProducts!: Table<DeletedProductRecord, string>;
 
   constructor() {
     super("posDB");
@@ -61,8 +63,8 @@ export class PosDB extends Dexie {
       cashReconciliations: "id, created_at",
     });
     // v3: grocery catalogue, purchasing, staff, and notification tables.
-    // Products gains `category`/`supplier_id` indexes so the POS category
-    // filter and supplier drill-downs are index-backed rather than full scans.
+    // The `category`/`supplier_id` product indexes added here turned out never
+    // to be queried and are dropped again in v5.
     this.version(3)
       .stores({
         products: "id, name, sku, barcode, category, supplier_id",
@@ -89,21 +91,118 @@ export class PosDB extends Dexie {
             product.reorder_level ??= 5;
           });
       });
+    // v4: the delete outbox. Products deleted offline leave the products table
+    // straight away and are recorded here until DELETE /products/{id} lands,
+    // which also stops the next catalogue pull from resurrecting them.
+    this.version(4).stores({
+      deletedProducts: "id, deleted_at",
+    });
+    // v5: trims the products table to what the code actually uses.
+    //
+    // Indexes: only `sku` and `barcode` are ever queried by key (the uniqueness
+    // probes and addProduct). `name`, `category` and `supplier_id` were indexed
+    // for filters that were then written as in-memory scans over the full
+    // table, so they only cost write time. Dropping them leaves every read path
+    // unchanged — none of them opened a cursor on those indexes.
+    //
+    // Columns: `status` was declared but never written by the form and never
+    // read by the till or reports, so cached rows carrying it are cleaned up
+    // here rather than left as a field with no type behind it.
+    this.version(5)
+      .stores({
+        products: "id, sku, barcode",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Record<string, unknown>>("products")
+          .toCollection()
+          .modify((product) => {
+            delete product.status;
+          });
+      });
   }
 }
 
 export const db = new PosDB();
 
-// Refreshes server products while preserving locally-created rows until a
-// product-create sync endpoint exists.
+// Refreshes server products while protecting local work the server has not
+// acknowledged yet:
+//
+//   - `_local_only` rows (created here) and `_pending_update` rows (edited
+//     here) win over the server's copy, so an offline change is not undone by
+//     an older row arriving in the pull.
+//   - products in the delete outbox are dropped from the incoming list, so one
+//     deleted offline does not reappear on every cycle until its DELETE lands.
+//
+// Each flag clears as soon as its push succeeds, so a row stays local-wins for
+// at most one cycle after the server agrees.
 export async function seedProducts(products: Product[]): Promise<void> {
-  await db.transaction("rw", db.products, async () => {
-    const localProducts = await db.products
-      .filter((product) => product._local_only === true)
+  await db.transaction("rw", db.products, db.deletedProducts, async () => {
+    const unpushed = await db.products
+      .filter(
+        (product) =>
+          product._local_only === true || product._pending_update === true,
+      )
       .toArray();
+    const deletedIds = new Set(await db.deletedProducts.toCollection().primaryKeys());
+
     await db.products.clear();
-    await db.products.bulkPut([...products, ...localProducts]);
+    // Unpushed rows go last so they overwrite the server's copy of the same id.
+    await db.products.bulkPut([
+      ...products.filter((product) => !deletedIds.has(product.id)),
+      ...unpushed,
+    ]);
   });
+}
+
+// Products created on this device that POST /products has not stored yet.
+export async function listUnpushedProducts(): Promise<Product[]> {
+  return db.products.filter((product) => product._local_only === true).toArray();
+}
+
+// Products edited on this device since their last successful push. `_local_only`
+// rows are excluded: their create carries the edits already, and pushing an
+// update for a product the server has never seen would only 404.
+export async function listEditedProducts(): Promise<Product[]> {
+  return db.products
+    .filter(
+      (product) =>
+        product._pending_update === true && product._local_only !== true,
+    )
+    .toArray();
+}
+
+export async function listPendingProductDeletes(): Promise<
+  DeletedProductRecord[]
+> {
+  return db.deletedProducts.orderBy("deleted_at").toArray();
+}
+
+export async function clearPendingProductDelete(id: string): Promise<void> {
+  await db.deletedProducts.delete(id);
+}
+
+// Clears a push flag once the server has the change. Read-modify-put rather
+// than delete-and-insert so a sale that adjusted stock in the meantime is not
+// rolled back to the pushed figure.
+async function clearProductFlag(
+  id: string,
+  flag: "_local_only" | "_pending_update",
+): Promise<void> {
+  await db.transaction("rw", db.products, async () => {
+    const product = await db.products.get(id);
+    if (!product) return;
+    delete product[flag];
+    await db.products.put(product);
+  });
+}
+
+export async function markProductPushed(id: string): Promise<void> {
+  await clearProductFlag(id, "_local_only");
+}
+
+export async function markProductUpdatePushed(id: string): Promise<void> {
+  await clearProductFlag(id, "_pending_update");
 }
 
 // Searches name, sku, and barcode against the local table. Works fully offline.
@@ -170,15 +269,37 @@ export async function getProduct(id: string): Promise<Product | undefined> {
   return db.products.get(id);
 }
 
+// Applies a catalogue edit and queues it for the next sync. A product still
+// waiting on its create keeps only `_local_only`: that push sends the whole row,
+// edits included, so flagging it for an update as well would send a second
+// request for a product the server has only just been told about.
 export async function updateProduct(
   productId: string,
   changes: Partial<Omit<Product, "id">>,
 ): Promise<void> {
-  await db.products.update(productId, changes);
+  await db.transaction("rw", db.products, async () => {
+    const product = await db.products.get(productId);
+    if (!product) return;
+    await db.products.update(productId, {
+      ...changes,
+      ...(product._local_only ? {} : { _pending_update: true }),
+    });
+  });
 }
 
+// Removes the product locally and records a tombstone for the sync manager.
+//
+// The row leaves `products` immediately so it disappears from the till and
+// every report at once. A product the server has never seen (`_local_only`)
+// needs no tombstone — there is nothing to delete server-side.
 export async function deleteProduct(productId: string): Promise<void> {
-  await db.products.delete(productId);
+  await db.transaction("rw", db.products, db.deletedProducts, async () => {
+    const product = await db.products.get(productId);
+    if (!product) return;
+    await db.products.delete(productId);
+    if (product._local_only) return;
+    await db.deletedProducts.put({ id: productId, deleted_at: Date.now() });
+  });
 }
 
 export async function addToCart(product: Product, quantity = 1): Promise<void> {
@@ -328,28 +449,6 @@ export async function listCategories(): Promise<string[]> {
   const names = new Set<string>();
   for (const product of products) {
     names.add(product.category?.trim() || "Uncategorised");
-  }
-  return Array.from(names).sort((a, b) => a.localeCompare(b));
-}
-
-// Distinct subcategory names, optionally narrowed to one parent category so
-// the subcategory picker only offers siblings of the chosen category.
-export async function listSubcategories(category?: string): Promise<string[]> {
-  const products = await db.products.toArray();
-  const names = new Set<string>();
-  for (const product of products) {
-    if (!product.subcategory?.trim()) continue;
-    if (category && (product.category ?? "") !== category) continue;
-    names.add(product.subcategory.trim());
-  }
-  return Array.from(names).sort((a, b) => a.localeCompare(b));
-}
-
-export async function listBranches(): Promise<string[]> {
-  const products = await db.products.toArray();
-  const names = new Set<string>();
-  for (const product of products) {
-    if (product.branch?.trim()) names.add(product.branch.trim());
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
