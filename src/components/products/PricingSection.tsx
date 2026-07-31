@@ -47,6 +47,13 @@ function Metric({
   );
 }
 
+/**
+ * Price, cost, tax and standing discount, with the derived margin.
+ *
+ * Margin is measured against the net price — what the till actually charges
+ * after the standing discount — not the list price, so a product discounted
+ * below cost reads as the loss it is.
+ */
 export function PricingSection({
   form,
   errorCount,
@@ -66,9 +73,6 @@ export function PricingSection({
     discount_percent: discountPercent,
   });
 
-  // Margin is measured against the net price — what the till actually charges
-  // after the standing discount — not the list price, so a product discounted
-  // below cost reads as the loss it is.
   const costCents = parseMoneyToCents(costPrice);
   const marginCents =
     costCents === null || summary.netPriceCents === null

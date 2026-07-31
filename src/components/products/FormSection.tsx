@@ -18,9 +18,11 @@ interface FormSectionProps {
   plain?: boolean;
 }
 
-// Card + disclosure. Sections stay collapsible at every width because a
-// grocery product has seven groups of fields — being able to fold the ones
-// you are not filling in is what makes the page usable on a tablet.
+/**
+ * Card + disclosure. Sections stay collapsible at every width because a
+ * grocery product has seven groups of fields — being able to fold the ones
+ * you are not filling in is what makes the page usable on a tablet.
+ */
 export function FormSection({
   id,
   title,
@@ -90,7 +92,9 @@ export function FormSection({
   );
 }
 
-// Marks a field as mandatory in a way that is announced, not just coloured.
+/**
+ * Marks a field as mandatory in a way that is announced, not just coloured.
+ */
 export function RequiredMark() {
   return (
     <>

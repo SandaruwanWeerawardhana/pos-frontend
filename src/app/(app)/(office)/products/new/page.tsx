@@ -31,9 +31,11 @@ import { useRouter } from "next/navigation";
 import { Suspense, lazy, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-// Below-the-fold sections are code-split: a cashier adding a quick line often
-// never opens Media, so its bundle should not block the first paint of the
-// fields everyone fills in.
+/**
+ * Below-the-fold sections are code-split: a cashier adding a quick line often
+ * never opens Media, so its bundle should not block the first paint of the
+ * fields everyone fills in.
+ */
 const GrocerySection = lazy(() =>
   import("@/components/products/GrocerySection").then((module) => ({
     default: module.GrocerySection,

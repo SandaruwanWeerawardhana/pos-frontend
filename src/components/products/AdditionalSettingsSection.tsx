@@ -13,9 +13,11 @@ interface AdditionalSettingsSectionProps extends ProductSectionProps {
   onPluginChange: (key: string, value: string | number | boolean) => void;
 }
 
-// Till policy switches plus whatever the active business-type plugin adds.
-// The plugin slot is rendered here rather than at the bottom of the page so
-// its fields sit inside the same card rhythm as everything else.
+/**
+ * Till policy switches plus whatever the active business-type plugin adds.
+ * The plugin slot is rendered here rather than at the bottom of the page so
+ * its fields sit inside the same card rhythm as everything else.
+ */
 export function AdditionalSettingsSection({
   pluginValues,
   onPluginChange,

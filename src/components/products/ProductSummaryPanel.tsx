@@ -15,9 +15,11 @@ interface ProductSummaryPanelProps {
   onCancel: () => void;
 }
 
-// Desktop's sticky right rail: a live preview of the record being built and
-// the primary actions. It is hidden below `lg`, where the bottom action bar
-// takes over.
+/**
+ * Desktop's sticky right rail: a live preview of the record being built and
+ * the primary actions. It is hidden below `lg`, where the bottom action bar
+ * takes over.
+ */
 export function ProductSummaryPanel({
   values,
   errorCount,

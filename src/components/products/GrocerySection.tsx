@@ -10,6 +10,11 @@ interface GrocerySectionProps extends ProductSectionProps {
   errorCount: number;
 }
 
+/**
+ * Expiry and manufacturing dates. Either one filled in means the opening stock
+ * is written as a batch, which is what the expiry and batch reports read from.
+ * See toProduct().
+ */
 export function GrocerySection({
   form,
   errorCount,
@@ -17,8 +22,6 @@ export function GrocerySection({
   const { control, register, formState } = form;
   const errors = formState.errors;
 
-  // Either date filled in means the opening stock is written as a batch, which
-  // is what the expiry and batch reports read from. See toProduct().
   const [expiryDate, manufacturingDate] = useWatch({
     control,
     name: ["expiry_date", "manufacturing_date"],

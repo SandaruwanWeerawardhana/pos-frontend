@@ -86,6 +86,12 @@ function toOptions(values: string[]) {
   return values.map((value) => ({ value, label: value }));
 }
 
+/**
+ * Name, category, SKU and barcode, plus the generators and the scanner.
+ *
+ * Only the fields the generators read are watched, so typing a description
+ * does not re-render this section's derived bits.
+ */
 export function ProductInfoSection({
   form,
   options,
@@ -95,8 +101,6 @@ export function ProductInfoSection({
   const { control, register, setValue, formState } = form;
   const errors = formState.errors;
 
-  // Only the fields the generators read are watched, so typing a description
-  // does not re-render this section's derived bits.
   const [name, category, sku, barcode, barcodeSource] = useWatch({
     control,
     name: ["name", "category", "sku", "barcode", "barcode_source"],
@@ -124,11 +128,13 @@ export function ProductInfoSection({
     writeBarcode(generateBarcode());
   }
 
+  /**
+   * Switching to an in-store code with nothing typed yet mints one straight
+   * away, since that is the only reason to pick this mode.
+   */
   function pickSource(next: BarcodeSource) {
     setValue("barcode_source", next, { shouldDirty: true, shouldValidate: true });
     setScanning(false);
-    // Switching to an in-store code with nothing typed yet: mint one straight
-    // away, since that is the only reason to pick this mode.
     if (next === "generated" && !barcode) fillBarcode();
   }
 

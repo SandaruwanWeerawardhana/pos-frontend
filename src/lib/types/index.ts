@@ -4,72 +4,100 @@ export type PaymentMethod = "cash" | "card" | "qr" | "other";
 
 export type SyncStatus = "pending" | "syncing" | "synced" | "conflict" | "error";
 
-// How a product's quantity is entered at the till. "unit" products are
-// counted (1 tin, 2 loaves); "weight" products are priced per kg and the
-// cart quantity carries a fractional weight read from the scale.
+/**
+ * How a product's quantity is entered at the till. "unit" products are
+ * counted (1 tin, 2 loaves); "weight" products are priced per kg and the
+ * cart quantity carries a fractional weight read from the scale.
+ */
 export type ProductUnit = "unit" | "kg" | "g" | "l" | "ml" | "pack" | "box";
 
 export interface ProductBatch {
   batch_no: string;
-  expiry_date: string | null; // ISO yyyy-mm-dd, null when not perishable
+  /** ISO yyyy-mm-dd, null when not perishable. */
+  expiry_date: string | null;
   quantity: number;
-  cost_cents?: number; // landed cost for this batch
-  manufactured_date?: string | null; // ISO yyyy-mm-dd
+  /** Landed cost for this batch. */
+  cost_cents?: number;
+  /** ISO yyyy-mm-dd. */
+  manufactured_date?: string | null;
 }
 
+/**
+ * A catalogue row.
+ *
+ * Every field below `stock_quantity` is optional: server payloads that predate
+ * a field still validate, and the UI falls back to sensible defaults.
+ */
 export interface Product {
   id: string;
   name: string;
   sku: string;
   barcode: string;
-  // "package" = GTIN printed by the supplier, "generated" = in-store code we
-  // print ourselves. Absent on rows that predate the field; treat as "package".
+  /**
+   * "package" = GTIN printed by the supplier, "generated" = in-store code we
+   * print ourselves. Absent on rows that predate the field; treat as "package".
+   */
   barcode_source?: "package" | "generated";
-  price_cents: number; // integer cents
-  tax_rate: number; // fractional rate, e.g. 0.08 = 8%
+  /** Integer cents. */
+  price_cents: number;
+  /** Fractional rate, e.g. 0.08 = 8%. */
+  tax_rate: number;
   stock_quantity: number;
-  // ── Grocery catalogue fields (all optional so server payloads that predate
-  // them still validate; the UI falls back to sensible defaults). ──
   category?: string;
   brand?: string;
   unit?: ProductUnit;
-  cost_cents?: number; // purchase cost, basis for profit margin
+  /** Purchase cost, basis for profit margin. */
+  cost_cents?: number;
   image_url?: string;
-  is_weighted?: boolean; // variable-weight item priced per `unit`
-  reorder_level?: number; // triggers the low-stock alert for this product
-  shelf_location?: string; // e.g. "A3-04"
+  /** Variable-weight item priced per `unit`. */
+  is_weighted?: boolean;
+  /** Triggers the low-stock alert for this product. */
+  reorder_level?: number;
+  /** e.g. "A3-04". */
+  shelf_location?: string;
   supplier_id?: string;
-  batches?: ProductBatch[]; // batch/expiry tracking for perishables
-  // ── Catalogue metadata captured by the product form. Optional for the same
-  // reason as the fields above: older cached rows predate them. ──
+  /** Batch/expiry tracking for perishables. */
+  batches?: ProductBatch[];
   description?: string;
-  discount_percent?: number; // standing line discount, 0-100
-  min_stock_level?: number; // hard floor; `reorder_level` is the alert trigger
-  images?: string[]; // data URLs; `image_url` mirrors images[0] for older UI
-  // Values for the active business-type plugin's declared fields, keyed by
-  // PluginField.key. Opaque to the core app.
+  /** Standing line discount, 0-100. */
+  discount_percent?: number;
+  /** Hard floor; `reorder_level` is the alert trigger. */
+  min_stock_level?: number;
+  /** Data URLs; `image_url` mirrors images[0] for older UI. */
+  images?: string[];
+  /**
+   * Values for the active business-type plugin's declared fields, keyed by
+   * PluginField.key. Opaque to the core app.
+   */
   plugin_data?: Record<string, string | number | boolean>;
-  // Created on this device and not yet accepted by the server. Cleared by the
-  // sync manager once POST /products has stored it, so a pull can safely
-  // replace the row with the server's canonical copy.
+  /**
+   * Created on this device and not yet accepted by the server. Cleared by the
+   * sync manager once POST /products has stored it, so a pull can safely
+   * replace the row with the server's canonical copy.
+   */
   _local_only?: boolean;
-  // Edited on this device since the last successful push. Set by updateProduct
-  // and cleared once PUT /products/{id} has stored the edit; a pull leaves
-  // flagged rows alone so an edit made offline is not undone by the server's
-  // older copy. Never set on a row that is still `_local_only` — that one is
-  // pushed by its create, edits and all.
+  /**
+   * Edited on this device since the last successful push. Set by updateProduct
+   * and cleared once PUT /products/{id} has stored the edit; a pull leaves
+   * flagged rows alone so an edit made offline is not undone by the server's
+   * older copy. Never set on a row that is still `_local_only` — that one is
+   * pushed by its create, edits and all.
+   */
   _pending_update?: boolean;
 }
 
-// A product deleted on this device whose DELETE has not reached the server yet.
-//
-// Kept as its own table rather than a flag on the product, so the row can leave
-// `products` immediately: a deleted product must vanish from the till, the
-// catalogue and every report at once, and a tombstone in the products table
-// would mean auditing every read path for it.
+/**
+ * A product deleted on this device whose DELETE has not reached the server yet.
+ *
+ * Kept as its own table rather than a flag on the product, so the row can leave
+ * `products` immediately: a deleted product must vanish from the till, the
+ * catalogue and every report at once, and a tombstone in the products table
+ * would mean auditing every read path for it.
+ */
 export interface DeletedProductRecord {
   id: string;
-  deleted_at: number; // epoch milliseconds
+  /** Epoch milliseconds. */
+  deleted_at: number;
 }
 
 export interface CartItem {

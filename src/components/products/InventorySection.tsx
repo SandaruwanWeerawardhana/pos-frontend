@@ -11,6 +11,11 @@ interface InventorySectionProps extends ProductSectionProps {
   errorCount: number;
 }
 
+/**
+ * Opening stock and the minimum level. Weighed goods arrive as 12.5 kg, not 12
+ * units, so the stepper works in fractions for them and whole numbers for
+ * everything else.
+ */
 export function InventorySection({
   form,
   errorCount,
@@ -23,8 +28,6 @@ export function InventorySection({
     name: ["unit", "min_stock_level"],
   });
 
-  // Weighed goods arrive as 12.5 kg, not 12 units, so the stepper has to work
-  // in fractions for them and whole numbers for everything else.
   const weighed = WEIGHT_UNITS.includes(unit);
   const stockStep = weighed ? 0.5 : 1;
   const stockPrecision = weighed ? 3 : 0;
