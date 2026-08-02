@@ -18,6 +18,7 @@ interface CartProps {
   onRemove: (id: number) => void;
   onHold: () => void;
   onPay: (method: PaymentMethod) => void;
+  busy?: boolean;
 }
 
 const DEFAULT_PAYMENT_METHOD: PaymentMethod = "cash";
@@ -30,6 +31,7 @@ export function Cart({
   onRemove,
   onHold,
   onPay,
+  busy = false,
 }: Readonly<CartProps>) {
   const { money } = useSettings();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -96,11 +98,11 @@ export function Cart({
 
       <button
         type="button"
-        disabled={empty}
+        disabled={empty || busy}
         onClick={() => onPay(DEFAULT_PAYMENT_METHOD)}
         className="mt-3 min-h-14 rounded-xl bg-secondary px-2 text-base font-semibold text-on-secondary transition-colors hover:bg-secondary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Pay {money(total.total_cents)}
+        {busy ? "Completing sale…" : `Pay ${money(total.total_cents)}`}
       </button>
     </div>
   );

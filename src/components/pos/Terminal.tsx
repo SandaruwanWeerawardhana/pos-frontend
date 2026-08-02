@@ -33,8 +33,10 @@ import type {
 
 const emptySubscribe = () => () => {};
 
-// True only after client hydration; false during SSR and the first client
-// render. Lets us gate localStorage-backed (persisted) UI without a mismatch.
+/**
+ * True only after client hydration; false during SSR and the first client
+ * render. Lets us gate localStorage-backed (persisted) UI without a mismatch.
+ */
 function useHydrated(): boolean {
   return useSyncExternalStore(
     emptySubscribe,
@@ -50,7 +52,9 @@ export function Terminal() {
   const [holdOpen, setHoldOpen] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<PendingOrder | null>(null);
+ 
+  const [lastOrder, setLastOrder] = useState<PendingOrder | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const mounted = useHydrated();
   const router = useRouter();
@@ -69,8 +73,10 @@ export function Terminal() {
   );
   const total = cart.computeTotal(discountCents);
 
-  // Search results are the source list; the category rail narrows them rather
-  // than issuing a second query, so filtering stays instant offline.
+  /**
+   * Search results are the source list; the category rail narrows them rather
+   * than issuing a second query, so filtering stays instant offline.
+   */
   const visibleProducts = useMemo(
     () =>
       category === ALL_CATEGORIES
@@ -109,6 +115,7 @@ export function Terminal() {
   }
 
   function handlePay(method: PaymentMethod) {
+    if (submitting) return;
     if (cart.items.length === 0) {
       showToast("Cart is empty", "warning");
       return;
@@ -136,7 +143,8 @@ export function Terminal() {
         payments: splits,
         cashierId: user?.id,
       });
-      setCompletedOrder(order);
+      setLastOrder(order);
+      setReceiptOpen(true);
       setSelectedDiscount(null);
       showToast("Sale completed", "success");
     } catch {
@@ -161,6 +169,7 @@ export function Terminal() {
       onRemove={cart.remove}
       onHold={() => setHoldOpen(true)}
       onPay={handlePay}
+      busy={submitting}
     />
   );
 
@@ -223,8 +232,8 @@ export function Terminal() {
           onHold={() => setHoldOpen(true)}
           onClear={handleClearCart}
           onPrintLast={() => {
-            if (completedOrder) {
-              setCompletedOrder(completedOrder);
+            if (lastOrder) {
+              setReceiptOpen(true);
             } else {
               showToast("No completed sale to reprint yet", "warning");
             }
@@ -276,19 +285,19 @@ export function Terminal() {
       />
 
       <Modal
-        open={completedOrder !== null}
-        onClose={() => setCompletedOrder(null)}
+        open={receiptOpen && lastOrder !== null}
+        onClose={() => setReceiptOpen(false)}
         title="Sale complete"
         size="md"
       >
-        {completedOrder && (
+        {lastOrder && (
           <div className="flex flex-col gap-4">
-            <Receipt order={completedOrder} />
+            <Receipt order={lastOrder} />
             <Button
               type="button"
               fullWidth
               size="lg"
-              onClick={() => setCompletedOrder(null)}
+              onClick={() => setReceiptOpen(false)}
             >
               New sale
             </Button>

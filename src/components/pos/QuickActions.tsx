@@ -9,8 +9,10 @@ interface QuickActionsProps {
   disabled: boolean;
 }
 
-// Till-side shortcuts. Keyboard equivalents are shown so cashiers on a
-// physical keyboard can learn them without a separate cheat sheet.
+/**
+ * Till-side shortcuts, duplicating the F-key bindings in Terminal for cashiers
+ * working from the touchscreen.
+ */
 export function QuickActions({
   onHold,
   onClear,
@@ -43,14 +45,12 @@ export function QuickActions({
 function ActionButton({
   icon,
   label,
-  hint,
   onClick,
   disabled,
   danger,
 }: Readonly<{
   icon: React.ReactNode;
   label: string;
-  hint?: string;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -68,11 +68,6 @@ function ActionButton({
     >
       <span aria-hidden>{icon}</span>
       <span className="text-center leading-tight">{label}</span>
-      {hint && (
-        <kbd className="rounded border border-outline-variant px-1 text-[10px] opacity-60 dark:border-zinc-700">
-          {hint}
-        </kbd>
-      )}
     </button>
   );
 }

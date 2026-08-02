@@ -1,114 +1,218 @@
-// Shared domain types. Money is ALWAYS integer cents — never floats.
+/**
+ * Shared domain types. Money is ALWAYS integer cents — never floats.
+ */
 
 export type PaymentMethod = "cash" | "card" | "qr" | "other";
 
 export type SyncStatus = "pending" | "syncing" | "synced" | "conflict" | "error";
 
-// How a product's quantity is entered at the till. "unit" products are
-// counted (1 tin, 2 loaves); "weight" products are priced per kg and the
-// cart quantity carries a fractional weight read from the scale.
+/**
+ * How a product's quantity is entered at the till. "unit" products are
+ * counted (1 tin, 2 loaves); "weight" products are priced per kg and the
+ * cart quantity carries a fractional weight read from the scale.
+ */
 export type ProductUnit = "unit" | "kg" | "g" | "l" | "ml" | "pack" | "box";
 
 export interface ProductBatch {
   batch_no: string;
-  expiry_date: string | null; // ISO yyyy-mm-dd, null when not perishable
+  /** ISO yyyy-mm-dd, null when not perishable. */
+  expiry_date: string | null;
   quantity: number;
-  cost_cents?: number; // landed cost for this batch
-  manufactured_date?: string | null; // ISO yyyy-mm-dd
+  /** Landed cost for this batch. */
+  cost_cents?: number;
+  /** ISO yyyy-mm-dd. */
+  manufactured_date?: string | null;
 }
 
+/**
+ * A catalogue row.
+ *
+ * Every field below `stock_quantity` is optional: server payloads that predate
+ * a field still validate, and the UI falls back to sensible defaults.
+ */
 export interface Product {
   id: string;
   name: string;
   sku: string;
   barcode: string;
-  // "package" = GTIN printed by the supplier, "generated" = in-store code we
-  // print ourselves. Absent on rows that predate the field; treat as "package".
+  /**
+   * "package" = GTIN printed by the supplier, "generated" = in-store code we
+   * print ourselves. Absent on rows that predate the field; treat as "package".
+   */
   barcode_source?: "package" | "generated";
-  price_cents: number; // integer cents
-  tax_rate: number; // fractional rate, e.g. 0.08 = 8%
+  /** Integer cents. */
+  price_cents: number;
+  /** Fractional rate, e.g. 0.08 = 8%. */
+  tax_rate: number;
   stock_quantity: number;
-  // ── Grocery catalogue fields (all optional so server payloads that predate
-  // them still validate; the UI falls back to sensible defaults). ──
   category?: string;
   brand?: string;
   unit?: ProductUnit;
-  cost_cents?: number; // purchase cost, basis for profit margin
+  /** Purchase cost, basis for profit margin. */
+  cost_cents?: number;
   image_url?: string;
-  is_weighted?: boolean; // variable-weight item priced per `unit`
-  reorder_level?: number; // triggers the low-stock alert for this product
-  shelf_location?: string; // e.g. "A3-04"
+  /** Variable-weight item priced per `unit`. */
+  is_weighted?: boolean;
+  /** Triggers the low-stock alert for this product. */
+  reorder_level?: number;
+  /** e.g. "A3-04". */
+  shelf_location?: string;
   supplier_id?: string;
-  batches?: ProductBatch[]; // batch/expiry tracking for perishables
-  // ── Catalogue metadata captured by the product form. Optional for the same
-  // reason as the fields above: older cached rows predate them. ──
+  /** Batch/expiry tracking for perishables. */
+  batches?: ProductBatch[];
   description?: string;
-  discount_percent?: number; // standing line discount, 0-100
-  min_stock_level?: number; // hard floor; `reorder_level` is the alert trigger
-  images?: string[]; // data URLs; `image_url` mirrors images[0] for older UI
-  // Values for the active business-type plugin's declared fields, keyed by
-  // PluginField.key. Opaque to the core app.
+  /** Standing line discount, 0-100. */
+  discount_percent?: number;
+  /** Hard floor; `reorder_level` is the alert trigger. */
+  min_stock_level?: number;
+  /** Data URLs; `image_url` mirrors images[0] for older UI. */
+  images?: string[];
+  /**
+   * Values for the active business-type plugin's declared fields, keyed by
+   * PluginField.key. Opaque to the core app.
+   */
   plugin_data?: Record<string, string | number | boolean>;
-  // Created on this device and not yet accepted by the server. Cleared by the
-  // sync manager once POST /products has stored it, so a pull can safely
-  // replace the row with the server's canonical copy.
+  /**
+   * Created on this device and not yet accepted by the server. Cleared by the
+   * sync manager once POST /products has stored it, so a pull can safely
+   * replace the row with the server's canonical copy.
+   */
   _local_only?: boolean;
-  // Edited on this device since the last successful push. Set by updateProduct
-  // and cleared once PUT /products/{id} has stored the edit; a pull leaves
-  // flagged rows alone so an edit made offline is not undone by the server's
-  // older copy. Never set on a row that is still `_local_only` — that one is
-  // pushed by its create, edits and all.
+  /**
+   * Edited on this device since the last successful push. Set by updateProduct
+   * and cleared once PUT /products/{id} has stored the edit; a pull leaves
+   * flagged rows alone so an edit made offline is not undone by the server's
+   * older copy. Never set on a row that is still `_local_only` — that one is
+   * pushed by its create, edits and all.
+   */
   _pending_update?: boolean;
 }
 
-// A product deleted on this device whose DELETE has not reached the server yet.
-//
-// Kept as its own table rather than a flag on the product, so the row can leave
-// `products` immediately: a deleted product must vanish from the till, the
-// catalogue and every report at once, and a tombstone in the products table
-// would mean auditing every read path for it.
+/**
+ * A product deleted on this device whose DELETE has not reached the server yet.
+ *
+ * Kept as its own table rather than a flag on the product, so the row can leave
+ * `products` immediately: a deleted product must vanish from the till, the
+ * catalogue and every report at once, and a tombstone in the products table
+ * would mean auditing every read path for it.
+ */
 export interface DeletedProductRecord {
   id: string;
-  deleted_at: number; // epoch milliseconds
+  /** Epoch milliseconds. */
+  deleted_at: number;
 }
 
 export interface CartItem {
-  id?: number; // Dexie auto-increment pk; present once persisted
+  id?: number; /* Dexie auto-increment pk; present once persisted */
   product_id: string;
   name: string;
-  quantity: number; // fractional for weighted items (kg), whole otherwise
-  unit_price_cents: number; // integer cents, per `unit`
-  tax_rate: number; // captured from the product at add-to-cart time, not re-fetched
+  quantity: number; /* fractional for weighted items (kg), whole otherwise */
+  unit_price_cents: number; /* integer cents, per `unit` */
+  tax_rate: number; /* captured from the product at add-to-cart time, not re-fetched */
   unit?: ProductUnit;
   is_weighted?: boolean;
-  line_discount_cents?: number; // per-line override, applied before cart discount
+  line_discount_cents?: number; /* per-line override, applied before cart discount */
 }
 
-// One leg of a payment. A single-tender sale has exactly one; a split sale
-// has several whose amounts sum to the order total.
+/**
+ * One leg of a payment. A single-tender sale has exactly one; a split sale
+ * has several whose amounts sum to the order total.
+ */
 export interface PaymentSplit {
   method: PaymentMethod;
   amount_cents: number;
-  tendered_cents?: number; // cash only — what the customer handed over
-  change_cents?: number; // cash only — tendered minus amount
-  reference?: string; // card auth code / QR transaction id
+  tendered_cents?: number; /* cash only — what the customer handed over */
+  change_cents?: number; /* cash only — tendered minus amount */
+  reference?: string; /* card auth code / QR transaction id */
 }
 
 export interface PendingOrder {
   client_generated_id: string;
   items: CartItem[];
-  total_cents: number; // integer cents
-  tax_total_cents: number; // integer cents
-  payment_method: PaymentMethod; // primary tender; see `payments` for splits
-  created_at: number; // epoch milliseconds
+  total_cents: number; /* integer cents */
+  tax_total_cents: number; /* integer cents */
+  payment_method: PaymentMethod; /* primary tender; see `payments` for splits */
+  created_at: number; /* epoch milliseconds */
   sync_status: SyncStatus;
   server_id: string | null;
-  customer_id?: string;
-  discount_cents?: number; // integer cents, applied before tax
-  refunded?: boolean; // local-only annotation, not synced (no backend refund endpoint yet)
-  payments?: PaymentSplit[]; // present for every order created after split-payment support
+  discount_cents?: number; /* integer cents, applied before tax */
+  refunded?: boolean; /* local-only annotation, not synced (no backend refund endpoint yet) */
+  payments?: PaymentSplit[]; /* present for every order created after split-payment support */
   cashier_id?: string;
   receipt_no?: string;
+}
+
+/**
+ * A sale as `GET /orders` returns it — the server's stored copy, not the till's.
+ *
+ * Keyed on `client_generated_id` as well as `id`, because the till already holds
+ * the same sale under that key. That is what lets the sales screen overlay its
+ * unsynced local orders on a server page without showing the same sale twice.
+ *
+ * Money is integer cents. `sold_at` is the business date the sale was rung up
+ * on (epoch ms), not when the server received it — an order that syncs three
+ * days late still belongs to the day it happened.
+ */
+export interface ServerOrder {
+  id: string;
+  client_generated_id: string;
+  receipt_no: string | null;
+  payment_method: PaymentMethod;
+  subtotal_cents: number;
+  discount_cents: number;
+  tax_total_cents: number;
+  total_cents: number;
+  refunded: boolean;
+  /** The server's recompute disagreed with the till's figures; needs review. */
+  totals_mismatch: boolean;
+  server_total_cents?: number;
+  server_tax_total_cents?: number;
+  cashier_id?: string;
+  branch_id?: string;
+  sold_at: number;
+  synced_at: number;
+  items: ServerOrderItem[];
+  payments: PaymentSplit[];
+}
+
+export interface ServerOrderItem {
+  product_id: string | null;
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  tax_rate: number;
+  unit?: ProductUnit;
+  is_weighted?: boolean;
+  line_discount_cents: number;
+}
+
+/** Pagination metadata returned alongside a server list page. */
+export interface PageMeta {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface OrderPage {
+  orders: ServerOrder[];
+  meta: PageMeta;
+}
+
+/** Query for `GET /orders`. Every field is optional; the server has defaults. */
+export interface OrderListParams {
+  page?: number;
+  per_page?: number;
+  /** Matched against receipt no, client id, and item names. */
+  search?: string;
+  payment_method?: PaymentMethod;
+  /** Epoch ms bounds on `sold_at`. */
+  from?: number;
+  to?: number;
+  sort?: "sold_at" | "total_cents" | "synced_at" | "created_at";
+  order?: "asc" | "desc";
 }
 
 export interface SyncMetaRecord {
@@ -131,7 +235,7 @@ export interface Supplier {
   created_at: number;
   address?: string;
   tax_id?: string;
-  payment_terms?: string; // e.g. "Net 30"
+  payment_terms?: string; /* e.g. "Net 30" */
 }
 
 export type DiscountType =
@@ -145,18 +249,20 @@ export interface Discount {
   id: string;
   name: string;
   type: DiscountType;
-  value: number; // percentage (0-100) or integer cents, depending on type
+  value: number; /* percentage (0-100) or integer cents, depending on type */
   active: boolean;
   created_at: number;
-  starts_at?: number; // epoch ms — campaign window start
-  ends_at?: number; // epoch ms — campaign window end
-  product_ids?: string[]; // limits the campaign to these products
-  buy_quantity?: number; // BOGO: buy N…
-  get_quantity?: number; // …get M free
-  min_subtotal_cents?: number; // threshold before the campaign applies
+  starts_at?: number; /* epoch ms — campaign window start */
+  ends_at?: number; /* epoch ms — campaign window end */
+  product_ids?: string[]; /* limits the campaign to these products */
+  buy_quantity?: number; /* BOGO: buy N… */
+  get_quantity?: number; /* …get M free */
+  min_subtotal_cents?: number; /* threshold before the campaign applies */
 }
 
-// ── Inventory ──────────────────────────────────────────────────────────────
+/**
+ * ── Inventory ──────────────────────────────────────────────────────────────
+ */
 
 export type StockMovementType =
   | "sale"
@@ -173,10 +279,10 @@ export interface StockMovement {
   product_id: string;
   product_name: string;
   type: StockMovementType;
-  quantity_delta: number; // signed: negative removes stock
+  quantity_delta: number; /* signed: negative removes stock */
   balance_after: number;
   reason?: string;
-  reference_id?: string; // order id / purchase order id
+  reference_id?: string; /* order id / purchase order id */
   warehouse_id?: string;
   batch_no?: string;
   created_at: number;
@@ -191,7 +297,9 @@ export interface Warehouse {
   created_at: number;
 }
 
-// ── Purchasing ─────────────────────────────────────────────────────────────
+/**
+ * ── Purchasing ─────────────────────────────────────────────────────────────
+ */
 
 export type PurchaseOrderStatus =
   | "draft"
@@ -212,7 +320,7 @@ export interface PurchaseOrderLine {
 
 export interface PurchaseOrder {
   id: string;
-  reference: string; // human-facing PO number
+  reference: string; /* human-facing PO number */
   supplier_id: string;
   supplier_name: string;
   status: PurchaseOrderStatus;
@@ -234,10 +342,14 @@ export interface PurchaseReturn {
   created_at: number;
 }
 
-// ── Users, roles, permissions ──────────────────────────────────────────────
+/**
+ * ── Users, roles, permissions ──────────────────────────────────────────────
+ */
 
-// Coarse-grained capability strings checked by `hasPermission`. Kept flat
-// (rather than resource/action objects) so a role is just a string list.
+/**
+ * Coarse-grained capability strings checked by `hasPermission`. Kept flat
+ * (rather than resource/action objects) so a role is just a string list.
+ */
 export const PERMISSIONS = [
   "pos.sell",
   "pos.refund",
@@ -259,7 +371,7 @@ export interface Role {
   id: string;
   name: string;
   permissions: Permission[];
-  is_system?: boolean; // seeded role, cannot be deleted
+  is_system?: boolean; /* seeded role, cannot be deleted */
   created_at: number;
 }
 
@@ -268,16 +380,20 @@ export interface StaffUser {
   name: string;
   email: string;
   role_id: string;
-  // Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
-  // fields are absent until a PIN is set; a user without one cannot sign in at
-  // the till. See `setStaffPin` for the (deliberately limited) threat model.
+  /**
+   * Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
+   * fields are absent until a PIN is set; a user without one cannot sign in at
+   * the till. See `setStaffPin` for the (deliberately limited) threat model.
+   */
   pin_hash?: string;
   pin_salt?: string;
   active: boolean;
   created_at: number;
 }
 
-// ── Notifications ──────────────────────────────────────────────────────────
+/**
+ * ── Notifications ──────────────────────────────────────────────────────────
+ */
 
 export type NotificationKind =
   | "low_stock"
@@ -297,12 +413,14 @@ export interface AppNotification {
   created_at: number;
 }
 
-// ── Settings ───────────────────────────────────────────────────────────────
+/**
+ * ── Settings ───────────────────────────────────────────────────────────────
+ */
 
 export interface TaxRateSetting {
   id: string;
   name: string;
-  rate: number; // fractional, e.g. 0.08
+  rate: number; /* fractional, e.g. 0.08 */
   is_default?: boolean;
 }
 
@@ -313,10 +431,10 @@ export interface StoreSettings {
   phone?: string;
   email?: string;
   tax_id?: string;
-  currency_code: string; // ISO 4217, e.g. "USD"
+  currency_code: string; /* ISO 4217, e.g. "USD" */
   currency_symbol: string;
   currency_position: "before" | "after";
-  locale: string; // BCP 47, drives number/date formatting
+  locale: string; /* BCP 47, drives number/date formatting */
   prices_include_tax: boolean;
   tax_rates: TaxRateSetting[];
   receipt_header?: string;

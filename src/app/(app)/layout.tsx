@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { AppHeader } from "@/components/shell/app-header";
 import { CommandPalette } from "@/components/shell/command-palette";
 
@@ -6,6 +9,11 @@ export default function AppGroupLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isAuthRoute = pathname?.startsWith("/auth");
+
+  if (isAuthRoute) return <>{children}</>;
+
   return (
     <>
       <AppHeader />

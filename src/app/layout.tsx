@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { AppShellInit } from "@/components/shell/app-shell-init";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -41,6 +42,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(function(){try{var k="theme";var s=localStorage.getItem(k);var t=(s==="light"||s==="dark"||s==="system")?s:"light";var d=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;var r=document.documentElement;r.classList.remove("light","dark");r.classList.add(d);r.style.colorScheme=d;}catch(e){}})();`}
+        </Script>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AppShellInit />
           <QueryProvider>

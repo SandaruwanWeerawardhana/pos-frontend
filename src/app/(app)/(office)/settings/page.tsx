@@ -33,6 +33,13 @@ export default function SettingsPage() {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
+
+  function wholeNonNegative(raw: string): number {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.floor(parsed));
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -158,7 +165,7 @@ export default function SettingsPage() {
               step="1"
               value={String(draft.low_stock_threshold)}
               onChange={(event) =>
-                update("low_stock_threshold", Number(event.target.value))
+                update("low_stock_threshold", wholeNonNegative(event.target.value))
               }
             />
             <Input
@@ -168,7 +175,7 @@ export default function SettingsPage() {
               step="1"
               value={String(draft.expiry_warning_days)}
               onChange={(event) =>
-                update("expiry_warning_days", Number(event.target.value))
+                update("expiry_warning_days", wholeNonNegative(event.target.value))
               }
             />
           </div>

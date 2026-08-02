@@ -4,19 +4,21 @@ import { MAX_IMAGES, WEIGHT_UNITS } from "./constants";
 import { isGtinLength, isValidEan13, isValidGtin } from "./generate";
 import type { Product, ProductBatch } from "@/lib/types";
 
-// Every field below is backed by a rendered input. Fields the form once
-// declared but never rendered a control for (product_code, qr_code,
-// subcategory, brand, status, reorder_level, shelf_location, warehouse_id,
-// branch, product_type, storage_type, is_variable_weight, batch_no,
-// allow_discount, allow_returns, track_expiry, track_batch, supplier_id,
-// supplier_product_code) were removed: they could only ever be saved at their
-// default, which made two of the superRefine rules below unreachable and the
-// catalogue's brand/weighted/margin figures permanently empty. Add the input
-// and the field back together if one is ever needed.
-
-// Numeric inputs are held as strings so a half-typed value ("1.", "") is a
-// legal intermediate state rather than NaN. Conversion to integer cents /
-// numbers happens once, in `toProduct`.
+/**
+ * Every field below is backed by a rendered input. Fields the form once
+ * declared but never rendered a control for (product_code, qr_code,
+ * subcategory, brand, status, reorder_level, shelf_location, warehouse_id,
+ * branch, product_type, storage_type, is_variable_weight, batch_no,
+ * allow_discount, allow_returns, track_expiry, track_batch, supplier_id,
+ * supplier_product_code) were removed: they could only ever be saved at their
+ * default, which made two of the superRefine rules below unreachable and the
+ * catalogue's brand/weighted/margin figures permanently empty. Add the input
+ * and the field back together if one is ever needed.
+ *
+ * Numeric inputs are held as strings so a half-typed value ("1.", "") is a
+ * legal intermediate state rather than NaN. Conversion to integer cents /
+ * numbers happens once, in `toProduct`.
+ */
 
 function toNumber(value: string): number | null {
   const cleaned = value.trim();
@@ -79,7 +81,6 @@ const isoDate = z
   );
 
 const baseProductSchema = z.object({
-  // Product information
   name: z.string().trim().min(2, "Product name is required").max(120),
   sku: z
     .string()
@@ -93,28 +94,22 @@ const baseProductSchema = z.object({
     .min(6, "Barcode is required")
     .max(32)
     .regex(/^[0-9]+$/, "Barcode must be digits only"),
-  // Where the barcode came from: "package" is the GTIN already printed on the
-  // supplier's packaging, "generated" is an in-store code we print ourselves.
   barcode_source: z.enum(["package", "generated"]),
   category: z.string().trim().min(1, "Category is required").max(60),
   unit: z.enum(["unit", "kg", "g", "l", "ml", "pack", "box"]),
   description: z.string().trim().max(1000),
 
-  // Pricing
   selling_price: moneyField("Price", true),
   cost_price: moneyField("Cost price", false),
   tax_rate: quantityField("Tax rate", { max: 100 }),
   discount_percent: quantityField("Discount", { max: 100 }),
 
-  // Inventory
   initial_stock: quantityField("Initial stock", { required: true }),
   min_stock_level: quantityField("Minimum stock", { integer: true }),
 
-  // Grocery
   expiry_date: isoDate,
   manufacturing_date: isoDate,
 
-  // Media — data URLs, already size/type checked at upload time.
   images: z.array(z.string()).max(MAX_IMAGES, `Up to ${MAX_IMAGES} images`),
 });
 
@@ -124,9 +119,15 @@ function startOfToday(): number {
   return today.getTime();
 }
 
+/**
+ * Cross-field rules the per-field schemas cannot express.
+ *
+ * An in-store code we print must be a well-formed EAN-13, or the shelf label
+ * will not scan; a package code is only checkable at real GTIN lengths. A cost
+ * above the selling price is a margin the till would book as a loss on every
+ * sale — almost always a typo or a cents/units slip.
+ */
 export const productFormSchema = baseProductSchema.superRefine((values, ctx) => {
-  // An in-store code we print must be a well-formed EAN-13, or the shelf label
-  // will not scan. A package code is only checkable at real GTIN lengths.
   if (values.barcode_source === "generated" && !isValidEan13(values.barcode)) {
     ctx.addIssue({
       code: "custom",
@@ -178,8 +179,6 @@ export const productFormSchema = baseProductSchema.superRefine((values, ctx) => 
     });
   }
 
-  // A cost above the selling price is a margin the till would book as a loss on
-  // every sale — almost always a typo or a cents/units slip.
   const priceCents = parseMoneyToCents(values.selling_price);
   const costCents = parseMoneyToCents(values.cost_price);
   if (priceCents !== null && costCents !== null && costCents > priceCents) {
@@ -259,17 +258,24 @@ function optional<T>(value: T | "" | null | undefined): T | undefined {
     : value;
 }
 
-// Strips empty strings so a blank optional field is absent from the record
-// rather than stored as "", which keeps `??` fallbacks working everywhere.
+/**
+ * Strips empty strings so a blank optional field is absent from the record
+ * rather than stored as "", which keeps `??` fallbacks working everywhere.
+ *
+ * An opening batch is written whenever either date is filled in, since those
+ * are the only two facts a batch would carry at creation time. Its number is
+ * derived from the SKU: batch numbering proper belongs to goods-receiving, not
+ * to first entry of the product.
+ *
+ * `is_weighted` is derived from the unit rather than asked for separately:
+ * choosing kg/g/l/ml *is* the statement that the item is weighed, and a second
+ * control that could contradict it only creates rows the till cannot price.
+ */
 export function toProduct(values: ProductFormValues, id: string): Product {
   const priceCents = parseMoneyToCents(values.selling_price) ?? 0;
   const costCents = parseMoneyToCents(values.cost_price);
   const stock = toNumber(values.initial_stock) ?? 0;
 
-  // An opening batch is written whenever either date is filled in, since those
-  // are the only two facts a batch would carry at creation time. Its number is
-  // derived from the SKU: batch numbering proper belongs to goods-receiving,
-  // not to first entry of the product.
   const batches: ProductBatch[] | undefined =
     values.expiry_date || values.manufacturing_date
       ? [
@@ -296,9 +302,6 @@ export function toProduct(values: ProductFormValues, id: string): Product {
     stock_quantity: stock,
     category: values.category,
     unit: values.unit,
-    // Derived from the unit rather than asked for separately: choosing kg/g/l/ml
-    // *is* the statement that the item is weighed, and a second control that
-    // could contradict it only creates rows the till cannot price.
     is_weighted: WEIGHT_UNITS.includes(values.unit),
     ...(costCents !== null ? { cost_cents: costCents } : {}),
     ...(optional(values.description) ? { description: values.description } : {}),

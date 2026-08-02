@@ -22,8 +22,10 @@ function SectionSkeleton({ rows }: Readonly<{ rows: number }>) {
   );
 }
 
-// Shown while the catalogue option lists load. Mirrors the real layout so the
-// page does not jump when the fields arrive.
+/**
+ * Shown while the catalogue option lists load. Mirrors the real layout so the
+ * page does not jump when the fields arrive.
+ */
 export function ProductFormSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-busy="true" aria-live="polite">

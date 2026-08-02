@@ -36,7 +36,7 @@ function MiniBarcode({ code }: Readonly<{ code: string }>) {
 }
 
 export default function ProductsPage() {
-  const { money } = useSettings();
+  const { money, settings } = useSettings();
 
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -171,8 +171,9 @@ export default function ProductsPage() {
       header: "Stock",
       align: "right",
       sortValue: (product) => product.stock_quantity,
-      render: (product) => {
-        const threshold = product.reorder_level ?? 5;
+      render: (product) => { 
+        const threshold =
+          product.reorder_level ?? settings.low_stock_threshold;
         let variant: "success" | "warning" | "danger" = "success";
         if (product.stock_quantity <= 0) variant = "danger";
         else if (product.stock_quantity <= threshold) variant = "warning";

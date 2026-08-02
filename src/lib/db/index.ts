@@ -22,8 +22,14 @@ import type {
   Warehouse,
 } from "@/lib/types";
 
-// Local-first IndexedDB store. Cart + orders are created/edited offline and
-// synced later; products are cached from the server for offline lookup.
+/**
+ * Local-first IndexedDB store. Cart + orders are created/edited offline and
+ * synced later; products are cached from the server for offline lookup.
+ *
+ * In every `stores()` spec the primary key comes first, then the secondary
+ * indexes. Booleans are never indexed — not a valid IndexedDB key type — so
+ * `discounts.active` and `notifications.read` are filtered in JS instead.
+ */
 export class PosDB extends Dexie {
   products!: Table<Product, string>;
   cartItems!: Table<CartItem, number>;
@@ -45,26 +51,30 @@ export class PosDB extends Dexie {
   constructor() {
     super("posDB");
     this.version(1).stores({
-      // primary key first, then secondary indexes
       products: "id, name, sku, barcode",
       cartItems: "++id, product_id",
       pendingOrders: "client_generated_id, sync_status, created_at",
       syncMeta: "key",
     });
-    // v2: local-only tables with no server counterpart yet (no sync endpoint
-    // for these exists - see CLAUDE.md / plan notes on this limitation).
+    /**
+     * v2: local-only tables with no server counterpart yet (no sync endpoint
+     * for these exists - see CLAUDE.md / plan notes on this limitation).
+     */
     this.version(2).stores({
       customers: "id, name",
       suppliers: "id, name",
-      // "active" is a boolean - not a valid IndexedDB key type, so it's not
-      // indexed here; getActiveDiscounts() filters in JS instead.
       discounts: "id",
       heldCarts: "id, created_at",
       cashReconciliations: "id, created_at",
     });
-    // v3: grocery catalogue, purchasing, staff, and notification tables.
-    // The `category`/`supplier_id` product indexes added here turned out never
-    // to be queried and are dropped again in v5.
+    /**
+     * v3: grocery catalogue, purchasing, staff, and notification tables. The
+     * `category`/`supplier_id` product indexes added here turned out never to
+     * be queried and are dropped again in v5.
+     *
+     * The upgrade backfills existing cached products, which predate the
+     * catalogue fields, so list/filter UI never has to special-case undefined.
+     */
     this.version(3)
       .stores({
         products: "id, name, sku, barcode, category, supplier_id",
@@ -74,14 +84,10 @@ export class PosDB extends Dexie {
         purchaseReturns: "id, purchase_order_id, created_at",
         roles: "id, name",
         staffUsers: "id, email, role_id",
-        // "read" is a boolean — not a valid IndexedDB key type — so unread
-        // filtering happens in JS, same as discounts.active.
         notifications: "id, kind, created_at",
         customerLedger: "id, customer_id, kind, created_at",
       })
       .upgrade(async (transaction) => {
-        // Existing cached products predate the catalogue fields. Give them
-        // defaults so list/filter UI never has to special-case undefined.
         await transaction
           .table<Product>("products")
           .toCollection()
@@ -91,23 +97,27 @@ export class PosDB extends Dexie {
             product.reorder_level ??= 5;
           });
       });
-    // v4: the delete outbox. Products deleted offline leave the products table
-    // straight away and are recorded here until DELETE /products/{id} lands,
-    // which also stops the next catalogue pull from resurrecting them.
+    /**
+     * v4: the delete outbox. Products deleted offline leave the products table
+     * straight away and are recorded here until DELETE /products/{id} lands,
+     * which also stops the next catalogue pull from resurrecting them.
+     */
     this.version(4).stores({
       deletedProducts: "id, deleted_at",
     });
-    // v5: trims the products table to what the code actually uses.
-    //
-    // Indexes: only `sku` and `barcode` are ever queried by key (the uniqueness
-    // probes and addProduct). `name`, `category` and `supplier_id` were indexed
-    // for filters that were then written as in-memory scans over the full
-    // table, so they only cost write time. Dropping them leaves every read path
-    // unchanged — none of them opened a cursor on those indexes.
-    //
-    // Columns: `status` was declared but never written by the form and never
-    // read by the till or reports, so cached rows carrying it are cleaned up
-    // here rather than left as a field with no type behind it.
+    /**
+     * v5: trims the products table to what the code actually uses.
+     *
+     * Indexes: only `sku` and `barcode` are ever queried by key (the uniqueness
+     * probes and addProduct). `name`, `category` and `supplier_id` were indexed
+     * for filters that were then written as in-memory scans over the full
+     * table, so they only cost write time. Dropping them leaves every read path
+     * unchanged — none of them opened a cursor on those indexes.
+     *
+     * Columns: `status` was declared but never written by the form and never
+     * read by the till or reports, so cached rows carrying it are cleaned up
+     * here rather than left as a field with no type behind it.
+     */
     this.version(5)
       .stores({
         products: "id, sku, barcode",
@@ -125,17 +135,20 @@ export class PosDB extends Dexie {
 
 export const db = new PosDB();
 
-// Refreshes server products while protecting local work the server has not
-// acknowledged yet:
-//
-//   - `_local_only` rows (created here) and `_pending_update` rows (edited
-//     here) win over the server's copy, so an offline change is not undone by
-//     an older row arriving in the pull.
-//   - products in the delete outbox are dropped from the incoming list, so one
-//     deleted offline does not reappear on every cycle until its DELETE lands.
-//
-// Each flag clears as soon as its push succeeds, so a row stays local-wins for
-// at most one cycle after the server agrees.
+/**
+ * Refreshes server products while protecting local work the server has not
+ * acknowledged yet:
+ *
+ *   - `_local_only` rows (created here) and `_pending_update` rows (edited
+ *     here) win over the server's copy, so an offline change is not undone by
+ *     an older row arriving in the pull.
+ *   - products in the delete outbox are dropped from the incoming list, so one
+ *     deleted offline does not reappear on every cycle until its DELETE lands.
+ *
+ * Each flag clears as soon as its push succeeds, so a row stays local-wins for
+ * at most one cycle after the server agrees. Unpushed rows are written last so
+ * they overwrite the server's copy of the same id.
+ */
 export async function seedProducts(products: Product[]): Promise<void> {
   await db.transaction("rw", db.products, db.deletedProducts, async () => {
     const unpushed = await db.products
@@ -147,7 +160,6 @@ export async function seedProducts(products: Product[]): Promise<void> {
     const deletedIds = new Set(await db.deletedProducts.toCollection().primaryKeys());
 
     await db.products.clear();
-    // Unpushed rows go last so they overwrite the server's copy of the same id.
     await db.products.bulkPut([
       ...products.filter((product) => !deletedIds.has(product.id)),
       ...unpushed,
@@ -155,14 +167,18 @@ export async function seedProducts(products: Product[]): Promise<void> {
   });
 }
 
-// Products created on this device that POST /products has not stored yet.
+/**
+ * Products created on this device that POST /products has not stored yet.
+ */
 export async function listUnpushedProducts(): Promise<Product[]> {
   return db.products.filter((product) => product._local_only === true).toArray();
 }
 
-// Products edited on this device since their last successful push. `_local_only`
-// rows are excluded: their create carries the edits already, and pushing an
-// update for a product the server has never seen would only 404.
+/**
+ * Products edited on this device since their last successful push.
+ * `_local_only` rows are excluded: their create carries the edits already, and
+ * pushing an update for a product the server has never seen would only 404.
+ */
 export async function listEditedProducts(): Promise<Product[]> {
   return db.products
     .filter(
@@ -182,9 +198,11 @@ export async function clearPendingProductDelete(id: string): Promise<void> {
   await db.deletedProducts.delete(id);
 }
 
-// Clears a push flag once the server has the change. Read-modify-put rather
-// than delete-and-insert so a sale that adjusted stock in the meantime is not
-// rolled back to the pushed figure.
+/**
+ * Clears a push flag once the server has the change. Read-modify-put rather
+ * than delete-and-insert so a sale that adjusted stock in the meantime is not
+ * rolled back to the pushed figure.
+ */
 async function clearProductFlag(
   id: string,
   flag: "_local_only" | "_pending_update",
@@ -205,7 +223,9 @@ export async function markProductUpdatePushed(id: string): Promise<void> {
   await clearProductFlag(id, "_pending_update");
 }
 
-// Searches name, sku, and barcode against the local table. Works fully offline.
+/**
+ * Searches name, sku, and barcode against the local table. Works fully offline.
+ */
 export async function searchProducts(query: string): Promise<Product[]> {
   const needle = query.trim().toLowerCase();
   if (!needle) return db.products.toArray();
@@ -239,8 +259,10 @@ export async function addProduct(product: Product): Promise<void> {
   });
 }
 
-// Sets an absolute stock level and journals the delta as an adjustment so
-// the movement history stays complete no matter which screen made the change.
+/**
+ * Sets an absolute stock level and journals the delta as an adjustment so
+ * the movement history stays complete no matter which screen made the change.
+ */
 export async function updateProductStock(
   productId: string,
   stockQuantity: number,
@@ -269,10 +291,12 @@ export async function getProduct(id: string): Promise<Product | undefined> {
   return db.products.get(id);
 }
 
-// Applies a catalogue edit and queues it for the next sync. A product still
-// waiting on its create keeps only `_local_only`: that push sends the whole row,
-// edits included, so flagging it for an update as well would send a second
-// request for a product the server has only just been told about.
+/**
+ * Applies a catalogue edit and queues it for the next sync. A product still
+ * waiting on its create keeps only `_local_only`: that push sends the whole
+ * row, edits included, so flagging it for an update as well would send a second
+ * request for a product the server has only just been told about.
+ */
 export async function updateProduct(
   productId: string,
   changes: Partial<Omit<Product, "id">>,
@@ -287,11 +311,13 @@ export async function updateProduct(
   });
 }
 
-// Removes the product locally and records a tombstone for the sync manager.
-//
-// The row leaves `products` immediately so it disappears from the till and
-// every report at once. A product the server has never seen (`_local_only`)
-// needs no tombstone — there is nothing to delete server-side.
+/**
+ * Removes the product locally and records a tombstone for the sync manager.
+ *
+ * The row leaves `products` immediately so it disappears from the till and
+ * every report at once. A product the server has never seen (`_local_only`)
+ * needs no tombstone — there is nothing to delete server-side.
+ */
 export async function deleteProduct(productId: string): Promise<void> {
   await db.transaction("rw", db.products, db.deletedProducts, async () => {
     const product = await db.products.get(productId);
@@ -345,25 +371,31 @@ export async function clearCart(): Promise<void> {
   await db.cartItems.clear();
 }
 
-// Subtotal, tax, and grand total in integer cents. Tax is rounded per line
-// item to avoid float drift. discountCents, if given, reduces the taxable
-// subtotal (tax is reduced proportionally) before totaling.
+/**
+ * Subtotal, tax, and grand total in integer cents. Tax is rounded per line
+ * item to avoid float drift. discountCents, if given, reduces the taxable
+ * subtotal (tax is reduced proportionally) before totaling.
+ */
 export async function getCartTotal(discountCents = 0): Promise<CartTotal> {
   const items = await db.cartItems.toArray();
   return computeCartTotal(items, discountCents);
 }
 
-// Moves the current cart into a pendingOrders record, optimistically deducts
-// stock, and clears the cart. Returns the created order.
+/**
+ * Options for `createLocalOrder`, which moves the current cart into a
+ * pendingOrders record, optimistically deducts stock, and clears the cart.
+ */
 export interface CreateOrderOptions {
   discountCents?: number;
   payments?: PaymentSplit[];
   cashierId?: string;
 }
 
-// Receipt numbers are per-day sequential and human-readable so a cashier can
-// read one back over the phone. Sequence lives in syncMeta, not a counter
-// table, and resets when the date part changes.
+/**
+ * Receipt numbers are per-day sequential and human-readable so a cashier can
+ * read one back over the phone. Sequence lives in syncMeta, not a counter
+ * table, and resets when the date part changes.
+ */
 async function nextReceiptNo(): Promise<string> {
   const datePart = new Date().toISOString().slice(0, 10).replaceAll("-", "");
   const record = await db.syncMeta.get("receipt_sequence");
@@ -394,6 +426,14 @@ export async function createLocalOrder(
     ],
     async () => {
       const items = await db.cartItems.toArray();
+      // An order with no lines is not a sale, and the server rejects it
+      // (POST /orders/sync requires items, min=1). Because that rejection is a
+      // 400 for the whole batch, one empty order would block every other sale
+      // queued behind it, so it must never reach the pendingOrders table.
+      if (items.length === 0) {
+        throw new Error("Cannot complete a sale with an empty cart");
+      }
+
       const { tax_total_cents, total_cents } = computeCartTotal(
         items,
         options?.discountCents ?? 0,
@@ -443,7 +483,9 @@ export async function createLocalOrder(
   );
 }
 
-// Distinct category names present in the local catalogue, for filter chips.
+/**
+ * Distinct category names present in the local catalogue, for filter chips.
+ */
 export async function listCategories(): Promise<string[]> {
   const products = await db.products.toArray();
   const names = new Set<string>();
@@ -453,9 +495,11 @@ export async function listCategories(): Promise<string[]> {
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
-// Uniqueness probes for the product form. `addProduct` re-checks inside its
-// transaction — these exist so the form can report a clash inline while the
-// user is still typing, rather than only on submit.
+/**
+ * Uniqueness probes for the product form. `addProduct` re-checks inside its
+ * transaction — these exist so the form can report a clash inline while the
+ * user is still typing, rather than only on submit.
+ */
 export async function isSkuTaken(sku: string, exceptId?: string): Promise<boolean> {
   const needle = sku.trim();
   if (!needle) return false;
@@ -482,7 +526,9 @@ export async function listBrands(): Promise<string[]> {
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
-// Persisted once on first access, never changed after that.
+/**
+ * Persisted once on first access, never changed after that.
+ */
 export async function getDeviceId(): Promise<string> {
   const existing = await db.syncMeta.get("device_id");
   if (existing && typeof existing.value === "string") return existing.value;

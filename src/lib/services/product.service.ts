@@ -1,10 +1,12 @@
 import { ApiError, httpClient, type HttpClient } from "./http-client";
 import type { Product } from "@/lib/types";
 
-// Fields the server owns or refuses in a write body. `_local_only` and
-// `_pending_update` are client bookkeeping with no column behind them;
-// `stock_quantity` and `batches` are server-owned on update (see the endpoint's
-// contract) and are dropped so a stale local figure cannot be offered at all.
+/**
+ * Fields the server owns or refuses in a write body. `_local_only` and
+ * `_pending_update` are client bookkeeping with no column behind them;
+ * `stock_quantity` and `batches` are server-owned on update (see the endpoint's
+ * contract) and are dropped so a stale local figure cannot be offered at all.
+ */
 type WritableProduct = Omit<
   Product,
   "_local_only" | "_pending_update" | "stock_quantity" | "batches"
@@ -26,10 +28,12 @@ export class ProductService {
     return this.http.request<Product[]>("/products");
   }
 
-  // `_local_only` and `_pending_update` are client-side bookkeeping with no
-  // column behind them, so they are stripped rather than sent and ignored.
-  // `stock_quantity` and `batches` stay: on create the client's figures are the
-  // only ones there are.
+  /**
+   * `_local_only` and `_pending_update` are client-side bookkeeping with no
+   * column behind them, so they are stripped rather than sent and ignored.
+   * `stock_quantity` and `batches` stay: on create the client's figures are the
+   * only ones there are.
+   */
   createProduct(product: Product): Promise<Product> {
     const body = { ...product };
     delete body._local_only;
@@ -44,8 +48,10 @@ export class ProductService {
     });
   }
 
-  // A 404 is success: the product is gone, which is the whole point of the
-  // call. Anything else propagates so the sync manager retries.
+  /**
+   * A 404 is success: the product is gone, which is the whole point of the
+   * call. Anything else propagates so the sync manager retries.
+   */
   async deleteProduct(id: string): Promise<void> {
     try {
       await this.http.request<void>(`/products/${id}`, { method: "DELETE" });

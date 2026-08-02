@@ -22,4 +22,5 @@ export const realApi: ApiClient = {
   updateProduct: (product) => productService.updateProduct(product),
   deleteProduct: (id) => productService.deleteProduct(id),
   syncOrders: (orders) => orderService.syncOrders(orders),
+  getOrders: (params) => orderService.getOrders(params),
 };

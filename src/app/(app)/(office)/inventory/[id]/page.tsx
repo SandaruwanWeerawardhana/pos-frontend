@@ -103,6 +103,20 @@ export default function ProductDetailPage({
     }
     const costCents = form.cost ? parseMoneyToCents(form.cost) : null;
 
+    /**
+     * reorder_level is the low-stock alert trigger, so a bad value here does
+     * not surface as a form error — it silently stops the product ever being
+     * reported low. NaN in particular, because `stock <= NaN` is always false.
+     */
+    let reorderLevel: number | undefined;
+    if (form.reorderLevel.trim()) {
+      reorderLevel = Number(form.reorderLevel);
+      if (!Number.isFinite(reorderLevel) || reorderLevel < 0) {
+        showToast("Reorder level must be zero or more", "error");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       await updateProduct(id, {
@@ -115,7 +129,7 @@ export default function ProductDetailPage({
         price_cents: priceCents,
         cost_cents: costCents ?? undefined,
         tax_rate: Number(form.taxRate) / 100,
-        reorder_level: form.reorderLevel ? Number(form.reorderLevel) : undefined,
+        reorder_level: reorderLevel,
         shelf_location: form.shelfLocation.trim() || undefined,
         supplier_id: form.supplierId || undefined,
         is_weighted: form.isWeighted,
