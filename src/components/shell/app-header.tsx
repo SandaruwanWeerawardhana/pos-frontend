@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { NotificationPanel } from "@/components/shell/notification-panel";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { useAuthStore } from "@/lib/store/auth";
 import { useSyncStatus } from "@/lib/sync/use-sync-status";
 import { ROUTES } from "@/lib/types/routes";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   ChevronRight,
   KeyRound,
@@ -76,6 +78,14 @@ function openCommandPalette() {
   );
 }
 
+function subscribeAuthHydration(onStoreChange: () => void) {
+  return useAuthStore.persist?.onFinishHydration(onStoreChange) ?? (() => {});
+}
+
+function getAuthHydrationSnapshot() {
+  return useAuthStore.persist?.hasHydrated?.() ?? true;
+}
+
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -85,6 +95,11 @@ export function AppHeader() {
   const [now, setNow] = useState<Date | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const hydrated = useSyncExternalStore(
+    subscribeAuthHydration,
+    getAuthHydrationSnapshot,
+    () => false,
+  );
 
   const currentPage =
     PAGE_LABELS.find((link) => pathname?.startsWith(link.href))?.label ??
@@ -146,6 +161,23 @@ export function AppHeader() {
     syncLabel = `${pendingCount} pending`;
     syncClass =
       "bg-amber-500/15 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  }
+  if (!hydrated) {
+    return (
+      <header
+        className="fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 md:left-56"
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Skeleton className="h-5 w-24 rounded" />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Skeleton className="hidden h-6 w-16 rounded-full sm:block" />
+          <Skeleton className="hidden h-6 w-16 rounded-full sm:block" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+      </header>
+    );
   }
 
   return (
