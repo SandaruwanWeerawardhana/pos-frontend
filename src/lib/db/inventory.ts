@@ -213,10 +213,6 @@ export async function createWarehouse(
   return warehouse;
 }
 
-export async function deleteWarehouse(id: string): Promise<void> {
-  await db.warehouses.delete(id);
-}
-
 // Seeds the single default location so transfer UI has something to point at
 // on a fresh install. No-op once any warehouse exists.
 export async function ensureDefaultWarehouse(): Promise<void> {

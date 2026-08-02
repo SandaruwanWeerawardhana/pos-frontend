@@ -1,18 +1,9 @@
 import { db } from "./index";
 import { getInventoryAlerts } from "./inventory";
 import { ROUTES } from "@/lib/types/routes";
-import type { AppNotification, NotificationKind } from "@/lib/types";
+import type { NotificationKind } from "@/lib/types";
 
 // Local-only table, no server sync yet (no backend endpoint exists).
-
-export async function listNotifications(limit = 50): Promise<AppNotification[]> {
-  return db.notifications.orderBy("created_at").reverse().limit(limit).toArray();
-}
-
-export async function countUnreadNotifications(): Promise<number> {
-  const all = await db.notifications.toArray();
-  return all.filter((notification) => !notification.read).length;
-}
 
 export async function pushNotification(input: {
   id?: string;
@@ -43,10 +34,6 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(): Promise<void> {
   await db.notifications.toCollection().modify({ read: true });
-}
-
-export async function clearNotifications(): Promise<void> {
-  await db.notifications.clear();
 }
 
 // Rebuilds the stock/expiry alert set from current inventory. Stale alerts
