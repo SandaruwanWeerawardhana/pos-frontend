@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
@@ -127,11 +128,11 @@ export default function OfficeLayout({
           }`}
         >
           <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-outline-variant px-4 dark:border-zinc-800">
-            <span className="flex h-7 w-7 select-none items-center justify-center rounded-lg bg-primary text-xs font-bold text-on-primary">
-              V
+            <span className="flex h-7 w-7 select-none items-center justify-center rounded-lg bg-primary">
+              <Image src="/logo.png" alt="PSI POS" width={28} height={28} className="rounded-lg" />
             </span>
             <span className="text-sm font-semibold text-on-surface dark:text-zinc-100">
-              Velocity POS
+              PSI POS
             </span>
           </div>
 
