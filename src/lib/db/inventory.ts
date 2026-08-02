@@ -8,13 +8,13 @@ import type {
   Warehouse,
 } from "@/lib/types";
 
-// Local-only tables, no server sync yet (no backend endpoint exists).
+/* Local-only tables, no server sync yet (no backend endpoint exists). */
 
 const DAY_MS = 86_400_000;
 
 export interface StockAdjustmentInput {
   productId: string;
-  quantityDelta: number; // signed
+  quantityDelta: number; /* signed */
   type: StockMovementType;
   reason?: string;
   warehouseId?: string;
@@ -23,9 +23,11 @@ export interface StockAdjustmentInput {
   referenceId?: string;
 }
 
-// Single entry point for every stock change outside the sale path: applies
-// the delta to the product and journals it atomically, so the product's
-// `stock_quantity` and the movement ledger can never disagree.
+/**
+ * Single entry point for every stock change outside the sale path: applies
+ * the delta to the product and journals it atomically, so the product's
+ * `stock_quantity` and the movement ledger can never disagree.
+ */
 export async function recordStockMovement(
   input: StockAdjustmentInput,
 ): Promise<StockMovement | null> {
@@ -58,9 +60,11 @@ export async function recordStockMovement(
   });
 }
 
-// Moves stock between warehouses as a matched out/in pair sharing a reason,
-// so a transfer reads as one event in the history even though the ledger
-// stores both legs.
+/**
+ * Moves stock between warehouses as a matched out/in pair sharing a reason,
+ * so a transfer reads as one event in the history even though the ledger
+ * stores both legs.
+ */
 export async function transferStock(input: {
   productId: string;
   quantity: number;
@@ -104,7 +108,7 @@ export async function listStockMovements(options?: {
   return options?.limit ? movements.slice(0, options.limit) : movements;
 }
 
-// ── Alerts ─────────────────────────────────────────────────────────────────
+/* ── Alerts ───────────────────────────────────────────────────────────────── */
 
 export interface ExpiringBatch {
   product: Product;
@@ -126,9 +130,11 @@ function daysUntil(isoDate: string): number {
   return Math.round((target - today.getTime()) / DAY_MS);
 }
 
-// A product's own `reorder_level` wins when set; otherwise the store-wide
-// low-stock threshold applies. Out-of-stock is reported separately so the
-// two badges never double-count the same product.
+/**
+ * A product's own `reorder_level` wins when set; otherwise the store-wide
+ * low-stock threshold applies. Out-of-stock is reported separately so the
+ * two badges never double-count the same product.
+ */
 export async function getInventoryAlerts(): Promise<InventoryAlerts> {
   const [products, settings] = await Promise.all([
     db.products.toArray(),
@@ -164,7 +170,7 @@ export async function getInventoryAlerts(): Promise<InventoryAlerts> {
   return { lowStock, outOfStock, nearExpiry, expired };
 }
 
-// ── Valuation ──────────────────────────────────────────────────────────────
+/* ── Valuation ────────────────────────────────────────────────────────────── */
 
 export interface InventoryValuation {
   retailValueCents: number;
@@ -195,7 +201,7 @@ export async function getInventoryValuation(): Promise<InventoryValuation> {
   };
 }
 
-// ── Warehouses ─────────────────────────────────────────────────────────────
+/* ── Warehouses ───────────────────────────────────────────────────────────── */
 
 export async function listWarehouses(): Promise<Warehouse[]> {
   return db.warehouses.orderBy("name").toArray();
@@ -213,8 +219,10 @@ export async function createWarehouse(
   return warehouse;
 }
 
-// Seeds the single default location so transfer UI has something to point at
-// on a fresh install. No-op once any warehouse exists.
+/**
+ * Seeds the single default location so transfer UI has something to point at
+ * on a fresh install. No-op once any warehouse exists.
+ */
 export async function ensureDefaultWarehouse(): Promise<void> {
   const count = await db.warehouses.count();
   if (count > 0) return;

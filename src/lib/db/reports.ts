@@ -2,12 +2,14 @@ import { db } from "./index";
 import { getStoreSettings } from "./settings";
 import type { PendingOrder, Product } from "@/lib/types";
 
-// Every report reads the local order/product/movement tables, so reports work
-// offline exactly like the till does.
+/**
+ * Every report reads the local order/product/movement tables, so reports work
+ * offline exactly like the till does.
+ */
 
 export interface DateRange {
-  from: number; // epoch ms, inclusive
-  to: number; // epoch ms, inclusive
+  from: number; /* epoch ms, inclusive */
+  to: number; /* epoch ms, inclusive */
 }
 
 export type RangePreset = "today" | "7d" | "30d" | "90d" | "all";
@@ -37,11 +39,13 @@ export function presetToRange(preset: RangePreset): DateRange {
   return { from: start.getTime(), to: end.getTime() };
 }
 
-// yyyy-mm-dd in the till's own timezone. Deliberately not
-// `toISOString().slice(0, 10)`, which is the UTC day: presetToRange builds its
-// bounds from local midnight, so a UTC key put every evening sale (or every
-// early-morning one, depending on the offset) in the wrong bucket — and in a
-// "today" range, in a bucket outside the range that produced it.
+/**
+ * yyyy-mm-dd in the till's own timezone. Deliberately not
+ * `toISOString().slice(0, 10)`, which is the UTC day: presetToRange builds its
+ * bounds from local midnight, so a UTC key put every evening sale (or every
+ * early-morning one, depending on the offset) in the wrong bucket — and in a
+ * "today" range, in a bucket outside the range that produced it.
+ */
 function localDateKey(timestamp: number): string {
   const date = new Date(timestamp);
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -56,10 +60,10 @@ async function ordersInRange(range: DateRange): Promise<PendingOrder[]> {
     .toArray();
 }
 
-// ── Sales ──────────────────────────────────────────────────────────────────
+/* ── Sales ────────────────────────────────────────────────────────────────── */
 
 export interface SalesRow {
-  date: string; // yyyy-mm-dd
+  date: string; /* yyyy-mm-dd */
   orderCount: number;
   grossCents: number;
   discountCents: number;
@@ -93,7 +97,7 @@ export async function getSalesReport(range: DateRange): Promise<SalesRow[]> {
   return Array.from(byDay.values()).sort((a, b) => b.date.localeCompare(a.date));
 }
 
-// ── Profit ─────────────────────────────────────────────────────────────────
+/* ── Profit ───────────────────────────────────────────────────────────────── */
 
 export interface ProfitRow {
   productId: string;
@@ -105,9 +109,11 @@ export interface ProfitRow {
   marginPercent: number;
 }
 
-// Cost basis comes from the product's current `cost_cents`. Products with no
-// recorded cost contribute zero cost, which would overstate profit — they are
-// surfaced with a 100% margin so the gap is visible rather than silent.
+/**
+ * Cost basis comes from the product's current `cost_cents`. Products with no
+ * recorded cost contribute zero cost, which would overstate profit — they are
+ * surfaced with a 100% margin so the gap is visible rather than silent.
+ */
 export async function getProfitReport(range: DateRange): Promise<ProfitRow[]> {
   const [orders, products] = await Promise.all([
     ordersInRange(range),
@@ -150,7 +156,7 @@ export async function getProfitReport(range: DateRange): Promise<ProfitRow[]> {
     .sort((a, b) => b.profitCents - a.profitCents);
 }
 
-// ── Inventory ──────────────────────────────────────────────────────────────
+/* ── Inventory ────────────────────────────────────────────────────────────── */
 
 export interface InventoryReportRow {
   id: string;
@@ -165,11 +171,13 @@ export interface InventoryReportRow {
   status: "ok" | "low" | "out";
 }
 
-// The low/out classification here is the same rule getInventoryAlerts applies:
-// the product's own reorder_level wins, and the store-wide threshold is the
-// fallback. It used to fall back to a hard-coded 5, so a shop that changed its
-// threshold in Settings got a report that disagreed with the Stock alerts page
-// about which products were low.
+/**
+ * The low/out classification here is the same rule getInventoryAlerts applies:
+ * the product's own reorder_level wins, and the store-wide threshold is the
+ * fallback. It used to fall back to a hard-coded 5, so a shop that changed its
+ * threshold in Settings got a report that disagreed with the Stock alerts page
+ * about which products were low.
+ */
 export async function getInventoryReport(): Promise<InventoryReportRow[]> {
   const [products, settings] = await Promise.all([
     db.products.toArray(),
@@ -198,7 +206,7 @@ export async function getInventoryReport(): Promise<InventoryReportRow[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// ── Suppliers & purchases ──────────────────────────────────────────────────
+/* ── Suppliers & purchases ────────────────────────────────────────────────── */
 
 export interface SupplierReportRow {
   id: string;

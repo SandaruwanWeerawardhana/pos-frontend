@@ -47,8 +47,10 @@ function serverOrderToPending(order: ServerOrder): PendingOrder {
 export default function SaleDetailPage({ params }: SaleDetailPageProps) {
   const { id } = use(params);
   const [order, setOrder] = useState<PendingOrder | null | undefined>(undefined);
-  // Whether this device holds its own copy. Only then can it be annotated —
-  // the refund flag is local, with no endpoint behind it.
+  /**
+   * Whether this device holds its own copy. Only then can it be annotated —
+   * the refund flag is local, with no endpoint behind it.
+   */
   const [hasLocalCopy, setHasLocalCopy] = useState(false);
   const { showToast } = useToast();
 

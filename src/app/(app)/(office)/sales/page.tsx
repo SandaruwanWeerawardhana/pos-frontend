@@ -28,8 +28,10 @@ const STATUS_VARIANT: Record<
   error: "danger",
 };
 
-// The server pages at 20 by default; asking for 25 keeps one server page and one
-// table page the same thing, so the table's own pager never splits a fetch.
+/**
+ * The server pages at 20 by default; asking for 25 keeps one server page and one
+ * table page the same thing, so the table's own pager never splits a fetch.
+ */
 const PER_PAGE = 25;
 
 export default function SalesPage() {
@@ -47,9 +49,11 @@ export default function SalesPage() {
     perPage: PER_PAGE,
   });
 
-  // Filters narrow the result set, so a page number carried over from a wider
-  // one can land past the end. Reset rather than showing an empty page the user
-  // has to click their way out of.
+  /**
+   * Filters narrow the result set, so a page number carried over from a wider
+   * one can land past the end. Reset rather than showing an empty page the user
+   * has to click their way out of.
+   */
   function updateFilter(apply: () => void) {
     apply();
     setPage(1);

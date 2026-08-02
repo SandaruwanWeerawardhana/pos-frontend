@@ -33,8 +33,10 @@ import type {
 
 const emptySubscribe = () => () => {};
 
-// True only after client hydration; false during SSR and the first client
-// render. Lets us gate localStorage-backed (persisted) UI without a mismatch.
+/**
+ * True only after client hydration; false during SSR and the first client
+ * render. Lets us gate localStorage-backed (persisted) UI without a mismatch.
+ */
 function useHydrated(): boolean {
   return useSyncExternalStore(
     emptySubscribe,
@@ -71,8 +73,10 @@ export function Terminal() {
   );
   const total = cart.computeTotal(discountCents);
 
-  // Search results are the source list; the category rail narrows them rather
-  // than issuing a second query, so filtering stays instant offline.
+  /**
+   * Search results are the source list; the category rail narrows them rather
+   * than issuing a second query, so filtering stays instant offline.
+   */
   const visibleProducts = useMemo(
     () =>
       category === ALL_CATEGORIES

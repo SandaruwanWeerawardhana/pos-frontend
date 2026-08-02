@@ -80,9 +80,11 @@ function serverRowToSale(order: ServerOrder): SaleRow {
     tax_total_cents: order.tax_total_cents,
     discount_cents: order.discount_cents,
     refunded: order.refunded,
-    // A sale the server holds has, by definition, synced. The local row's own
-    // status is not consulted: it can still say "syncing" if the response was
-    // lost in flight, and the server is the authority on what it stored.
+    /*
+     * A sale the server holds has, by definition, synced. The local row's own
+     * status is not consulted: it can still say "syncing" if the response was
+     * lost in flight, and the server is the authority on what it stored.
+     */
     sync_status: "synced",
     totals_mismatch: order.totals_mismatch,
     source: "server",
@@ -103,15 +105,17 @@ function localRowToSale(order: PendingOrder): SaleRow {
     discount_cents: order.discount_cents ?? 0,
     refunded: order.refunded ?? false,
     sync_status: order.sync_status,
-    // Only the server recomputes, so a row it has never seen cannot be flagged.
+    /* Only the server recomputes, so a row it has never seen cannot be flagged. */
     totals_mismatch: false,
     source: "local",
   };
 }
 
-// The same predicate the server applies, so the unsynced overlay is filtered on
-// the same terms as the page it is laid over. Without this a search would return
-// a filtered server page plus every local order regardless of the query.
+/**
+ * The same predicate the server applies, so the unsynced overlay is filtered on
+ * the same terms as the page it is laid over. Without this a search would return
+ * a filtered server page plus every local order regardless of the query.
+ */
 function matchesFilters(order: PendingOrder, filters: SalesFilters): boolean {
   if (filters.paymentMethod && order.payment_method !== filters.paymentMethod) {
     return false;
@@ -129,10 +133,12 @@ function matchesFilters(order: PendingOrder, filters: SalesFilters): boolean {
   );
 }
 
-// The server's error bodies are {"message": "..."} and httpClient rethrows that
-// string, so a rejection usually already carries something a shop owner can act
-// on ("invalid sort field"). Anything else gets a generic line rather than a
-// stringified object.
+/**
+ * The server's error bodies are {"message": "..."} and httpClient rethrows that
+ * string, so a rejection usually already carries something a shop owner can act
+ * on ("invalid sort field"). Anything else gets a generic line rather than a
+ * stringified object.
+ */
 function describeFailure(cause: unknown): string {
   if (cause instanceof Error && cause.message) return cause.message;
   return "Could not load sales from the server";
@@ -168,10 +174,12 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
   const [serverOrders, setServerOrders] = useState<ServerOrder[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [localOrders, setLocalOrders] = useState<PendingOrder[]>([]);
-  // The request whose response is currently in state. Compared against the key
-  // the current filters describe to derive `loading`, so nothing has to flip a
-  // spinner flag synchronously inside the effect — an effect that sets state in
-  // its own body triggers the cascading render react-hooks warns about.
+  /**
+   * The request whose response is currently in state. Compared against the key
+   * the current filters describe to derive `loading`, so nothing has to flip a
+   * spinner flag synchronously inside the effect — an effect that sets state in
+   * its own body triggers the cascading render react-hooks warns about.
+   */
   const [resolvedKey, setResolvedKey] = useState<string | null>(null);
   const [fetchOffline, setFetchOffline] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -179,8 +187,10 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
 
   const online = useConnectionStore((state) => state.online);
 
-  // The local table drives its own subscription: a sale rung up on this device,
-  // or one that finishes syncing, must move the list without a refetch.
+  /*
+   * The local table drives its own subscription: a sale rung up on this device,
+   * or one that finishes syncing, must move the list without a refetch.
+   */
   useEffect(() => {
     const subscription = liveQuery(() =>
       db.pendingOrders.orderBy("created_at").reverse().toArray(),
@@ -198,17 +208,21 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
     perPage,
   } = filters;
 
-  // A status filter for unsynced work has no server-side counterpart — the
-  // server only holds synced sales — so there is nothing to ask it for.
-  // Derived during render rather than written into state from the effect: the
-  // effect would then be clearing state it had just caused to be set, which is
-  // the cascading-render pattern react-hooks/set-state-in-effect flags.
+  /**
+   * A status filter for unsynced work has no server-side counterpart — the
+   * server only holds synced sales — so there is nothing to ask it for.
+   * Derived during render rather than written into state from the effect: the
+   * effect would then be clearing state it had just caused to be set, which is
+   * the cascading-render pattern react-hooks/set-state-in-effect flags.
+   */
   const skipServer = Boolean(syncStatus && syncStatus !== "synced");
 
   const listParams = toListParams({ search, paymentMethod, from, to, page, perPage });
-  // Identifies one request, so a response can be recognised as belonging to the
-  // filters currently on screen. reloadToken is part of it: a manual refresh has
-  // to count as a new request even when nothing else changed.
+  /**
+   * Identifies one request, so a response can be recognised as belonging to the
+   * filters currently on screen. reloadToken is part of it: a manual refresh has
+   * to count as a new request even when nothing else changed.
+   */
   const requestKey = `${reloadToken}:${JSON.stringify(listParams)}`;
 
   useEffect(() => {
@@ -228,8 +242,10 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
         if (cancelled) return;
         setServerOrders([]);
         setMeta(null);
-        // Offline is expected on a till and is not an error the cashier needs
-        // to act on; a rejection while online is.
+        /**
+         * Offline is expected on a till and is not an error the cashier needs
+         * to act on; a rejection while online is.
+         */
         const isOffline = !useConnectionStore.getState().online;
         setFetchOffline(isOffline);
         setFetchError(isOffline ? null : describeFailure(cause));
@@ -241,32 +257,40 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
     return () => {
       cancelled = true;
     };
-    // listParams is rebuilt every render; requestKey is its stable identity, so
-    // that is what the effect depends on.
+    /*
+     * listParams is rebuilt every render; requestKey is its stable identity, so
+     * that is what the effect depends on.
+     */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skipServer, requestKey, online]);
 
   const refresh = useCallback(() => setReloadToken((token) => token + 1), []);
 
-  // Every server-derived value is masked while skipServer holds, so a stale page
-  // left in state from a previous filter cannot leak into the rendered list.
+  /**
+   * Every server-derived value is masked while skipServer holds, so a stale page
+   * left in state from a previous filter cannot leak into the rendered list.
+   */
   const serverRows = skipServer ? [] : serverOrders.map(serverRowToSale);
   const syncedIds = new Set(serverRows.map((row) => row.client_generated_id));
 
-  // In flight until the response for exactly these filters has landed.
+  /* In flight until the response for exactly these filters has landed. */
   const loading = !skipServer && resolvedKey !== requestKey;
   const offline = !skipServer && fetchOffline;
   const error = skipServer ? null : fetchError;
 
-  // With no server page to lay over — offline, or the request failed — the local
-  // table is the whole list, synced rows included. Restricting to unsynced ones
-  // there would blank out the history a cashier can normally still read offline,
-  // which is worse than the stale-but-complete view this gives.
+  /**
+   * With no server page to lay over — offline, or the request failed — the local
+   * table is the whole list, synced rows included. Restricting to unsynced ones
+   * there would blank out the history a cashier can normally still read offline,
+   * which is worse than the stale-but-complete view this gives.
+   */
   const serverUnavailable = offline || error !== null;
 
-  // Otherwise: only rows the server does not already hold. A sale it does hold is
-  // rendered from the server's copy, which carries the mismatch flag and the
-  // authoritative totals; the local copy of the same sale would shadow both.
+  /**
+   * Otherwise: only rows the server does not already hold. A sale it does hold is
+   * rendered from the server's copy, which carries the mismatch flag and the
+   * authoritative totals; the local copy of the same sale would shadow both.
+   */
   const localRows = localOrders
     .filter((order) => {
       if (!matchesFilters(order, filters)) return false;
@@ -278,10 +302,12 @@ export function useSalesFeed(filters: SalesFilters): SalesFeed {
     })
     .map(localRowToSale);
 
-  // Unsynced first, then the server page. They are the newest sales on this
-  // device and the ones a cashier is most likely to be looking for; sorting them
-  // into the server's page order would also be wrong, because the server page is
-  // a window over a larger set this device cannot see.
+  /**
+   * Unsynced first, then the server page. They are the newest sales on this
+   * device and the ones a cashier is most likely to be looking for; sorting them
+   * into the server's page order would also be wrong, because the server page is
+   * a window over a larger set this device cannot see.
+   */
   const rows = [...localRows, ...serverRows];
 
   return { rows, meta: skipServer ? null : meta, loading, offline, error, refresh };

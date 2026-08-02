@@ -2,7 +2,7 @@ import { db } from "./index";
 import type { CashReconciliation, PaymentMethod } from "@/lib/types";
 
 export interface TodaysOrderSummary {
-  byPaymentMethod: Record<PaymentMethod, number>; // cents
+  byPaymentMethod: Record<PaymentMethod, number>; /* cents */
   orderCount: number;
   totalCents: number;
 }
@@ -13,13 +13,15 @@ function startOfToday(): number {
   return now.getTime();
 }
 
-// Groups today's local orders by payment method - the basis for an
-// end-of-day cash count. Includes every local order regardless of
-// sync_status (an order that failed to sync still took real cash).
-//
-// Refunded orders are excluded, matching the sales list and every report. The
-// drawer is counted against this figure, so leaving a refund in it reported the
-// till as short by the refunded amount every single day after the refund.
+/**
+ * Groups today's local orders by payment method - the basis for an
+ * end-of-day cash count. Includes every local order regardless of
+ * sync_status (an order that failed to sync still took real cash).
+ *
+ * Refunded orders are excluded, matching the sales list and every report. The
+ * drawer is counted against this figure, so leaving a refund in it reported the
+ * till as short by the refunded amount every single day after the refund.
+ */
 export async function getTodaysOrderSummary(): Promise<TodaysOrderSummary> {
   const since = startOfToday();
   const orders = (
@@ -35,8 +37,10 @@ export async function getTodaysOrderSummary(): Promise<TodaysOrderSummary> {
   let totalCents = 0;
 
   for (const order of orders) {
-    // Split-tender orders record each leg separately so the cash drawer
-    // expectation only counts the part actually paid in cash.
+    /*
+     * Split-tender orders record each leg separately so the cash drawer
+     * expectation only counts the part actually paid in cash.
+     */
     if (order.payments?.length) {
       for (const split of order.payments) {
         byPaymentMethod[split.method] += split.amount_cents;

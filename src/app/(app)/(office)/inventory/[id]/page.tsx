@@ -103,9 +103,11 @@ export default function ProductDetailPage({
     }
     const costCents = form.cost ? parseMoneyToCents(form.cost) : null;
 
-    // reorder_level is the low-stock alert trigger, so a bad value here does
-    // not surface as a form error — it silently stops the product ever being
-    // reported low. NaN in particular, because `stock <= NaN` is always false.
+    /**
+     * reorder_level is the low-stock alert trigger, so a bad value here does
+     * not surface as a form error — it silently stops the product ever being
+     * reported low. NaN in particular, because `stock <= NaN` is always false.
+     */
     let reorderLevel: number | undefined;
     if (form.reorderLevel.trim()) {
       reorderLevel = Number(form.reorderLevel);

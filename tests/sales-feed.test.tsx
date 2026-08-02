@@ -111,7 +111,7 @@ describe("useSalesFeed", () => {
     const { result } = renderHook(() => useSalesFeed({}));
 
     await waitFor(() => expect(result.current.rows).toHaveLength(2));
-    // Unsynced first: they are the newest sales on this device.
+    /* Unsynced first: they are the newest sales on this device. */
     expect(result.current.rows[0].client_generated_id).toBe("local-only");
     expect(result.current.rows[0].source).toBe("local");
     expect(result.current.rows[0].sync_status).toBe("pending");
@@ -119,8 +119,10 @@ describe("useSalesFeed", () => {
   });
 
   it("does not show a sale twice once the server holds it", async () => {
-    // Still marked "syncing" locally — the response was lost in flight — while
-    // the server has already stored it.
+    /*
+     * Still marked "syncing" locally — the response was lost in flight — while
+     * the server has already stored it.
+     */
     await db.pendingOrders.add(
       makeLocalOrder("both-sides", { sync_status: "syncing" }),
     );
@@ -132,7 +134,7 @@ describe("useSalesFeed", () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.rows).toHaveLength(1);
-    // The server's copy wins: it is the authority on what was stored.
+    /* The server's copy wins: it is the authority on what was stored. */
     expect(result.current.rows[0].source).toBe("server");
     expect(result.current.rows[0].sync_status).toBe("synced");
   });
@@ -148,7 +150,7 @@ describe("useSalesFeed", () => {
     const { result } = renderHook(() => useSalesFeed({}));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    // Synced local rows included: offline, they are the only history there is.
+    /* Synced local rows included: offline, they are the only history there is. */
     expect(result.current.rows).toHaveLength(2);
     expect(result.current.offline).toBe(true);
     expect(result.current.error).toBeNull();
@@ -201,10 +203,12 @@ describe("useSalesFeed", () => {
 
     const { result } = renderHook(() => useSalesFeed({ syncStatus: "conflict" }));
 
-    // No fetch means `loading` is false from the first render, so wait on the
-    // local subscription delivering instead.
+    /*
+     * No fetch means `loading` is false from the first render, so wait on the
+     * local subscription delivering instead.
+     */
     await waitFor(() => expect(result.current.rows).toHaveLength(1));
-    // The server only holds synced sales, so there is nothing to ask it for.
+    /* The server only holds synced sales, so there is nothing to ask it for. */
     expect(getOrders).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
     expect(result.current.rows[0].sync_status).toBe("conflict");
@@ -235,7 +239,7 @@ describe("mockApi.getOrders", () => {
 
     expect(result.orders).toHaveLength(1);
     expect(result.orders[0].client_generated_id).toBe(order.client_generated_id);
-    // sold_at is the till's clock, not the server's receive time.
+    /* sold_at is the till's clock, not the server's receive time. */
     expect(result.orders[0].sold_at).toBe(order.created_at);
     expect(result.meta.per_page).toBe(20);
   });

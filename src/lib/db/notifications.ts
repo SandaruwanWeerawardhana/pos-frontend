@@ -3,7 +3,7 @@ import { getInventoryAlerts } from "./inventory";
 import { ROUTES } from "@/lib/types/routes";
 import type { NotificationKind } from "@/lib/types";
 
-// Local-only table, no server sync yet (no backend endpoint exists).
+/* Local-only table, no server sync yet (no backend endpoint exists). */
 
 export async function pushNotification(input: {
   id?: string;
@@ -12,9 +12,11 @@ export async function pushNotification(input: {
   body?: string;
   href?: string;
 }): Promise<void> {
-  // A caller-supplied id makes the write idempotent: the inventory sweep
-  // re-derives the same ids each run, so a standing alert updates in place
-  // instead of piling up a duplicate every refresh.
+  /**
+   * A caller-supplied id makes the write idempotent: the inventory sweep
+   * re-derives the same ids each run, so a standing alert updates in place
+   * instead of piling up a duplicate every refresh.
+   */
   const id = input.id ?? crypto.randomUUID();
   const existing = await db.notifications.get(id);
   await db.notifications.put({
@@ -36,9 +38,11 @@ export async function markAllNotificationsRead(): Promise<void> {
   await db.notifications.toCollection().modify({ read: true });
 }
 
-// Rebuilds the stock/expiry alert set from current inventory. Stale alerts
-// (the product was restocked, the batch was sold) are removed so the panel
-// only ever shows conditions that are still true right now.
+/**
+ * Rebuilds the stock/expiry alert set from current inventory. Stale alerts
+ * (the product was restocked, the batch was sold) are removed so the panel
+ * only ever shows conditions that are still true right now.
+ */
 export async function refreshInventoryNotifications(): Promise<void> {
   const alerts = await getInventoryAlerts();
   const liveIds = new Set<string>();

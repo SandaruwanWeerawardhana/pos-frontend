@@ -16,8 +16,10 @@ import { ApiError } from "@/lib/services/http-client";
 import { SyncManager } from "@/lib/sync";
 import type { PendingOrder, Product } from "@/lib/types";
 
-// 899 c/kg is the price that made unrounded cart maths persist 410.843 into
-// IndexedDB; every test below that touches weighted money uses it.
+/**
+ * 899 c/kg is the price that made unrounded cart maths persist 410.843 into
+ * IndexedDB; every test below that touches weighted money uses it.
+ */
 const chickenBreast: Product = {
   id: "p_chicken",
   name: "Chicken Breast",
@@ -80,7 +82,7 @@ afterEach(() => {
 
 describe("weighted-line money stays integer cents", () => {
   it("rounds the cart subtotal instead of carrying a fraction", async () => {
-    await addToCart(chickenBreast, 0.457); // 899 * 0.457 = 410.843
+    await addToCart(chickenBreast, 0.457); /* 899 * 0.457 = 410.843 */
 
     const total = await getCartTotal();
 
@@ -91,7 +93,7 @@ describe("weighted-line money stays integer cents", () => {
   });
 
   it("clamps a discount against the rounded subtotal, as the server does", async () => {
-    await addToCart(chickenBreast, 0.457); // rounds to 411
+    await addToCart(chickenBreast, 0.457); /* rounds to 411 */
 
     const total = await getCartTotal(411);
 
@@ -188,10 +190,12 @@ describe("refunded sales are excluded from takings", () => {
 
 describe("sales report day buckets", () => {
   it("buckets a sale by the till's own date, not the UTC date", async () => {
-    // 23:30 local on whatever today is — a UTC key would move this to tomorrow
-    // for any negative offset, and 00:30 local would move to yesterday for a
-    // positive one. Either way it lands outside the "today" range that produced
-    // it.
+    /**
+     * 23:30 local on whatever today is — a UTC key would move this to tomorrow
+     * for any negative offset, and 00:30 local would move to yesterday for a
+     * positive one. Either way it lands outside the "today" range that produced
+     * it.
+     */
     const lateTonight = new Date();
     lateTonight.setHours(23, 30, 0, 0);
 

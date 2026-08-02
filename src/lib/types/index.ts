@@ -1,4 +1,6 @@
-// Shared domain types. Money is ALWAYS integer cents — never floats.
+/**
+ * Shared domain types. Money is ALWAYS integer cents — never floats.
+ */
 
 export type PaymentMethod = "cash" | "card" | "qr" | "other";
 
@@ -101,39 +103,41 @@ export interface DeletedProductRecord {
 }
 
 export interface CartItem {
-  id?: number; // Dexie auto-increment pk; present once persisted
+  id?: number; /* Dexie auto-increment pk; present once persisted */
   product_id: string;
   name: string;
-  quantity: number; // fractional for weighted items (kg), whole otherwise
-  unit_price_cents: number; // integer cents, per `unit`
-  tax_rate: number; // captured from the product at add-to-cart time, not re-fetched
+  quantity: number; /* fractional for weighted items (kg), whole otherwise */
+  unit_price_cents: number; /* integer cents, per `unit` */
+  tax_rate: number; /* captured from the product at add-to-cart time, not re-fetched */
   unit?: ProductUnit;
   is_weighted?: boolean;
-  line_discount_cents?: number; // per-line override, applied before cart discount
+  line_discount_cents?: number; /* per-line override, applied before cart discount */
 }
 
-// One leg of a payment. A single-tender sale has exactly one; a split sale
-// has several whose amounts sum to the order total.
+/**
+ * One leg of a payment. A single-tender sale has exactly one; a split sale
+ * has several whose amounts sum to the order total.
+ */
 export interface PaymentSplit {
   method: PaymentMethod;
   amount_cents: number;
-  tendered_cents?: number; // cash only — what the customer handed over
-  change_cents?: number; // cash only — tendered minus amount
-  reference?: string; // card auth code / QR transaction id
+  tendered_cents?: number; /* cash only — what the customer handed over */
+  change_cents?: number; /* cash only — tendered minus amount */
+  reference?: string; /* card auth code / QR transaction id */
 }
 
 export interface PendingOrder {
   client_generated_id: string;
   items: CartItem[];
-  total_cents: number; // integer cents
-  tax_total_cents: number; // integer cents
-  payment_method: PaymentMethod; // primary tender; see `payments` for splits
-  created_at: number; // epoch milliseconds
+  total_cents: number; /* integer cents */
+  tax_total_cents: number; /* integer cents */
+  payment_method: PaymentMethod; /* primary tender; see `payments` for splits */
+  created_at: number; /* epoch milliseconds */
   sync_status: SyncStatus;
   server_id: string | null;
-  discount_cents?: number; // integer cents, applied before tax
-  refunded?: boolean; // local-only annotation, not synced (no backend refund endpoint yet)
-  payments?: PaymentSplit[]; // present for every order created after split-payment support
+  discount_cents?: number; /* integer cents, applied before tax */
+  refunded?: boolean; /* local-only annotation, not synced (no backend refund endpoint yet) */
+  payments?: PaymentSplit[]; /* present for every order created after split-payment support */
   cashier_id?: string;
   receipt_no?: string;
 }
@@ -231,7 +235,7 @@ export interface Supplier {
   created_at: number;
   address?: string;
   tax_id?: string;
-  payment_terms?: string; // e.g. "Net 30"
+  payment_terms?: string; /* e.g. "Net 30" */
 }
 
 export type DiscountType =
@@ -245,18 +249,20 @@ export interface Discount {
   id: string;
   name: string;
   type: DiscountType;
-  value: number; // percentage (0-100) or integer cents, depending on type
+  value: number; /* percentage (0-100) or integer cents, depending on type */
   active: boolean;
   created_at: number;
-  starts_at?: number; // epoch ms — campaign window start
-  ends_at?: number; // epoch ms — campaign window end
-  product_ids?: string[]; // limits the campaign to these products
-  buy_quantity?: number; // BOGO: buy N…
-  get_quantity?: number; // …get M free
-  min_subtotal_cents?: number; // threshold before the campaign applies
+  starts_at?: number; /* epoch ms — campaign window start */
+  ends_at?: number; /* epoch ms — campaign window end */
+  product_ids?: string[]; /* limits the campaign to these products */
+  buy_quantity?: number; /* BOGO: buy N… */
+  get_quantity?: number; /* …get M free */
+  min_subtotal_cents?: number; /* threshold before the campaign applies */
 }
 
-// ── Inventory ──────────────────────────────────────────────────────────────
+/**
+ * ── Inventory ──────────────────────────────────────────────────────────────
+ */
 
 export type StockMovementType =
   | "sale"
@@ -273,10 +279,10 @@ export interface StockMovement {
   product_id: string;
   product_name: string;
   type: StockMovementType;
-  quantity_delta: number; // signed: negative removes stock
+  quantity_delta: number; /* signed: negative removes stock */
   balance_after: number;
   reason?: string;
-  reference_id?: string; // order id / purchase order id
+  reference_id?: string; /* order id / purchase order id */
   warehouse_id?: string;
   batch_no?: string;
   created_at: number;
@@ -291,7 +297,9 @@ export interface Warehouse {
   created_at: number;
 }
 
-// ── Purchasing ─────────────────────────────────────────────────────────────
+/**
+ * ── Purchasing ─────────────────────────────────────────────────────────────
+ */
 
 export type PurchaseOrderStatus =
   | "draft"
@@ -312,7 +320,7 @@ export interface PurchaseOrderLine {
 
 export interface PurchaseOrder {
   id: string;
-  reference: string; // human-facing PO number
+  reference: string; /* human-facing PO number */
   supplier_id: string;
   supplier_name: string;
   status: PurchaseOrderStatus;
@@ -334,10 +342,14 @@ export interface PurchaseReturn {
   created_at: number;
 }
 
-// ── Users, roles, permissions ──────────────────────────────────────────────
+/**
+ * ── Users, roles, permissions ──────────────────────────────────────────────
+ */
 
-// Coarse-grained capability strings checked by `hasPermission`. Kept flat
-// (rather than resource/action objects) so a role is just a string list.
+/**
+ * Coarse-grained capability strings checked by `hasPermission`. Kept flat
+ * (rather than resource/action objects) so a role is just a string list.
+ */
 export const PERMISSIONS = [
   "pos.sell",
   "pos.refund",
@@ -359,7 +371,7 @@ export interface Role {
   id: string;
   name: string;
   permissions: Permission[];
-  is_system?: boolean; // seeded role, cannot be deleted
+  is_system?: boolean; /* seeded role, cannot be deleted */
   created_at: number;
 }
 
@@ -368,16 +380,20 @@ export interface StaffUser {
   name: string;
   email: string;
   role_id: string;
-  // Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
-  // fields are absent until a PIN is set; a user without one cannot sign in at
-  // the till. See `setStaffPin` for the (deliberately limited) threat model.
+  /**
+   * Till PIN, stored as a salted SHA-256 digest rather than in the clear. Both
+   * fields are absent until a PIN is set; a user without one cannot sign in at
+   * the till. See `setStaffPin` for the (deliberately limited) threat model.
+   */
   pin_hash?: string;
   pin_salt?: string;
   active: boolean;
   created_at: number;
 }
 
-// ── Notifications ──────────────────────────────────────────────────────────
+/**
+ * ── Notifications ──────────────────────────────────────────────────────────
+ */
 
 export type NotificationKind =
   | "low_stock"
@@ -397,12 +413,14 @@ export interface AppNotification {
   created_at: number;
 }
 
-// ── Settings ───────────────────────────────────────────────────────────────
+/**
+ * ── Settings ───────────────────────────────────────────────────────────────
+ */
 
 export interface TaxRateSetting {
   id: string;
   name: string;
-  rate: number; // fractional, e.g. 0.08
+  rate: number; /* fractional, e.g. 0.08 */
   is_default?: boolean;
 }
 
@@ -413,10 +431,10 @@ export interface StoreSettings {
   phone?: string;
   email?: string;
   tax_id?: string;
-  currency_code: string; // ISO 4217, e.g. "USD"
+  currency_code: string; /* ISO 4217, e.g. "USD" */
   currency_symbol: string;
   currency_position: "before" | "after";
-  locale: string; // BCP 47, drives number/date formatting
+  locale: string; /* BCP 47, drives number/date formatting */
   prices_include_tax: boolean;
   tax_rates: TaxRateSetting[];
   receipt_header?: string;

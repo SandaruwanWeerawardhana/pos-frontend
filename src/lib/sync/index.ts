@@ -20,12 +20,14 @@ const MAX_BACKOFF_MS: number = SYNC_CONFIG.maxBackoffMs;
 const MAX_BATCH_SIZE: number = SYNC_CONFIG.maxBatchSize;
 const SYNCABLE_STATUSES: SyncStatus[] = ["pending", "error"];
 
-// Atomically claims up to maxBatchSize syncable orders by flipping them to
-// "syncing" inside the same transaction that reads them. This is what
-// prevents a second concurrent sync run (e.g. the 30s tick firing right as
-// an online-transition run is still in flight) from picking up and
-// double-sending the same orders - once claimed, a row is no longer
-// "pending"/"error" so a concurrent read simply won't see it.
+/**
+ * Atomically claims up to maxBatchSize syncable orders by flipping them to
+ * "syncing" inside the same transaction that reads them. This is what
+ * prevents a second concurrent sync run (e.g. the 30s tick firing right as
+ * an online-transition run is still in flight) from picking up and
+ * double-sending the same orders - once claimed, a row is no longer
+ * "pending"/"error" so a concurrent read simply won't see it.
+ */
 async function claimBatch(maxBatchSize: number): Promise<PendingOrder[]> {
   return db.transaction("rw", db.pendingOrders, async () => {
     const batch = await db.pendingOrders
@@ -47,10 +49,12 @@ async function claimBatch(maxBatchSize: number): Promise<PendingOrder[]> {
   });
 }
 
-// A "syncing" claim only lives for the duration of one in-process run, so any
-// order still marked "syncing" at startup was orphaned by a reload or crash
-// mid-push. Nothing would ever pick those up again (they're neither "pending"
-// nor "error"), so release them back to "pending" before the first cycle.
+/**
+ * A "syncing" claim only lives for the duration of one in-process run, so any
+ * order still marked "syncing" at startup was orphaned by a reload or crash
+ * mid-push. Nothing would ever pick those up again (they're neither "pending"
+ * nor "error"), so release them back to "pending" before the first cycle.
+ */
 async function releaseOrphanedClaims(): Promise<void> {
   await db.pendingOrders
     .where("sync_status")
@@ -58,15 +62,17 @@ async function releaseOrphanedClaims(): Promise<void> {
     .modify({ sync_status: "pending" satisfies SyncStatus });
 }
 
-// Statuses that mean "this exact body will never be accepted, however often it
-// is resent". POST /orders/sync validates the whole batch before it looks at
-// any order, so one malformed sale 400s the entire request — and marking the
-// batch "error" put it straight back in the claim queue, blocking every sale
-// behind it forever. Those go to "conflict" instead, which is terminal on the
-// client and leaves the rest of the queue draining.
-//
-// Deliberately excluded: 401/403 (a re-login fixes them), 408/429 (explicitly
-// "try later") and every 5xx. Stranding a real sale is worse than retrying one.
+/**
+ * Statuses that mean "this exact body will never be accepted, however often it
+ * is resent". POST /orders/sync validates the whole batch before it looks at
+ * any order, so one malformed sale 400s the entire request — and marking the
+ * batch "error" put it straight back in the claim queue, blocking every sale
+ * behind it forever. Those go to "conflict" instead, which is terminal on the
+ * client and leaves the rest of the queue draining.
+ *
+ * Deliberately excluded: 401/403 (a re-login fixes them), 408/429 (explicitly
+ * "try later") and every 5xx. Stranding a real sale is worse than retrying one.
+ */
 const PERMANENT_REJECTION_STATUSES = new Set([400, 413, 422]);
 
 function isPermanentRejection(error: unknown): boolean {
@@ -89,7 +95,7 @@ function mapSyncResultToStatus(result: SyncOrderResult): SyncStatus {
   }
 }
 
-// Background reconciliation between IndexedDB and the server.
+/* Background reconciliation between IndexedDB and the server. */
 export class SyncManager {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private unsubscribeConnection: (() => void) | null = null;
@@ -102,10 +108,12 @@ export class SyncManager {
     private readonly maxBatchSize = MAX_BATCH_SIZE,
   ) {}
 
-  // Runs immediately if already online, then re-runs on a timer while
-  // online, and on every offline -> online transition.
+  /*
+   * Runs immediately if already online, then re-runs on a timer while
+   * online, and on every offline -> online transition.
+   */
   start() {
-    if (this.unsubscribeConnection) return; // already started
+    if (this.unsubscribeConnection) return; /* already started */
 
     this.unsubscribeConnection = useConnectionStore.subscribe((curr, prev) => {
       if (curr.online === prev.online) return;
@@ -117,10 +125,12 @@ export class SyncManager {
       }
     });
 
-    // Recover orphaned claims before the first cycle so they're visible as
-    // "pending" to the very first claimBatch() rather than a cycle later.
+    /*
+     * Recover orphaned claims before the first cycle so they're visible as
+     * "pending" to the very first claimBatch() rather than a cycle later.
+     */
     void releaseOrphanedClaims().finally(() => {
-      if (!this.unsubscribeConnection) return; // stopped while recovering
+      if (!this.unsubscribeConnection) return; /* stopped while recovering */
       if (useConnectionStore.getState().online) {
         this.scheduleNext(0);
       }
@@ -133,7 +143,7 @@ export class SyncManager {
     this.unsubscribeConnection = null;
   }
 
-  // Manual trigger for the useSyncStatus() hook's triggerSync().
+  /* Manual trigger for the useSyncStatus() hook's triggerSync(). */
   async triggerSync(): Promise<void> {
     await this.syncOnce();
   }
@@ -154,8 +164,10 @@ export class SyncManager {
     }, delayMs);
   }
 
-  // Exponential backoff so a downed server doesn't get hammered every 30s
-  // forever - resets to the base interval as soon as a sync call succeeds.
+  /*
+   * Exponential backoff so a downed server doesn't get hammered every 30s
+   * forever - resets to the base interval as soon as a sync call succeeds.
+   */
   private nextDelayMs(): number {
     if (this.failureStreak === 0) return this.intervalMs;
     return Math.min(this.intervalMs * 2 ** this.failureStreak, this.maxBackoffMs);
@@ -167,10 +179,12 @@ export class SyncManager {
     try {
       await this.pushPendingOrders();
       this.failureStreak = 0;
-      // Push before pull, and in this order: a create must land before the
-      // edit that refers to it, and a delete last so it is not undone by an
-      // update pushed in the same cycle. The pull then overwrites the local
-      // catalogue with a server copy that already reflects all three.
+      /*
+       * Push before pull, and in this order: a create must land before the
+       * edit that refers to it, and a delete last so it is not undone by an
+       * update pushed in the same cycle. The pull then overwrites the local
+       * catalogue with a server copy that already reflects all three.
+       */
       await this.pushNewProducts();
       await this.pushEditedProducts();
       await this.pushDeletedProducts();
@@ -183,7 +197,7 @@ export class SyncManager {
     }
   }
 
-  // Claims a batch of pending/error orders and pushes them to the server.
+  /* Claims a batch of pending/error orders and pushes them to the server. */
   private async pushPendingOrders(): Promise<void> {
     const batch = await claimBatch(this.maxBatchSize);
     if (batch.length === 0) return;
@@ -200,10 +214,12 @@ export class SyncManager {
         })),
       );
     } catch (error) {
-      // Transport-level failure (server unreachable): release the claim so
-      // these orders are retried next cycle, and let the caller back off. A
-      // rejection the server will never accept is parked as "conflict" instead,
-      // so it stops re-claiming the queue ahead of every later sale.
+      /**
+       * Transport-level failure (server unreachable): release the claim so
+       * these orders are retried next cycle, and let the caller back off. A
+       * rejection the server will never accept is parked as "conflict" instead,
+       * so it stops re-claiming the queue ahead of every later sale.
+       */
       const status: SyncStatus = isPermanentRejection(error)
         ? "conflict"
         : "error";
@@ -217,14 +233,16 @@ export class SyncManager {
     }
   }
 
-  // Pushes products created on this device to the server, one request each —
-  // the catalogue endpoint takes a single product, and a shop adds them a few
-  // at a time rather than in the batches order sync is built for.
-  //
-  // A rejected product (duplicate SKU or barcode against a different row) is
-  // left flagged so it stays visible on this till and keeps selling. Retrying it
-  // is harmless: the push is idempotent on the product id, and the clash needs
-  // an operator to rename the product before it can ever succeed.
+  /*
+   * Pushes products created on this device to the server, one request each —
+   * the catalogue endpoint takes a single product, and a shop adds them a few
+   * at a time rather than in the batches order sync is built for.
+   *
+   * A rejected product (duplicate SKU or barcode against a different row) is
+   * left flagged so it stays visible on this till and keeps selling. Retrying it
+   * is harmless: the push is idempotent on the product id, and the clash needs
+   * an operator to rename the product before it can ever succeed.
+   */
   private async pushNewProducts(): Promise<void> {
     const unpushed = await listUnpushedProducts();
 
@@ -233,21 +251,25 @@ export class SyncManager {
         await apiClient.createProduct(product);
         await markProductPushed(product.id);
       } catch {
-        // Transport failure or a clash the server will not accept. Either way
-        // the row stays local; the next pull leaves it alone because it is
-        // still flagged.
+        /*
+         * Transport failure or a clash the server will not accept. Either way
+         * the row stays local; the next pull leaves it alone because it is
+         * still flagged.
+         */
       }
     }
   }
 
-  // Pushes catalogue edits made on this device. A row keeps its flag until the
-  // server accepts it, which both retries it next cycle and stops the pull from
-  // replacing it with the server's older copy.
-  //
-  // A rejected edit (its SKU or barcode now belongs to another product) stays
-  // flagged too. Retrying is harmless — the write is a replacement, so a repeat
-  // is the same request — and the clash needs an operator to rename the product
-  // before it can succeed.
+  /*
+   * Pushes catalogue edits made on this device. A row keeps its flag until the
+   * server accepts it, which both retries it next cycle and stops the pull from
+   * replacing it with the server's older copy.
+   *
+   * A rejected edit (its SKU or barcode now belongs to another product) stays
+   * flagged too. Retrying is harmless — the write is a replacement, so a repeat
+   * is the same request — and the clash needs an operator to rename the product
+   * before it can succeed.
+   */
   private async pushEditedProducts(): Promise<void> {
     const edited = await listEditedProducts();
 
@@ -256,15 +278,19 @@ export class SyncManager {
         await apiClient.updateProduct(product);
         await markProductUpdatePushed(product.id);
       } catch {
-        // Transport failure or a clash the server will not accept; leave the
-        // flag on so the next cycle tries again.
+        /*
+         * Transport failure or a clash the server will not accept; leave the
+         * flag on so the next cycle tries again.
+         */
       }
     }
   }
 
-  // Drains the delete outbox. The tombstone is removed only once the server has
-  // confirmed, so a failed delete is retried and the pull keeps filtering the
-  // product out in the meantime rather than resurrecting it.
+  /*
+   * Drains the delete outbox. The tombstone is removed only once the server has
+   * confirmed, so a failed delete is retried and the pull keeps filtering the
+   * product out in the meantime rather than resurrecting it.
+   */
   private async pushDeletedProducts(): Promise<void> {
     const tombstones = await listPendingProductDeletes();
 
@@ -273,18 +299,18 @@ export class SyncManager {
         await apiClient.deleteProduct(id);
         await clearPendingProductDelete(id);
       } catch {
-        // Server unreachable. The tombstone stays; retried next cycle.
+        /* Server unreachable. The tombstone stays; retried next cycle. */
       }
     }
   }
 
-  // Refresh the local product cache from the server.
+  /* Refresh the local product cache from the server. */
   private async pullProducts(): Promise<void> {
     try {
       const products = await apiClient.getProducts();
       await seedProducts(products);
     } catch {
-      // non-fatal: a stale product cache shouldn't back off order syncing.
+      /* non-fatal: a stale product cache shouldn't back off order syncing. */
     }
   }
 }
