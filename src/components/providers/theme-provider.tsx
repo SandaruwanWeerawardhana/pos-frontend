@@ -68,12 +68,14 @@ export function ThemeProvider({
   storageKey = "theme",
   themes = ["light", "dark"],
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<ThemeName>(() =>
-    getStoredTheme(storageKey, defaultTheme),
-  );
-  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(() =>
-    getSystemTheme(),
-  );
+  const [theme, setThemeState] = useState<ThemeName>(defaultTheme);
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const syncStoredTheme = () =>
+      setThemeState(getStoredTheme(storageKey, defaultTheme));
+    syncStoredTheme();
+  }, [defaultTheme, storageKey]);
 
   const resolvedTheme = theme === "system" && enableSystem ? systemTheme : theme;
   const htmlTheme: "light" | "dark" =

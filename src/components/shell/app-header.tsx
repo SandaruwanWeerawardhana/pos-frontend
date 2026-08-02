@@ -221,7 +221,7 @@ export function AppHeader() {
           <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
         </span>
 
-        <NotificationPanel />
+        {/* <NotificationPanel /> */}
         <ThemeToggle />
 
         {isAuthenticated && (
