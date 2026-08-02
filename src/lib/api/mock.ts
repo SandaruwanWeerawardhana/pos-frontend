@@ -1,4 +1,10 @@
-import type { PendingOrder, Product } from "@/lib/types";
+import type {
+  OrderListParams,
+  OrderPage,
+  PendingOrder,
+  Product,
+  ServerOrder,
+} from "@/lib/types";
 import type {
   ApiClient,
   AuthUser,
@@ -11,9 +17,10 @@ import type {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Bumped from v1 when the seed catalogue changed shape: an old blob would
-// otherwise keep serving products with no category, cost, or batch data.
-const STORAGE_KEY = "mock_api_state_v2";
+// Bumped from v1 when the seed catalogue changed shape, and from v2 when the
+// fake started storing synced orders rather than only their ids: an old blob
+// would otherwise serve an empty sales list on a till that has been selling.
+const STORAGE_KEY = "mock_api_state_v3";
 const DEFAULT_SYNC_DELAY_MS = 800;
 
 // Expiry dates are generated relative to "now" so a freshly-cloned repo always
@@ -103,6 +110,10 @@ interface MockAccount {
 interface MockApiState {
   products: Product[];
   syncedOrderIds: string[];
+  // The stored sales GET /orders reads back. Kept alongside syncedOrderIds
+  // rather than replacing it: that array is the idempotency check, and an
+  // order can be replayed after this list has been filtered or trimmed.
+  orders: ServerOrder[];
   // Passwords are stored in cleartext because this is a browser-only fake
   // with no security boundary. The real backend hashes server-side; nothing
   // here should ever be reused as a template for that.
@@ -115,6 +126,7 @@ function defaultState(): MockApiState {
   return {
     products: structuredClone(DEFAULT_PRODUCTS),
     syncedOrderIds: [],
+    orders: [],
     accounts: {},
     resetTokens: {},
     currentEmail: null,
@@ -188,6 +200,44 @@ function setNextSyncResult(result: SyncOrderResult | null) {
   forcedSyncResult = result;
 }
 
+// Mirrors what the real backend stores: the till's figures verbatim, plus a
+// server-side subtotal derived from them. There is no independent recompute
+// here, so totals_mismatch is always false — the mock cannot disagree with a
+// client it does not re-add.
+function toServerOrder(order: PendingOrder, serverID: string): ServerOrder {
+  const discountCents = order.discount_cents ?? 0;
+  return {
+    id: serverID,
+    client_generated_id: order.client_generated_id,
+    receipt_no: order.receipt_no ?? null,
+    payment_method: order.payment_method,
+    subtotal_cents: order.total_cents - order.tax_total_cents,
+    discount_cents: discountCents,
+    tax_total_cents: order.tax_total_cents,
+    total_cents: order.total_cents,
+    // Refunds are a local annotation with no endpoint behind them, so a synced
+    // order is never refunded server-side.
+    refunded: false,
+    totals_mismatch: false,
+    ...(order.cashier_id ? { cashier_id: order.cashier_id } : {}),
+    // The till's own clock, preserved as the business date — an order synced
+    // days late must not be booked today.
+    sold_at: order.created_at,
+    synced_at: Date.now(),
+    items: order.items.map((item) => ({
+      product_id: item.product_id,
+      name: item.name,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      tax_rate: item.tax_rate,
+      ...(item.unit ? { unit: item.unit } : {}),
+      ...(item.is_weighted ? { is_weighted: item.is_weighted } : {}),
+      line_discount_cents: item.line_discount_cents ?? 0,
+    })),
+    payments: order.payments ?? [],
+  };
+}
+
 function resolveOrderResult(order: PendingOrder, apiState: MockApiState): SyncOrderOutcome {
   if (forcedSyncResult) {
     return { client_generated_id: order.client_generated_id, result: forcedSyncResult };
@@ -197,12 +247,38 @@ function resolveOrderResult(order: PendingOrder, apiState: MockApiState): SyncOr
     return { client_generated_id: order.client_generated_id, result: "already_synced" };
   }
 
+  const serverID = `srv_${order.client_generated_id}`;
   apiState.syncedOrderIds.push(order.client_generated_id);
+  apiState.orders.push(toServerOrder(order, serverID));
   return {
     client_generated_id: order.client_generated_id,
     result: "synced",
-    server_id: `srv_${order.client_generated_id}`,
+    server_id: serverID,
   };
+}
+
+// Same filter/sort/page semantics as the Go handler, so switching
+// NEXT_PUBLIC_USE_MOCK_API does not change what the sales screen renders.
+const MOCK_DEFAULT_PER_PAGE = 20;
+const MOCK_MAX_PER_PAGE = 100;
+
+function matchesSearch(order: ServerOrder, needle: string): boolean {
+  return (
+    (order.receipt_no ?? "").toLowerCase().includes(needle) ||
+    order.client_generated_id.toLowerCase().includes(needle) ||
+    order.items.some((item) => item.name.toLowerCase().includes(needle))
+  );
+}
+
+function sortValue(order: ServerOrder, sort: OrderListParams["sort"]): number {
+  switch (sort) {
+    case "total_cents":
+      return order.total_cents;
+    case "synced_at":
+      return order.synced_at;
+    default:
+      return order.sold_at;
+  }
 }
 
 // In-memory fake with simulated latency + configurable test scenarios. Used
@@ -442,6 +518,49 @@ export const mockApi: ApiClient & {
     forcedSyncResult = null;
     saveState();
     return { results };
+  },
+
+  async getOrders(params: OrderListParams = {}): Promise<OrderPage> {
+    await delay(120);
+    const apiState = getState();
+
+    const needle = params.search?.trim().toLowerCase() ?? "";
+    const filtered = apiState.orders.filter((order) => {
+      if (params.payment_method && order.payment_method !== params.payment_method) {
+        return false;
+      }
+      if (params.from !== undefined && order.sold_at < params.from) return false;
+      if (params.to !== undefined && order.sold_at > params.to) return false;
+      if (needle && !matchesSearch(order, needle)) return false;
+      return true;
+    });
+
+    const direction = params.order === "asc" ? 1 : -1;
+    filtered.sort(
+      (a, b) =>
+        direction * (sortValue(a, params.sort) - sortValue(b, params.sort)),
+    );
+
+    const perPage = Math.min(
+      Math.max(params.per_page ?? MOCK_DEFAULT_PER_PAGE, 1),
+      MOCK_MAX_PER_PAGE,
+    );
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    const page = Math.min(Math.max(params.page ?? 1, 1), totalPages);
+    const offset = (page - 1) * perPage;
+
+    return {
+      orders: structuredClone(filtered.slice(offset, offset + perPage)),
+      meta: {
+        page,
+        per_page: perPage,
+        total,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1,
+      },
+    };
   },
 
   setSyncDelay,

@@ -63,10 +63,19 @@ export function computeDiscountCents(
 // subtotal (tax is reduced proportionally) before totaling. Shared between
 // src/lib/db (persisted totals) and UI code that needs a synchronous preview
 // (e.g. the POS terminal previewing a discount before checkout).
+//
+// The raw subtotal is rounded before the discount is applied, not after. A
+// weighted line multiplies integer cents by a fractional quantity (899 c/kg ×
+// 0.457 kg = 410.843), so leaving it fractional persisted non-integer money
+// into IndexedDB and every figure derived from it. Rounding here also makes
+// this function agree exactly with the server's computeTotals
+// (pos-backend/internal/service/order_sync_service.go), which rounds at the
+// same point and clamps the discount against the rounded figure — the two
+// disagreeing on the discount ratio was flagging honest sales as
+// totals_mismatch.
 export function computeCartTotal(items: CartItem[], discountCents = 0): CartTotal {
-  const rawSubtotalCents = items.reduce(
-    (sum, item) => sum + item.unit_price_cents * item.quantity,
-    0,
+  const rawSubtotalCents = Math.round(
+    items.reduce((sum, item) => sum + item.unit_price_cents * item.quantity, 0),
   );
   const rawTaxCents = items.reduce(
     (sum, item) =>

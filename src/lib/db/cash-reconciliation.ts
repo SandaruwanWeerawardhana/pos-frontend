@@ -16,12 +16,15 @@ function startOfToday(): number {
 // Groups today's local orders by payment method - the basis for an
 // end-of-day cash count. Includes every local order regardless of
 // sync_status (an order that failed to sync still took real cash).
+//
+// Refunded orders are excluded, matching the sales list and every report. The
+// drawer is counted against this figure, so leaving a refund in it reported the
+// till as short by the refunded amount every single day after the refund.
 export async function getTodaysOrderSummary(): Promise<TodaysOrderSummary> {
   const since = startOfToday();
-  const orders = await db.pendingOrders
-    .where("created_at")
-    .aboveOrEqual(since)
-    .toArray();
+  const orders = (
+    await db.pendingOrders.where("created_at").aboveOrEqual(since).toArray()
+  ).filter((order) => !order.refunded);
 
   const byPaymentMethod: Record<PaymentMethod, number> = {
     cash: 0,

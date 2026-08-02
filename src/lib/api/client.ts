@@ -1,4 +1,9 @@
-import type { PendingOrder, Product } from "@/lib/types";
+import type {
+  OrderListParams,
+  OrderPage,
+  PendingOrder,
+  Product,
+} from "@/lib/types";
 
 export interface AuthUser {
   id: string;
@@ -63,4 +68,11 @@ export interface ApiClient {
   // have: the outcome the caller wants is "gone", and a 404 means it already is.
   deleteProduct(id: string): Promise<void>;
   syncOrders(orders: PendingOrder[]): Promise<SyncOrdersResponse>;
+  // Reads stored sales back. Paginated, unlike getProducts: the catalogue is
+  // bounded and cached whole for offline selling, but sales history only grows.
+  //
+  // This is the server's copy, so it only contains sales that have synced. The
+  // sales screen overlays its own unsynced local orders on top — see
+  // useSalesFeed — rather than treating this as the complete picture.
+  getOrders(params?: OrderListParams): Promise<OrderPage>;
 }

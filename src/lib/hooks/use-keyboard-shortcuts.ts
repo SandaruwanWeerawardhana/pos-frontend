@@ -41,6 +41,11 @@ export function useKeyboardShortcuts(
     if (!enabled) return;
 
     function handleKeyDown(event: KeyboardEvent) {
+      // Auto-repeat from a held key is not a second press. F2 is bound to Pay,
+      // so honouring the repeat stream rang up a burst of sales from one
+      // leaning-on-the-keyboard moment.
+      if (event.repeat) return;
+
       const match = bindingsRef.current.find(
         (binding) =>
           binding.key.toLowerCase() === event.key.toLowerCase() &&

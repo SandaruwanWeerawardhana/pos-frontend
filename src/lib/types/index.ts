@@ -131,12 +131,84 @@ export interface PendingOrder {
   created_at: number; // epoch milliseconds
   sync_status: SyncStatus;
   server_id: string | null;
-  customer_id?: string;
   discount_cents?: number; // integer cents, applied before tax
   refunded?: boolean; // local-only annotation, not synced (no backend refund endpoint yet)
   payments?: PaymentSplit[]; // present for every order created after split-payment support
   cashier_id?: string;
   receipt_no?: string;
+}
+
+/**
+ * A sale as `GET /orders` returns it — the server's stored copy, not the till's.
+ *
+ * Keyed on `client_generated_id` as well as `id`, because the till already holds
+ * the same sale under that key. That is what lets the sales screen overlay its
+ * unsynced local orders on a server page without showing the same sale twice.
+ *
+ * Money is integer cents. `sold_at` is the business date the sale was rung up
+ * on (epoch ms), not when the server received it — an order that syncs three
+ * days late still belongs to the day it happened.
+ */
+export interface ServerOrder {
+  id: string;
+  client_generated_id: string;
+  receipt_no: string | null;
+  payment_method: PaymentMethod;
+  subtotal_cents: number;
+  discount_cents: number;
+  tax_total_cents: number;
+  total_cents: number;
+  refunded: boolean;
+  /** The server's recompute disagreed with the till's figures; needs review. */
+  totals_mismatch: boolean;
+  server_total_cents?: number;
+  server_tax_total_cents?: number;
+  cashier_id?: string;
+  branch_id?: string;
+  sold_at: number;
+  synced_at: number;
+  items: ServerOrderItem[];
+  payments: PaymentSplit[];
+}
+
+export interface ServerOrderItem {
+  product_id: string | null;
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  tax_rate: number;
+  unit?: ProductUnit;
+  is_weighted?: boolean;
+  line_discount_cents: number;
+}
+
+/** Pagination metadata returned alongside a server list page. */
+export interface PageMeta {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface OrderPage {
+  orders: ServerOrder[];
+  meta: PageMeta;
+}
+
+/** Query for `GET /orders`. Every field is optional; the server has defaults. */
+export interface OrderListParams {
+  page?: number;
+  per_page?: number;
+  /** Matched against receipt no, client id, and item names. */
+  search?: string;
+  payment_method?: PaymentMethod;
+  /** Epoch ms bounds on `sold_at`. */
+  from?: number;
+  to?: number;
+  sort?: "sold_at" | "total_cents" | "synced_at" | "created_at";
+  order?: "asc" | "desc";
 }
 
 export interface SyncMetaRecord {

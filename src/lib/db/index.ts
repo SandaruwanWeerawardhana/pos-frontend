@@ -426,6 +426,14 @@ export async function createLocalOrder(
     ],
     async () => {
       const items = await db.cartItems.toArray();
+      // An order with no lines is not a sale, and the server rejects it
+      // (POST /orders/sync requires items, min=1). Because that rejection is a
+      // 400 for the whole batch, one empty order would block every other sale
+      // queued behind it, so it must never reach the pendingOrders table.
+      if (items.length === 0) {
+        throw new Error("Cannot complete a sale with an empty cart");
+      }
+
       const { tax_total_cents, total_cents } = computeCartTotal(
         items,
         options?.discountCents ?? 0,

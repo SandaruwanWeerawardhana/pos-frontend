@@ -1,4 +1,5 @@
 import { apiClient, type SyncOrderResult } from "@/lib/api";
+import { ApiError } from "@/lib/services/http-client";
 import {
   clearPendingProductDelete,
   db,
@@ -55,6 +56,23 @@ async function releaseOrphanedClaims(): Promise<void> {
     .where("sync_status")
     .equals("syncing")
     .modify({ sync_status: "pending" satisfies SyncStatus });
+}
+
+// Statuses that mean "this exact body will never be accepted, however often it
+// is resent". POST /orders/sync validates the whole batch before it looks at
+// any order, so one malformed sale 400s the entire request — and marking the
+// batch "error" put it straight back in the claim queue, blocking every sale
+// behind it forever. Those go to "conflict" instead, which is terminal on the
+// client and leaves the rest of the queue draining.
+//
+// Deliberately excluded: 401/403 (a re-login fixes them), 408/429 (explicitly
+// "try later") and every 5xx. Stranding a real sale is worse than retrying one.
+const PERMANENT_REJECTION_STATUSES = new Set([400, 413, 422]);
+
+function isPermanentRejection(error: unknown): boolean {
+  return (
+    error instanceof ApiError && PERMANENT_REJECTION_STATUSES.has(error.status)
+  );
 }
 
 function mapSyncResultToStatus(result: SyncOrderResult): SyncStatus {
@@ -183,11 +201,16 @@ export class SyncManager {
       );
     } catch (error) {
       // Transport-level failure (server unreachable): release the claim so
-      // these orders are retried next cycle, and let the caller back off.
+      // these orders are retried next cycle, and let the caller back off. A
+      // rejection the server will never accept is parked as "conflict" instead,
+      // so it stops re-claiming the queue ahead of every later sale.
+      const status: SyncStatus = isPermanentRejection(error)
+        ? "conflict"
+        : "error";
       await db.pendingOrders.bulkUpdate(
         batch.map((order) => ({
           key: order.client_generated_id,
-          changes: { sync_status: "error" satisfies SyncStatus },
+          changes: { sync_status: status },
         })),
       );
       throw error;

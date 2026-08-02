@@ -10,12 +10,9 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { useSettings } from "@/lib/hooks/use-settings";
 import { ROUTES } from "@/lib/types/routes";
 import type { CashReconciliation } from "@/lib/types";
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 export default function PosClosePage() {
   const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
@@ -23,6 +20,8 @@ export default function PosClosePage() {
   const [notes, setNotes] = useState("");
   const [result, setResult] = useState<CashReconciliation | null>(null);
   const { showToast } = useToast();
+
+  const { money: formatCents } = useSettings();
 
   useEffect(() => {
     getTodaysOrderSummary().then(setSummary);
