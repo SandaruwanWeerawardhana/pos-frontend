@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ROUTES } from "@/lib/types/routes";
+import { PwaInstallButton } from "@/components/shell/pwa-install-button";
 
 const features = [
   {
@@ -52,12 +53,15 @@ export default function LandingPage() {
             instantly on the device and synced to the server the moment
             connectivity comes back.
           </p>
-          <Link
-            href={ROUTES.auth.login}
-            className="mt-2 rounded-full bg-gradient-to-r from-[#E63946] to-[#c1121f] px-8 py-3 text-base font-medium text-white shadow-[0_8px_30px_-8px_rgba(230,57,70,0.6)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E63946]"
-          >
-            Sign in to your counter
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={ROUTES.auth.login}
+              className="mt-2 rounded-full bg-gradient-to-r from-[#E63946] to-[#c1121f] px-8 py-3 text-base font-medium text-white shadow-[0_8px_30px_-8px_rgba(230,57,70,0.6)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E63946]"
+            >
+              Sign in
+            </Link>
+            <PwaInstallButton />
+          </div>
         </section>
 
         <section className="w-full max-w-2xl pb-20">
