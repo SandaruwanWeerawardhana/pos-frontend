@@ -1,11 +1,10 @@
 "use client";
 
-import { NumberField } from "@/components/ui/NumberField";
-import { WEIGHT_UNITS } from "@/lib/products/constants";
+import { Input } from "@/components/ui/Input";
 import { totalOpeningStock } from "@/lib/products/schema";
 import type { Warehouse } from "@/lib/types";
 import { ShoppingBag } from "lucide-react";
-import { Controller, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { FormSection } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
@@ -18,16 +17,13 @@ interface OpeningStockSectionProps extends ProductSectionProps {
  * The quantity on hand in each warehouse at the moment the product is created.
  * Their sum becomes `stock_quantity`, which is the figure the till sells
  * against — so the split here is the only place opening stock is ever entered.
- *
- * Weighed goods arrive as 12.5 kg rather than 12 units, so the stepper works
- * in fractions for them and whole numbers for everything else.
  */
 export function OpeningStockSection({
   form,
   warehouses,
   errorCount,
 }: Readonly<OpeningStockSectionProps>) {
-  const { control, formState } = form;
+  const { control, register, formState } = form;
   const errors = formState.errors;
 
   const [unit, openingStock] = useWatch({
@@ -35,7 +31,6 @@ export function OpeningStockSection({
     name: ["unit", "opening_stock"],
   });
 
-  const weighed = WEIGHT_UNITS.includes(unit);
   const total = totalOpeningStock(openingStock ?? {});
 
   return (
@@ -53,23 +48,15 @@ export function OpeningStockSection({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {warehouses.map((warehouse) => (
-            <Controller
+            <Input
               key={warehouse.id}
-              control={control}
-              name={`opening_stock.${warehouse.id}`}
-              render={({ field }) => (
-                <NumberField
-                  label={warehouse.name}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  placeholder="0"
-                  step={weighed ? 0.5 : 1}
-                  precision={weighed ? 3 : 0}
-                  suffix={unit === "unit" ? undefined : unit}
-                  error={errors.opening_stock?.[warehouse.id]?.message}
-                />
-              )}
+              label={warehouse.name}
+              placeholder="0"
+              inputMode="decimal"
+              autoComplete="off"
+              className="tabular-nums"
+              error={errors.opening_stock?.[warehouse.id]?.message}
+              {...register(`opening_stock.${warehouse.id}`)}
             />
           ))}
         </div>

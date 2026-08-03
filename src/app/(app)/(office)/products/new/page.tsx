@@ -389,7 +389,7 @@ export default function ProductAddPage() {
               <LocationSection
                 form={form}
                 warehouses={options.warehouses}
-                knownLocations={options.locations}
+                locations={options.locations}
                 errorCount={errorsFor("location")}
               />
             </Suspense>

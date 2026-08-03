@@ -1,17 +1,122 @@
 "use client";
 
-import { Combobox } from "@/components/ui/Combobox";
-import type { Warehouse } from "@/lib/types";
-import { MapPin } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
+import { addWarehouseLocation } from "@/lib/db";
+import type { Warehouse, WarehouseLocation } from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, MapPin, Plus } from "lucide-react";
+import { useState } from "react";
 import { Controller } from "react-hook-form";
-import { FormSection } from "./FormSection";
+import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
 interface LocationSectionProps extends ProductSectionProps {
   warehouses: Warehouse[];
-  /** Rack/shelf references already used in the catalogue, for the typeahead. */
-  knownLocations: string[];
+  /** Named rack/shelf locations across all warehouses. */
+  locations: WarehouseLocation[];
   errorCount: number;
+}
+
+/**
+ * The "Create Location" popup opened by the "+" beside a warehouse. Locations
+ * are scoped to the warehouse whose button was pressed, so the same shelf name
+ * can exist in two warehouses without either being ambiguous.
+ */
+function CreateLocationModal({
+  warehouse,
+  onClose,
+  onCreated,
+}: Readonly<{
+  warehouse: Warehouse | null;
+  onClose: () => void;
+  onCreated: (location: WarehouseLocation) => void;
+}>) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function reset() {
+    setName("");
+    setError(null);
+  }
+
+  async function handleSubmit() {
+    if (!warehouse) return;
+    if (!name.trim()) {
+      setError("Location name is required");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const location = await addWarehouseLocation({
+        warehouse_id: warehouse.id,
+        name,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["product-options", "locations"],
+      });
+      onCreated(location);
+      reset();
+      onClose();
+    } catch (creationError) {
+      setError(
+        creationError instanceof Error
+          ? creationError.message
+          : "Failed to add location",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={warehouse !== null}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Create Location"
+      description={warehouse ? `In ${warehouse.name}` : undefined}
+      size="sm"
+    >
+      {/* The modal is portalled out of the product form's DOM, but React still
+          bubbles events up the component tree — without stopping it, adding a
+          location would submit the whole product. */}
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void handleSubmit();
+        }}
+      >
+        <Input
+          label={
+            <>
+              Location
+              <RequiredMark />
+            </>
+          }
+          placeholder="e.g. Rack A / Shelf 3"
+          hint="Rack, shelf, zone or bin — whatever your pickers actually say."
+          autoFocus
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        {error && <p className="text-xs text-error">{error}</p>}
+        <Button type="submit" loading={saving} className="self-start">
+          <Check size={16} />
+          Submit
+        </Button>
+      </form>
+    </Modal>
+  );
 }
 
 /**
@@ -22,11 +127,12 @@ interface LocationSectionProps extends ProductSectionProps {
 export function LocationSection({
   form,
   warehouses,
-  knownLocations,
+  locations,
   errorCount,
 }: Readonly<LocationSectionProps>) {
-  const { control, formState } = form;
+  const { control, setValue, formState } = form;
   const errors = formState.errors;
+  const [creatingFor, setCreatingFor] = useState<Warehouse | null>(null);
 
   return (
     <FormSection
@@ -36,9 +142,11 @@ export function LocationSection({
       errorCount={errorCount}
     >
       <p className="mb-3 rounded-xl bg-surface-container-low px-3 py-2 text-xs text-on-surface-variant dark:bg-zinc-800/60 dark:text-zinc-400">
-        Optional. Identifies where the product sits in the warehouse (rack /
-        shelf / zone / bin) for faster picking during stock counts. Stock is
-        still tracked by warehouse, not by location.
+        <strong className="font-semibold">Warehouse Location (Optional):</strong>{" "}
+        This field helps you identify the physical position of the product in
+        the warehouse (Rack / Shelf / Zone / Bin). It&apos;s for reference and
+        faster picking during inventory checks. Stock is still tracked by
+        warehouse, not by location.
       </p>
 
       {warehouses.length === 0 ? (
@@ -47,31 +155,61 @@ export function LocationSection({
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {warehouses.map((warehouse) => (
-            <Controller
-              key={warehouse.id}
-              control={control}
-              name={`rack_locations.${warehouse.id}`}
-              render={({ field }) => (
-                <Combobox
-                  label={warehouse.name}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  options={knownLocations.map((location) => ({
-                    value: location,
-                    label: location,
-                  }))}
-                  placeholder="Choose"
-                  allowCustom
-                  emptyMessage="Type a rack or shelf reference"
-                  error={errors.rack_locations?.[warehouse.id]?.message}
-                />
-              )}
-            />
-          ))}
+          {warehouses.map((warehouse) => {
+            const options = locations
+              .filter((location) => location.warehouse_id === warehouse.id)
+              .map((location) => ({
+                value: location.name,
+                label: location.name,
+              }));
+
+            return (
+              <Controller
+                key={warehouse.id}
+                control={control}
+                name={`rack_locations.${warehouse.id}`}
+                render={({ field }) => (
+                  <div className="flex items-end gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Select
+                        label={warehouse.name}
+                        placeholder="Choose"
+                        options={options}
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        error={errors.rack_locations?.[warehouse.id]?.message}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCreatingFor(warehouse)}
+                      aria-label={`Add a location in ${warehouse.name}`}
+                      title={`Add a location in ${warehouse.name}`}
+                      className="flex h-[42px] w-12 shrink-0 items-center justify-center rounded-lg border border-secondary text-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 active:scale-95 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-500/10"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                )}
+              />
+            );
+          })}
         </div>
       )}
+
+      {/* One modal for all warehouses — which one it writes to is whichever
+          "+" opened it, so the dialog cannot target a stale warehouse. */}
+      <CreateLocationModal
+        warehouse={creatingFor}
+        onClose={() => setCreatingFor(null)}
+        onCreated={(created) => {
+          setValue(`rack_locations.${created.warehouse_id}`, created.name, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+      />
     </FormSection>
   );
 }

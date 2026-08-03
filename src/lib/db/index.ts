@@ -21,6 +21,7 @@ import type {
   Supplier,
   SyncMetaRecord,
   Warehouse,
+  WarehouseLocation,
 } from "@/lib/types";
 
 /**
@@ -49,6 +50,7 @@ export class PosDB extends Dexie {
   notifications!: Table<AppNotification, string>;
   deletedProducts!: Table<DeletedProductRecord, string>;
   productUnits!: Table<ProductUnitRecord, string>;
+  warehouseLocations!: Table<WarehouseLocation, string>;
 
   constructor() {
     super("posDB");
@@ -138,6 +140,15 @@ export class PosDB extends Dexie {
      */
     this.version(6).stores({
       productUnits: "id, short_name",
+    });
+    /**
+     * v7: named rack/shelf locations, created from the product form's "+" next
+     * to Internal Location. Reference data only — stock is tracked against the
+     * warehouse, so a location can be renamed or removed without moving any
+     * quantity.
+     */
+    this.version(7).stores({
+      warehouseLocations: "id, warehouse_id, name",
     });
   }
 }
@@ -553,19 +564,71 @@ export async function listSubcategories(category?: string): Promise<string[]> {
 }
 
 /**
- * Rack/shelf references already in use, so the product form can offer the
- * existing ones instead of inviting a second spelling of the same shelf.
+ * Named rack/shelf locations, newest names included, sorted for the picker.
+ * Locations created before this table existed still appear: any reference
+ * already written onto a product is folded in, so the list never loses a shelf
+ * the catalogue is using.
  */
-export async function listShelfLocations(): Promise<string[]> {
-  const products = await db.products.toArray();
-  const names = new Set<string>();
+export async function listWarehouseLocations(): Promise<WarehouseLocation[]> {
+  const [saved, products] = await Promise.all([
+    db.warehouseLocations.toArray(),
+    db.products.toArray(),
+  ]);
+
+  const seen = new Set(
+    saved.map((entry) => `${entry.warehouse_id}::${entry.name.toLowerCase()}`),
+  );
+  const derived: WarehouseLocation[] = [];
+
   for (const product of products) {
-    if (product.shelf_location?.trim()) names.add(product.shelf_location.trim());
     for (const entry of product.opening_stock ?? []) {
-      if (entry.location?.trim()) names.add(entry.location.trim());
+      const name = entry.location?.trim();
+      if (!name) continue;
+      const key = `${entry.warehouse_id}::${name.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      derived.push({
+        id: key,
+        warehouse_id: entry.warehouse_id,
+        name,
+        created_at: "",
+      });
     }
   }
-  return Array.from(names).sort((a, b) => a.localeCompare(b));
+
+  return [...saved, ...derived].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Adds a location to one warehouse. Names are unique per warehouse, not
+ * globally — "A1" in the back store and "A1" in the shop floor are different
+ * shelves and both are legitimate.
+ */
+export async function addWarehouseLocation(input: {
+  warehouse_id: string;
+  name: string;
+}): Promise<WarehouseLocation> {
+  const name = input.name.trim();
+  if (!input.warehouse_id) throw new Error("Warehouse is required");
+  if (!name) throw new Error("Location name is required");
+
+  return db.transaction("rw", db.warehouseLocations, async () => {
+    const clash = await db.warehouseLocations
+      .where("warehouse_id")
+      .equals(input.warehouse_id)
+      .filter((entry) => entry.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (clash) throw new Error("That location already exists in this warehouse");
+
+    const location: WarehouseLocation = {
+      id: crypto.randomUUID(),
+      warehouse_id: input.warehouse_id,
+      name,
+      created_at: new Date().toISOString(),
+    };
+    await db.warehouseLocations.add(location);
+    return location;
+  });
 }
 
 export async function listProductUnits(): Promise<ProductUnitRecord[]> {

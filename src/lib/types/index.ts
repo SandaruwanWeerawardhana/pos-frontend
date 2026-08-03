@@ -425,6 +425,18 @@ export interface Warehouse {
 }
 
 /**
+ * A named rack/shelf/zone/bin inside one warehouse, created from the product
+ * form's "+" beside Internal Location. Reference data for picking only — stock
+ * is tracked against the warehouse, never against a location.
+ */
+export interface WarehouseLocation {
+  id: string;
+  warehouse_id: string;
+  name: string;
+  created_at: string;
+}
+
+/**
  * ── Purchasing ─────────────────────────────────────────────────────────────
  */
 

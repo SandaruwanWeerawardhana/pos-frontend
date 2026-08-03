@@ -6,19 +6,23 @@ import {
   listBrands,
   listCategories,
   listProductUnits,
-  listShelfLocations,
   listSubcategories,
+  listWarehouseLocations,
   listWarehouses,
 } from "@/lib/db";
-import type { ProductUnitRecord, Warehouse } from "@/lib/types";
+import type {
+  ProductUnitRecord,
+  Warehouse,
+  WarehouseLocation,
+} from "@/lib/types";
 
 export interface CatalogueOptions {
   categories: string[];
   subcategories: string[];
   brands: string[];
   warehouses: Warehouse[];
-  /** Rack/shelf references already used, for the location typeahead. */
-  locations: string[];
+  /** Named rack/shelf locations, per warehouse. */
+  locations: WarehouseLocation[];
   /** Custom units created from the product form's "+", alongside the fixed list. */
   productUnits: ProductUnitRecord[];
   loading: boolean;
@@ -65,7 +69,7 @@ export function useProductCatalogueOptions(): CatalogueOptions {
 
   const locations = useQuery({
     queryKey: ["product-options", "locations"],
-    queryFn: listShelfLocations,
+    queryFn: listWarehouseLocations,
     staleTime: STALE_MS,
   });
 
