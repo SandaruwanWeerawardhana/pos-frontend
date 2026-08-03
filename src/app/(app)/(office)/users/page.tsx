@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   FileSpreadsheet,
   FileText,
@@ -14,7 +15,6 @@ import {
 import {
   CASHIER_ROLE_ID,
   PIN_PATTERN,
-  createStaffUser,
   deleteStaffUser,
   displayUsername,
   listRoles,
@@ -62,17 +62,6 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  const [userModalOpen, setUserModalOpen] = useState(false);
-  const [userFirstName, setUserFirstName] = useState("");
-  const [userLastName, setUserLastName] = useState("");
-  const [userUsername, setUserUsername] = useState("");
-  const [userPhone, setUserPhone] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userRoleId, setUserRoleId] = useState(CASHIER_ROLE_ID);
-  const [userPin, setUserPin] = useState("");
-  const [userPinConfirm, setUserPinConfirm] = useState("");
-  const [userError, setUserError] = useState("");
-
   const [editTarget, setEditTarget] = useState<StaffUser | null>(null);
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
@@ -115,60 +104,6 @@ export default function UsersPage() {
   useEffect(() => {
     void refresh();
   }, []);
-
-  function openCreateModal() {
-    setUserFirstName("");
-    setUserLastName("");
-    setUserUsername("");
-    setUserPhone("");
-    setUserEmail("");
-    setUserRoleId(CASHIER_ROLE_ID);
-    setUserPin("");
-    setUserPinConfirm("");
-    setUserError("");
-    setUserModalOpen(true);
-  }
-
-  // The PIN is mandatory here: it is the only credential a cashier has, so an
-  // account created without one could never sign in at the till.
-  async function handleCreateUser() {
-    setUserError("");
-    const first = userFirstName.trim();
-    const last = userLastName.trim();
-    if (!first || !userEmail.trim() || !userRoleId) {
-      setUserError("First name, email, and role are all required.");
-      return;
-    }
-    if (!PIN_PATTERN.test(userPin)) {
-      setUserError("Password must be 4 to 6 digits.");
-      return;
-    }
-    if (userPin !== userPinConfirm) {
-      setUserError("The two passwords do not match.");
-      return;
-    }
-    const fullName = [first, last].filter(Boolean).join(" ");
-    try {
-      await createStaffUser({
-        name: fullName,
-        first_name: first,
-        last_name: last,
-        username: userUsername.trim() || fullName,
-        phone: userPhone.trim(),
-        email: userEmail.trim().toLowerCase(),
-        role_id: userRoleId,
-        pin: userPin,
-        active: true,
-      });
-      setUserModalOpen(false);
-      await refresh();
-      showToast("User added", "success");
-    } catch (caught) {
-      setUserError(
-        caught instanceof Error ? caught.message : "Failed to add user",
-      );
-    }
-  }
 
   function openEditModal(user: StaffUser) {
     const { first, last } = nameParts(user);
@@ -413,10 +348,13 @@ export default function UsersPage() {
               <FileSpreadsheet size={15} />
               EXCEL
             </Button>
-            <Button type="button" size="sm" onClick={openCreateModal}>
+            <Link
+              href={ROUTES.users.new}
+              className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/90 hover:shadow-elevated active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
               <Plus size={15} />
               Create
-            </Button>
+            </Link>
           </div>
         </div>
 
@@ -468,79 +406,6 @@ export default function UsersPage() {
           pageSizeOptions={[10, 25, 50]}
         />
       </div>
-
-      <Modal
-        open={userModalOpen}
-        onClose={() => setUserModalOpen(false)}
-        title="Create user"
-      >
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="First name"
-              value={userFirstName}
-              onChange={(event) => setUserFirstName(event.target.value)}
-              autoFocus
-            />
-            <Input
-              label="Last name"
-              value={userLastName}
-              onChange={(event) => setUserLastName(event.target.value)}
-            />
-          </div>
-          <Input
-            label="Username"
-            value={userUsername}
-            onChange={(event) => setUserUsername(event.target.value)}
-            hint="Optional. Defaults to the full name."
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={userEmail}
-            onChange={(event) => setUserEmail(event.target.value)}
-            hint="Used together with the password to sign in at the till."
-          />
-          <Input
-            label="Phone"
-            type="tel"
-            inputMode="tel"
-            value={userPhone}
-            onChange={(event) => setUserPhone(event.target.value)}
-          />
-          <Select
-            label="Role"
-            value={userRoleId}
-            onChange={(event) => setUserRoleId(event.target.value)}
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-          />
-          <Input
-            label="Password"
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={userPin}
-            onChange={(event) =>
-              setUserPin(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            hint="4 to 6 digits."
-          />
-          <Input
-            label="Confirm password"
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={userPinConfirm}
-            onChange={(event) =>
-              setUserPinConfirm(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            error={userError}
-          />
-          <Button type="button" onClick={handleCreateUser}>
-            Create user
-          </Button>
-        </div>
-      </Modal>
 
       <Modal
         open={editTarget !== null}

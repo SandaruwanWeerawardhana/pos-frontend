@@ -42,6 +42,7 @@ export const ROUTES = {
   discounts: "/discounts",
   users: {
     root: "/users",
+    new: "/users/new",
     permissions: "/users/permissions",
   },
   settings: {

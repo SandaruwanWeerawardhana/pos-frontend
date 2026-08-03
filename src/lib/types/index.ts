@@ -389,6 +389,12 @@ export interface StaffUser {
   /** Optional login handle shown in the users table; defaults to `name`. */
   username?: string;
   phone?: string;
+  /** Profile picture as a data URL — local-first, same as product images. */
+  avatar?: string;
+  /** Lets the user see every record on list screens, not only their own. */
+  view_all_records?: boolean;
+  /** Warehouses the user may work in. Undefined means all of them. */
+  warehouse_ids?: string[];
   email: string;
   role_id: string;
   /**
