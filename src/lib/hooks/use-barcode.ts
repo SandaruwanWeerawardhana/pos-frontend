@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 import { HARDWARE_CONFIG } from "@/lib/types/hardware.config";
 
 export interface UseBarcodeOptions {
@@ -44,26 +44,4 @@ export function useBarcode({ onScan, enabled = true }: UseBarcodeOptions): void 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [enabled, onScan]);
-}
-
-// Camera-based fallback support check for the BarcodeDetector API (Chrome/
-// Edge only). BarcodeScanner.tsx uses this to decide whether to offer a
-// "scan with camera" option. useSyncExternalStore (rather than a
-// useState+useEffect pair) is the correct way to read this: the capability
-// never changes mid-session, and the server snapshot (false) safely differs
-// from the client snapshot without a synchronous setState-in-effect.
-function subscribe(): () => void {
-  return () => {};
-}
-
-function getSnapshot(): boolean {
-  return typeof window !== "undefined" && "BarcodeDetector" in window;
-}
-
-function getServerSnapshot(): boolean {
-  return false;
-}
-
-export function useCameraBarcodeSupport(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

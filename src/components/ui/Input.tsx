@@ -13,6 +13,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
   pill?: boolean;
   revealToggle?: boolean;
+  // Icon or icon-button rendered inside the field. Callers own click handling
+  // (pass a <button>) so this stays generic rather than growing an action prop.
+  leading?: ReactNode;
+  trailing?: ReactNode;
 }
 
 function EyeIcon({ open }: Readonly<{ open: boolean }>) {
@@ -50,6 +54,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     hint,
     pill = false,
     revealToggle = false,
+    leading,
+    trailing,
     className = "",
     id,
     type,
@@ -64,7 +70,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const inputType = hasToggle && visible ? "text" : type;
 
   const inputClass = `${pill ? "rounded-full" : "rounded-lg"} w-full border px-3 py-2 text-sm text-on-surface bg-surface-container-lowest outline-none transition-[color,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-outline focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 ${
-    hasToggle ? "pr-10" : ""
+    leading ? "pl-9" : ""
+  } ${
+    hasToggle || trailing ? "pr-10" : ""
   } ${
     error ? "border-error" : "border-outline-variant dark:border-zinc-700"
   } ${className}`;
@@ -80,6 +88,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         </label>
       )}
       <div className="relative flex items-center">
+        {leading && (
+          <span className="absolute left-2.5 flex items-center text-on-surface-variant dark:text-zinc-400">
+            {leading}
+          </span>
+        )}
         <input
           ref={ref}
           id={inputId}
@@ -88,6 +101,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           className={inputClass}
           {...props}
         />
+        {trailing && !hasToggle && (
+          <span className="absolute right-2.5 flex items-center text-on-surface-variant dark:text-zinc-400">
+            {trailing}
+          </span>
+        )}
         {hasToggle && (
           <button
             type="button"

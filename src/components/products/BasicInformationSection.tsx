@@ -3,6 +3,7 @@
 import { BarcodeScanner } from "@/components/hardware/BarcodeScanner";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import type { CatalogueOptions } from "@/lib/hooks/use-product-catalogue-options";
@@ -15,8 +16,8 @@ import {
   isValidGtin,
 } from "@/lib/products/generate";
 import type { BarcodeSource } from "@/lib/products/schema";
-import { FileText, ScanLine, Sparkles } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Barcode, FileText, RefreshCw, ScanLine, Sparkles } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
@@ -44,41 +45,29 @@ function GenerateButton({
   );
 }
 
-const BARCODE_SOURCES: { value: BarcodeSource; label: string }[] = [
-  { value: "package", label: "On package" },
-  { value: "generated", label: "In-store" },
-];
-
-function BarcodeSourceToggle({
+/**
+ * Sits inside the "Code Product" field as the trailing icon. Clicking it
+ * flips `barcode_source` between package and in-store — the icon shown is
+ * the mode a click switches *to*, matching the field's own scan/generate
+ * split without needing the separate pill toggle it replaced.
+ */
+function SourceToggleIcon({
   value,
   onChange,
 }: Readonly<{ value: BarcodeSource; onChange: (next: BarcodeSource) => void }>) {
+  const packageMode = value === "package";
   return (
-    <div
-      role="radiogroup"
-      aria-label="Product code source"
-      className="inline-flex gap-0.5 rounded-lg border border-outline-variant bg-surface-container-low p-0.5 dark:border-zinc-700 dark:bg-zinc-800/60"
+    <button
+      type="button"
+      onClick={() => onChange(packageMode ? "generated" : "package")}
+      aria-label={
+        packageMode ? "Switch to in-store generated code" : "Switch to on-package code"
+      }
+      title={packageMode ? "Switch to in-store code" : "Switch to on-package code"}
+      className="pointer-events-auto rounded-md p-0.5 transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 hover:text-secondary active:scale-95 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
     >
-      {BARCODE_SOURCES.map((option) => {
-        const selected = option.value === value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onChange(option.value)}
-            className={`min-h-7 rounded-md px-2 text-xs font-semibold transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-95 ${
-              selected
-                ? "bg-secondary text-on-secondary dark:bg-blue-500 dark:text-white"
-                : "text-on-surface-variant hover:bg-secondary/10 dark:text-zinc-400 dark:hover:bg-blue-500/10"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+      {packageMode ? <Sparkles size={15} /> : <ScanLine size={15} />}
+    </button>
   );
 }
 
@@ -167,6 +156,7 @@ export function BasicInformationSection({
     const scanned = code.trim();
     if (!scanned) return;
     writeBarcode(scanned);
+    setValue("barcode_source", "package", { shouldDirty: true });
     setScanning(false);
   }
 
@@ -223,16 +213,27 @@ export function BasicInformationSection({
         <div className="flex flex-col gap-2">
           <Input
             label={
-              <span className="flex flex-wrap items-center justify-between gap-2">
-                <span>
-                  Code Product
-                  <RequiredMark />
-                </span>
-                <BarcodeSourceToggle
-                  value={barcodeSource ?? "package"}
-                  onChange={pickSource}
-                />
-              </span>
+              <>
+                Code Product
+                <RequiredMark />
+              </>
+            }
+            leading={
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                aria-label="Scan barcode"
+                title="Scan barcode"
+                className="rounded-md p-0.5 transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 hover:text-secondary active:scale-95 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+              >
+                <Barcode size={15} />
+              </button>
+            }
+            trailing={
+              <SourceToggleIcon
+                value={barcodeSource ?? "package"}
+                onChange={pickSource}
+              />
             }
             placeholder={fixedLength ? "5901234123457" : "75724471"}
             hint={
@@ -248,42 +249,46 @@ export function BasicInformationSection({
             {...register("barcode")}
           />
 
-          <div className="flex flex-wrap items-center gap-2">
-            {packageMode ? (
-              <GenerateButton
-                onClick={() => setScanning((active) => !active)}
-                label={scanning ? "Stop scanning" : "Scan"}
-                icon={<ScanLine size={12} />}
-              />
-            ) : (
-              <GenerateButton onClick={fillBarcode} label="Generate EAN-13" />
-            )}
-            {checkable && !barcodeError && (
-              <span
-                className={`text-xs font-medium ${
-                  isValidGtin(barcode)
-                    ? "text-green-700 dark:text-green-400"
-                    : "text-on-surface-variant dark:text-zinc-400"
-                }`}
-              >
-                {isValidGtin(barcode) ? "Check digit valid" : "Check digit unverified"}
-              </span>
-            )}
-          </div>
-
-          {/* Mounted only while scanning so the keyboard-wedge listener cannot
-              swallow ordinary typing elsewhere in the form. */}
-          {packageMode && scanning && (
-            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-outline-variant p-3 dark:border-zinc-700">
-              <p
-                aria-live="polite"
-                className="text-xs text-on-surface-variant dark:text-zinc-400"
-              >
-                Waiting for a scan — trigger the USB scanner, or use the camera.
-              </p>
-              <BarcodeScanner onScan={handleScan} />
+          {(checkable || !packageMode) && !barcodeError && (
+            <div className="flex flex-wrap items-center gap-2">
+              {!packageMode && (
+                <GenerateButton
+                  onClick={fillBarcode}
+                  label="Regenerate"
+                  icon={<RefreshCw size={12} />}
+                />
+              )}
+              {checkable && (
+                <span
+                  className={`text-xs font-medium ${
+                    isValidGtin(barcode)
+                      ? "text-green-700 dark:text-green-400"
+                      : "text-on-surface-variant dark:text-zinc-400"
+                  }`}
+                >
+                  {isValidGtin(barcode) ? "Check digit valid" : "Check digit unverified"}
+                </span>
+              )}
             </div>
           )}
+
+          <Modal
+            open={scanning}
+            onClose={() => setScanning(false)}
+            title="Barcode_Scanner"
+            size="sm"
+          >
+            <div className="flex flex-col gap-3">
+              <p aria-live="polite" className="text-xs text-on-surface-variant dark:text-zinc-400">
+                Waiting for a scan — trigger the USB scanner, or use the camera.
+              </p>
+              <BarcodeScanner
+                onScan={handleScan}
+                autoStart
+                onStop={() => setScanning(false)}
+              />
+            </div>
+          </Modal>
         </div>
 
         <Input
