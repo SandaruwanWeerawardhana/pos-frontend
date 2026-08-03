@@ -83,7 +83,8 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    void refresh();
+    const refreshTimerId = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(refreshTimerId);
   }, []);
 
   async function handleToggleActive(user: StaffUser) {
@@ -105,7 +106,9 @@ export default function UsersPage() {
       header: "First Name",
       sortValue: (user) => nameParts(user).first,
       render: (user) => (
-        <span className="font-medium">{nameParts(user).first}</span>
+        <span className="block min-w-24 max-w-36 truncate font-medium">
+          {nameParts(user).first}
+        </span>
       ),
     },
     {
@@ -121,7 +124,7 @@ export default function UsersPage() {
       hideOnMobile: true,
       sortValue: (user) => displayUsername(user),
       render: (user) => (
-        <span className="text-primary dark:text-blue-400">
+        <span className="block min-w-28 max-w-40 truncate text-primary dark:text-blue-400">
           {displayUsername(user)}
         </span>
       ),
@@ -133,7 +136,7 @@ export default function UsersPage() {
       render: (user) => (
         <a
           href={`mailto:${user.email}`}
-          className="text-primary hover:underline dark:text-blue-400"
+          className="block min-w-48 max-w-64 truncate text-primary hover:underline dark:text-blue-400"
         >
           {user.email}
         </a>
@@ -152,8 +155,9 @@ export default function UsersPage() {
       key: "status",
       header: "Status",
       hideOnMobile: true,
+      align: "right",
       render: (user) => (
-        <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+        <label className="relative inline-flex min-w-16 shrink-0 cursor-pointer items-center justify-end">
           <span className="sr-only">
             {user.active ? `Disable ${user.name}` : `Enable ${user.name}`}
           </span>
@@ -174,8 +178,9 @@ export default function UsersPage() {
     {
       key: "actions",
       header: "Action",
+      align: "right",
       render: (user) => (
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-20 items-center justify-end gap-2">
           <Link
             href={ROUTES.users.edit(user.id)}
             aria-label={`Edit ${user.name}`}
