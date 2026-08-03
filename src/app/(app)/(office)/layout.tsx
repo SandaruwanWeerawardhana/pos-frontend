@@ -117,13 +117,13 @@ export default function OfficeLayout({
             type="button"
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 z-[75] bg-black/30 md:hidden"
+            className="animate-fade-in fixed inset-0 z-[75] bg-black/30 md:hidden"
           />
         )}
 
         <aside
           aria-label="Main navigation"
-          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-200 md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
+          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -151,16 +151,18 @@ export default function OfficeLayout({
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                      className={`group flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         active
                           ? "bg-primary text-on-primary shadow-sm"
-                          : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                          : "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                       }`}
                     >
                       <Icon
                         size={16}
                         aria-hidden
-                        className={active ? "opacity-90" : "opacity-60"}
+                        className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
+                          active ? "opacity-90" : "opacity-60"
+                        }`}
                       />
                       {item.label}
                     </Link>
@@ -174,7 +176,7 @@ export default function OfficeLayout({
             <button
               type="button"
               onClick={handleLogout}
-              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-on-surface-variant transition-all duration-150 hover:bg-error-container/20 hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:translate-x-0.5 hover:bg-error-container/20 hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
             >
               <LogOut size={16} className="opacity-60" aria-hidden />
               Logout
@@ -182,8 +184,13 @@ export default function OfficeLayout({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto bg-surface dark:bg-zinc-950">
-          <div className="mx-auto max-w-6xl p-4 sm:p-6">{children}</div>
+        <main className="min-w-0 flex-1 overflow-y-auto scroll-smooth bg-surface dark:bg-zinc-950">
+          <div
+            key={pathname}
+            className="animate-fade-in-up mx-auto max-w-6xl p-4 sm:p-6"
+          >
+            {children}
+          </div>
         </main>
       </div>
       </RequireOffice>

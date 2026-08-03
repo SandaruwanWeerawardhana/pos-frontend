@@ -7,17 +7,29 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { NotificationPanel } from "@/components/shell/notification-panel";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useAuthStore } from "@/lib/store/auth";
+import { useSettings } from "@/lib/hooks/use-settings";
 import { ROUTES } from "@/lib/types/routes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
+  Globe,
   KeyRound,
+  LayoutGrid,
   LogOut,
+  Maximize2,
   Menu,
+  Minimize2,
   Search,
   User as UserIcon,
   Wifi,
   WifiOff,
 } from "lucide-react";
+
+const LOCALE_OPTIONS = [
+  { code: "en-US", label: "English (US)" },
+  { code: "en-GB", label: "English (UK)" },
+  { code: "es-ES", label: "Español" },
+  { code: "fr-FR", label: "Français" },
+];
 
 const OFFICE_SIDEBAR_PATHS = [
   ROUTES.dashboard,
@@ -70,10 +82,14 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, staff, isAuthenticated, posOnly, logout } = useAuth();
+  const { settings, save } = useSettings();
   const [online, setOnline] = useState(true);
   const [now, setNow] = useState<Date | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
   const hydrated = useSyncExternalStore(
     subscribeAuthHydration,
     getAuthHydrationSnapshot,
@@ -117,8 +133,34 @@ export function AppHeader() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!langOpen) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!langRef.current?.contains(event.target as Node)) setLangOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [langOpen]);
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   function handleToggleSidebar() {
     window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
+  }
+
+  function handleToggleFullscreen() {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void document.documentElement.requestFullscreen();
+    }
   }
 
   function handleLogout() {
@@ -190,6 +232,16 @@ export function AppHeader() {
         </button>
         )}
 
+        {!posOnly && (
+          <Link
+            href={ROUTES.pos.root}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:scale-105 active:scale-95"
+          >
+            <LayoutGrid size={14} aria-hidden />
+            POS
+          </Link>
+        )}
+
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-colors duration-[var(--duration-base)] ease-[var(--ease-standard)] ${
             online
@@ -207,8 +259,56 @@ export function AppHeader() {
           <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
         </span>
 
-        {/* <NotificationPanel /> */}
         <ThemeToggle />
+
+        <button
+          type="button"
+          onClick={handleToggleFullscreen}
+          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+        </button>
+
+        <div ref={langRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setLangOpen((current) => !current)}
+            aria-expanded={langOpen}
+            aria-haspopup="menu"
+            aria-label="Change language"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            <Globe size={15} />
+          </button>
+          {langOpen && (
+            <div
+              role="menu"
+              className="animate-scale-in absolute right-0 top-10 z-[120] w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              {LOCALE_OPTIONS.map((option) => (
+                <button
+                  key={option.code}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    void save({ locale: option.code });
+                    setLangOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between px-4 py-2 text-sm transition-colors hover:bg-surface-container dark:hover:bg-zinc-800 ${
+                    settings.locale === option.code
+                      ? "font-semibold text-primary dark:text-blue-400"
+                      : "text-on-surface dark:text-zinc-100"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <NotificationPanel />
 
         {isAuthenticated && (
           <div ref={menuRef} className="relative">

@@ -93,11 +93,14 @@ export function NotificationPanel() {
             ? `Notifications, ${unreadCount} unread`
             : "Notifications"
         }
-        className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all hover:border-primary/40 hover:bg-surface-container hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        className="group relative flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-primary/40 hover:bg-surface-container hover:text-primary active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
       >
-        <Bell size={15} />
+        <Bell
+          size={15}
+          className="transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110"
+        />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-on-error">
+          <span className="animate-scale-in absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-on-error">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -107,7 +110,7 @@ export function NotificationPanel() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-10 z-[120] flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+          className="animate-scale-in absolute right-0 top-10 z-[120] flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] origin-top-right flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div className="flex items-center justify-between gap-2 border-b border-outline-variant px-4 py-3 dark:border-zinc-800">
             <p className="text-sm font-semibold text-on-surface dark:text-zinc-50">
@@ -117,7 +120,7 @@ export function NotificationPanel() {
               <button
                 type="button"
                 onClick={() => void markAllNotificationsRead()}
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline dark:text-blue-400"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-opacity duration-[var(--duration-fast)] hover:underline hover:opacity-80 dark:text-blue-400"
               >
                 <CheckCheck size={13} />
                 Mark all read
@@ -127,7 +130,7 @@ export function NotificationPanel() {
 
           <ul className="min-h-0 flex-1 overflow-y-auto">
             {notifications.length === 0 && (
-              <li className="px-4 py-10 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+              <li className="animate-fade-in px-4 py-10 text-center text-sm text-on-surface-variant dark:text-zinc-400">
                 Nothing needs your attention right now.
               </li>
             )}
@@ -162,7 +165,7 @@ export function NotificationPanel() {
                 </>
               );
 
-              const className = `flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-container dark:hover:bg-zinc-800 ${
+              const className = `flex w-full items-start gap-3 px-4 py-3 text-left transition-[background-color,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container dark:hover:bg-zinc-800 ${
                 notification.read ? "opacity-70" : ""
               }`;
 

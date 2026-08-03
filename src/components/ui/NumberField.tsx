@@ -60,7 +60,7 @@ export function NumberField({
   }
 
   const buttonClass =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:scale-105 active:scale-90 active:duration-[var(--duration-instant)] disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800";
 
   return (
     <div className="flex flex-col gap-1">
@@ -92,7 +92,7 @@ export function NumberField({
             placeholder={placeholder}
             inputMode="decimal"
             aria-invalid={error ? true : undefined}
-            className={`h-9 w-full rounded-lg border bg-surface-container-lowest px-3 text-center text-sm font-medium tabular-nums text-on-surface outline-none transition-colors focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 ${
+            className={`h-9 w-full rounded-lg border bg-surface-container-lowest px-3 text-center text-sm font-medium tabular-nums text-on-surface outline-none transition-[color,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-outline focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-zinc-600 ${
               suffix ? "pr-10" : ""
             } ${
               error ? "border-error" : "border-outline-variant dark:border-zinc-700"
@@ -118,7 +118,9 @@ export function NumberField({
           <Plus size={14} />
         </button>
       </div>
-      {error && <span className="text-xs text-error">{error}</span>}
+      {error && (
+        <span className="animate-fade-in text-xs text-error">{error}</span>
+      )}
       {!error && hint && (
         <span className="text-xs text-on-surface-variant dark:text-zinc-500">
           {hint}

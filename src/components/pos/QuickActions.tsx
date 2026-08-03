@@ -60,13 +60,18 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex min-h-16 min-w-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 text-xs font-medium transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 dark:border-zinc-800 dark:hover:bg-zinc-800 ${
+      className={`group flex min-h-16 min-w-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 text-xs font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:bg-surface-container hover:shadow-elevated active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:hover:bg-zinc-800 ${
         danger
           ? "text-error dark:text-red-400"
           : "text-on-surface-variant dark:text-zinc-300"
       }`}
     >
-      <span aria-hidden>{icon}</span>
+      <span
+        aria-hidden
+        className="transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110"
+      >
+        {icon}
+      </span>
       <span className="text-center leading-tight">{label}</span>
     </button>
   );

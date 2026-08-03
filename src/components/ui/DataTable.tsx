@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { staggerDelay } from "@/lib/motion";
 
 export interface DataColumn<T> {
   key: string;
@@ -83,7 +84,7 @@ export function DataTable<T>({
 
   if (rows.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-outline-variant py-10 text-center text-sm text-on-surface-variant dark:border-zinc-800 dark:text-zinc-400">
+      <p className="animate-fade-in rounded-xl border border-dashed border-outline-variant py-10 text-center text-sm text-on-surface-variant dark:border-zinc-800 dark:text-zinc-400">
         {emptyMessage}
       </p>
     );
@@ -123,19 +124,31 @@ export function DataTable<T>({
                       <button
                         type="button"
                         onClick={() => toggleSort(column)}
-                        className={`inline-flex items-center gap-1 rounded transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-100 ${
+                        className={`group inline-flex items-center gap-1 rounded transition-colors duration-[var(--duration-fast)] hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-100 ${
                           column.align === "right" ? "flex-row-reverse" : ""
                         }`}
                       >
                         {column.header}
                         {active ? (
                           sort?.direction === "asc" ? (
-                            <ChevronUp size={13} aria-hidden />
+                            <ChevronUp
+                              size={13}
+                              className="animate-fade-in"
+                              aria-hidden
+                            />
                           ) : (
-                            <ChevronDown size={13} aria-hidden />
+                            <ChevronDown
+                              size={13}
+                              className="animate-fade-in"
+                              aria-hidden
+                            />
                           )
                         ) : (
-                          <ChevronDown size={13} className="opacity-30" aria-hidden />
+                          <ChevronDown
+                            size={13}
+                            className="opacity-30 transition-opacity duration-[var(--duration-fast)] group-hover:opacity-70"
+                            aria-hidden
+                          />
                         )}
                       </button>
                     ) : (
@@ -147,9 +160,10 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/50 dark:divide-zinc-800">
-            {visible.map((row) => (
+            {visible.map((row, index) => (
               <tr
                 key={rowKey(row)}
+                style={staggerDelay(index)}
                 // Rows are activated with Enter/Space as well as click so the
                 // whole table is usable without a pointer.
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -164,7 +178,7 @@ export function DataTable<T>({
                     : undefined
                 }
                 tabIndex={onRowClick ? 0 : undefined}
-                className={`text-on-surface transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:text-zinc-50 ${
+                className={`animate-fade-in text-on-surface transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:text-zinc-50 ${
                   onRowClick
                     ? "cursor-pointer hover:bg-surface-container-low dark:hover:bg-zinc-800/60"
                     : ""
@@ -202,7 +216,7 @@ export function DataTable<T>({
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
               aria-label="Previous page"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:-translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
               <ChevronLeft size={16} />
             </button>
@@ -214,7 +228,7 @@ export function DataTable<T>({
               onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
               disabled={currentPage >= pageCount - 1}
               aria-label="Next page"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
               <ChevronRight size={16} />
             </button>

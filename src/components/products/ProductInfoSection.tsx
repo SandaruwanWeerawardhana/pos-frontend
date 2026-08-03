@@ -36,7 +36,7 @@ function GenerateButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-6 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/10 dark:text-blue-400 dark:hover:bg-blue-500/10"
+      className="inline-flex min-h-6 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 active:scale-95 dark:text-blue-400 dark:hover:bg-blue-500/10"
     >
       {icon ?? <Sparkles size={12} />}
       {label}
@@ -68,7 +68,7 @@ function BarcodeSourceToggle({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(option.value)}
-            className={`min-h-7 rounded-md px-2 text-xs font-semibold transition-colors ${
+            className={`min-h-7 rounded-md px-2 text-xs font-semibold transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-95 ${
               selected
                 ? "bg-secondary text-on-secondary dark:bg-blue-500 dark:text-white"
                 : "text-on-surface-variant hover:bg-secondary/10 dark:text-zinc-400 dark:hover:bg-blue-500/10"

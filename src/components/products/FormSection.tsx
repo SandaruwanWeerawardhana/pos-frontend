@@ -48,7 +48,7 @@ export function FormSection({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="scroll-mt-20 overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest/80 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900/80"
+      className="animate-fade-in-up scroll-mt-20 overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest/80 shadow-sm backdrop-blur-sm transition-[box-shadow,border-color] duration-[var(--duration-base)] ease-[var(--ease-standard)] hover:border-outline hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:border-zinc-700"
     >
       <h2 id={`${id}-heading`}>
         <button
@@ -56,9 +56,9 @@ export function FormSection({
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
-          className="flex min-h-14 w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5 dark:hover:bg-zinc-800/60"
+          className="group flex min-h-14 w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5 dark:hover:bg-zinc-800/60"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-blue-500/15 dark:text-blue-400">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 dark:bg-blue-500/15 dark:text-blue-400">
             {icon}
           </span>
           <span className="min-w-0 flex-1">

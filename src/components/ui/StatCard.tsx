@@ -44,11 +44,11 @@ export function StatCard({
   const positive = (deltaPercent ?? 0) >= 0;
 
   const body = (
-    <div className="flex h-full flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="group animate-fade-in-up flex h-full flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-base)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:border-outline hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
       <div className="flex items-start justify-between gap-2">
         {icon && (
           <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ACCENT_CLASSES[accent]}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${ACCENT_CLASSES[accent]}`}
           >
             {icon}
           </span>
@@ -91,7 +91,7 @@ export function StatCard({
   return (
     <Link
       href={href}
-      className="rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="block rounded-2xl transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {body}
     </Link>

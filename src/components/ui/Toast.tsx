@@ -100,7 +100,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
           <div
             key={toast.id}
             role={toast.variant === "error" ? "alert" : "status"}
-            className={`pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-lg border-l-4 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-lg dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-black/40 ${
+            className={`animate-slide-in-right pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-lg border-l-4 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-lg transition-shadow duration-[var(--duration-base)] hover:shadow-xl dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-black/40 ${
               VARIANT_CLASSES[toast.variant]
             }`}
           >
@@ -110,7 +110,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
               type="button"
               onClick={() => dismissToast(toast.id)}
               aria-label="Dismiss notification"
-              className="-mr-1 -mt-0.5 shrink-0 rounded p-1 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-zinc-700"
+              className="-mr-1 -mt-0.5 shrink-0 rounded p-1 text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:rotate-90 hover:bg-surface-container hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-zinc-700"
             >
               <X size={14} />
             </button>

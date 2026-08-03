@@ -47,7 +47,7 @@ export function ConfirmDialog({
           type="button"
           variant={destructive ? "danger" : "primary"}
           onClick={onConfirm}
-          disabled={busy}
+          loading={busy}
           autoFocus
         >
           {busy ? "Working…" : confirmLabel}

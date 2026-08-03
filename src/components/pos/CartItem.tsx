@@ -24,6 +24,7 @@ export function CartItem({
 }: Readonly<CartItemProps>) {
   const { money } = useSettings();
   const [offsetX, setOffsetX] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const startXRef = useRef<number | null>(null);
 
   // Weighted lines come off the scale, so ±1 stepping is meaningless; they
@@ -40,6 +41,7 @@ export function CartItem({
     // Only track touch/pen drags — a mouse press shouldn't arm a swipe.
     if (event.pointerType === "mouse") return;
     startXRef.current = event.clientX;
+    setDragging(true);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -54,17 +56,25 @@ export function CartItem({
       onRemove(item.id);
     }
     startXRef.current = null;
+    setDragging(false);
     setOffsetX(0);
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="animate-slide-in-right relative overflow-hidden rounded-xl">
       {offsetX < 0 && (
         <div
           aria-hidden
           className="absolute inset-y-0 right-0 flex w-24 items-center justify-center rounded-xl bg-error text-on-error"
         >
-          <Trash2 size={18} />
+          <Trash2
+            size={18}
+            /* Grows as the drag nears the threshold, so the cashier can feel
+               how far is far enough before letting go. */
+            className={`transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] ${
+              offsetX <= -SWIPE_THRESHOLD_PX ? "scale-125" : "scale-100"
+            }`}
+          />
         </div>
       )}
       <div
@@ -73,7 +83,11 @@ export function CartItem({
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
         style={{ transform: `translateX(${offsetX}px)` }}
-        className="relative flex touch-pan-y items-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-2 transition-transform dark:border-zinc-800 dark:bg-zinc-900"
+        /* No transition while the finger is down — the row has to track the
+           drag exactly; the easing is only for the snap back on release. */
+        className={`relative flex touch-pan-y items-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-2 transition-transform ease-[var(--ease-decelerate)] dark:border-zinc-800 dark:bg-zinc-900 ${
+          dragging ? "duration-0" : "duration-[var(--duration-base)]"
+        }`}
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-container text-xs font-semibold text-on-surface-variant dark:bg-zinc-800">
           {item.name.charAt(0).toUpperCase()}
@@ -91,7 +105,7 @@ export function CartItem({
             type="button"
             aria-label={`Decrease quantity of ${item.name}`}
             onClick={() => changeQuantity(-step)}
-            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
+            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-110 hover:text-on-surface active:scale-90 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
           >
             <Minus size={12} />
           </button>
@@ -102,7 +116,7 @@ export function CartItem({
             type="button"
             aria-label={`Increase quantity of ${item.name}`}
             onClick={() => changeQuantity(step)}
-            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
+            className="flex h-8 w-8 items-center justify-center text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-110 hover:text-on-surface active:scale-90 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:hover:text-zinc-50"
           >
             <Plus size={12} />
           </button>
@@ -116,7 +130,7 @@ export function CartItem({
           type="button"
           aria-label={`Remove ${item.name}`}
           onClick={() => item.id !== undefined && onRemove(item.id)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-outline-variant transition-colors hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-600"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-outline-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-110 hover:text-error active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-600"
         >
           <Trash2 size={14} />
         </button>

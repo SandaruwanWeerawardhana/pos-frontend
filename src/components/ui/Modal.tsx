@@ -114,7 +114,7 @@ export function Modal({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4 ${
+      className={`animate-fade-in fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4 ${
         glass ? "backdrop-blur-sm" : ""
       }`}
     >
@@ -135,7 +135,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 shadow-xl outline-none sm:rounded-2xl ${
+        className={`animate-slide-up-sheet relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 shadow-xl outline-none sm:animate-scale-in sm:rounded-2xl ${
           SIZE_CLASSES[size]
         } ${
           glass
@@ -173,7 +173,7 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:rotate-90 hover:bg-surface-container hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
                 <X size={18} />
               </button>
