@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Pencil, Plus, Search, X } from "lucide-react";
 import {
   ADMIN_ROLE_ID,
@@ -10,33 +11,16 @@ import {
   listStaffUsers,
   updateRole,
 } from "@/lib/db";
-import { PERMISSIONS, type Permission, type Role } from "@/lib/types";
+import { type Permission, type Role } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PermissionPicker } from "@/components/ui/PermissionPicker";
 import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
-
-// Permission strings are `resource.action`; the editor groups by resource so
-// twelve checkboxes stay readable on a till-sized display.
-const RESOURCE_LABELS: Record<string, string> = {
-  pos: "Point of sale",
-  products: "Products",
-  inventory: "Inventory",
-  purchases: "Purchasing",
-  reports: "Reports",
-  settings: "Settings",
-  users: "Users",
-};
-
-function resourceOf(permission: string): string {
-  return permission.split(".")[0];
-}
-
-const RESOURCES = Array.from(new Set(PERMISSIONS.map(resourceOf)));
 
 export default function GroupPermissionsPage() {
   const { showToast } = useToast();
@@ -76,15 +60,6 @@ export default function GroupPermissionsPage() {
     );
   }, [roles, search]);
 
-  function openCreate() {
-    setEditTarget(null);
-    setFormName("");
-    setFormDescription("");
-    setFormPermissions([]);
-    setFormError("");
-    setEditorOpen(true);
-  }
-
   function openEdit(role: Role) {
     setEditTarget(role);
     setFormName(role.name);
@@ -92,14 +67,6 @@ export default function GroupPermissionsPage() {
     setFormPermissions([...role.permissions]);
     setFormError("");
     setEditorOpen(true);
-  }
-
-  function togglePermission(permission: Permission) {
-    setFormPermissions((current) =>
-      current.includes(permission)
-        ? current.filter((entry) => entry !== permission)
-        : [...current, permission],
-    );
   }
 
   async function handleSave() {
@@ -247,10 +214,13 @@ export default function GroupPermissionsPage() {
               className="min-h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-9 pr-3 text-sm text-on-surface outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
             />
           </div>
-          <Button type="button" size="sm" onClick={openCreate}>
+          <Link
+            href={ROUTES.users.permissionsNew}
+            className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/90 hover:shadow-elevated active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
             <Plus size={15} />
             Create
-          </Button>
+          </Link>
         </div>
 
         <DataTable
@@ -266,7 +236,7 @@ export default function GroupPermissionsPage() {
       <Modal
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
-        title={editTarget ? `Edit ${editTarget.name}` : "Create role"}
+        title={editTarget ? `Edit ${editTarget.name}` : "Role"}
       >
         <div className="flex flex-col gap-4">
           <Input
@@ -284,42 +254,17 @@ export default function GroupPermissionsPage() {
             placeholder={`${formName || "Role"} Permissions`}
           />
 
-          <fieldset className="flex flex-col gap-3" disabled={adminLocked}>
-            <legend className="text-sm font-medium text-on-surface-variant dark:text-zinc-300">
-              Permissions
-            </legend>
-            {adminLocked && (
-              <p className="text-xs text-on-surface-variant dark:text-zinc-500">
-                Admin always holds every permission, so an install cannot lock
-                itself out of this screen.
-              </p>
-            )}
-            {RESOURCES.map((resource) => (
-              <div key={resource} className="flex flex-col gap-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant/70 dark:text-zinc-500">
-                  {RESOURCE_LABELS[resource] ?? resource}
-                </p>
-                <div className="grid gap-1.5 sm:grid-cols-2">
-                  {PERMISSIONS.filter(
-                    (permission) => resourceOf(permission) === resource,
-                  ).map((permission) => (
-                    <label
-                      key={permission}
-                      className="flex items-center gap-2 text-sm text-on-surface dark:text-zinc-100"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formPermissions.includes(permission)}
-                        onChange={() => togglePermission(permission)}
-                        className="h-4 w-4 cursor-pointer accent-primary"
-                      />
-                      <code className="text-xs">{permission}</code>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </fieldset>
+          {adminLocked && (
+            <p className="text-xs text-on-surface-variant dark:text-zinc-500">
+              Admin always holds every permission, so an install cannot lock
+              itself out of this screen.
+            </p>
+          )}
+          <PermissionPicker
+            value={formPermissions}
+            onChange={setFormPermissions}
+            locked={adminLocked}
+          />
 
           {formError && (
             <p className="text-sm text-error" role="alert">

@@ -45,6 +45,7 @@ export const ROUTES = {
     new: "/users/new",
     edit: (id: string) => `/users/${id}`,
     permissions: "/users/permissions",
+    permissionsNew: "/users/permissions/new",
   },
   settings: {
     root: "/settings",
