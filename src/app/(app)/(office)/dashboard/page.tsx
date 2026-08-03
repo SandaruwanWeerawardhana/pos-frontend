@@ -251,6 +251,82 @@ function ChartTooltip({
   );
 }
 
+/*
+ * Lightens (amount > 0) or darkens (amount < 0) a #rrggbb colour. The lit top
+ * face and shaded side face of an extruded bar are derived from the series'
+ * own hue this way, so the 3D shading never introduces a colour outside the
+ * validated palette.
+ */
+function shadeHex(hex: string, amount: number): string {
+  const value = Number.parseInt(hex.replace("#", ""), 16);
+  const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  return `#${channels
+    .map((channel) => {
+      const mixed =
+        amount >= 0
+          ? channel + (255 - channel) * amount
+          : channel * (1 + amount);
+      return Math.min(255, Math.max(0, Math.round(mixed)))
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("")}`;
+}
+
+/*
+ * Extrusion depth in px. Deliberately shallow: the top cap of a 3D bar sits
+ * above the value it encodes, so the deeper the prism the more the eye
+ * over-reads the magnitude. The gridlines and y-axis stay aligned to the
+ * front face, which is the true value.
+ */
+const BAR_DEPTH_PX = 7;
+
+interface Bar3DProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  gradientId?: string;
+}
+
+function Bar3D({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  fill = "#000000",
+  gradientId,
+}: Readonly<Bar3DProps>) {
+  if (width <= 0 || height <= 0) return null;
+
+  const depth = Math.min(BAR_DEPTH_PX, width * 0.4);
+  const right = x + width;
+  const bottom = y + height;
+
+  return (
+    <g>
+      {/* Side face — the darkest plane, so the light reads as coming from the
+          upper left across every bar in the chart. */}
+      <path
+        d={`M ${right} ${y} L ${right + depth} ${y - depth} L ${right + depth} ${bottom - depth} L ${right} ${bottom} Z`}
+        fill={shadeHex(fill, -0.3)}
+      />
+      <path
+        d={`M ${x} ${y} L ${x + depth} ${y - depth} L ${right + depth} ${y - depth} L ${right} ${y} Z`}
+        fill={shadeHex(fill, 0.24)}
+      />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={gradientId ? `url(#${gradientId})` : fill}
+      />
+    </g>
+  );
+}
+
 function SalesPurchasesChart({
   series,
   money,
@@ -273,7 +349,25 @@ function SalesPurchasesChart({
       </h3>
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barGap={4} barCategoryGap="24%">
+          {/* The extra top and right margin is the room the extrusion needs —
+              without it the tallest bar's cap and the rightmost bar's side
+              face clip against the plot edge. */}
+          <BarChart
+            data={data}
+            barGap={6}
+            barCategoryGap="26%"
+            margin={{ top: BAR_DEPTH_PX + 4, right: BAR_DEPTH_PX + 4, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="bar3d-sales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={shadeHex(colors.sales, 0.12)} />
+                <stop offset="100%" stopColor={colors.sales} />
+              </linearGradient>
+              <linearGradient id="bar3d-purchases" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={shadeHex(colors.purchases, 0.12)} />
+                <stop offset="100%" stopColor={colors.purchases} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke={colors.grid} />
             <XAxis
               dataKey="label"
@@ -290,19 +384,21 @@ function SalesPurchasesChart({
             />
             <Tooltip content={<ChartTooltip money={money} />} cursor={{ fill: colors.grid, opacity: 0.4 }} />
             <Legend wrapperStyle={{ fontSize: 12, color: colors.ink }} />
+            {/* `fill` stays a flat hex so the legend swatch resolves — the
+                gradient only reaches the front face, via the custom shape. */}
             <Bar
               dataKey="Sales"
               fill={colors.sales}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={22}
+              shape={<Bar3D gradientId="bar3d-sales" />}
+              maxBarSize={26}
               animationDuration={700}
               animationEasing="ease-out"
             />
             <Bar
               dataKey="Purchases"
               fill={colors.purchases}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={22}
+              shape={<Bar3D gradientId="bar3d-purchases" />}
+              maxBarSize={26}
               animationDuration={700}
               animationEasing="ease-out"
             />
