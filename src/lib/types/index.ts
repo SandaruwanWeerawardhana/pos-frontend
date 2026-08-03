@@ -370,6 +370,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export interface Role {
   id: string;
   name: string;
+  description?: string;
   permissions: Permission[];
   is_system?: boolean; /* seeded role, cannot be deleted */
   created_at: number;
