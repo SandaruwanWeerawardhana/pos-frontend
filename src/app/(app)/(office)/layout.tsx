@@ -11,7 +11,9 @@ import {
   BarChart2,
   Bell,
   Boxes,
+  ChevronDown,
   DollarSign,
+  KeyRound,
   LayoutDashboard,
   Monitor,
   PackagePlus,
@@ -20,12 +22,16 @@ import {
   ShoppingCart,
   Tag,
   Truck,
+  UserCog,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
   href: string;
   label: string;
   icon: typeof Monitor;
+  /* Rendered as a collapsible section instead of a plain link. */
+  children?: NavItem[];
 }
 
 interface NavGroup {
@@ -61,19 +67,43 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "People & insight",
+    label: "Administration",
+    items: [
+      {
+        href: ROUTES.users.root,
+        label: "User Management",
+        icon: ShieldCheck,
+        children: [
+          { href: ROUTES.users.root, label: "Users", icon: Users },
+          {
+            href: ROUTES.users.permissions,
+            label: "Group Permissions",
+            icon: KeyRound,
+          },
+        ],
+      },
+      { href: ROUTES.profile, label: "My profile", icon: UserCog },
+    ],
+  },
+  {
+    label: "Insight & setup",
     items: [
       { href: ROUTES.reports, label: "Reports", icon: BarChart2 },
-      { href: ROUTES.users, label: "Cashiers", icon: ShieldCheck },
       { href: ROUTES.settings.root, label: "Settings", icon: Settings },
     ],
   },
 ];
 
 
+function flattenItems(items: NavItem[]): NavItem[] {
+  return items.flatMap((item) =>
+    item.children ? [item, ...item.children] : [item],
+  );
+}
+
 function findActiveHref(pathname: string | null): string | null {
   if (!pathname) return null;
-  const matches = NAV_GROUPS.flatMap((group) => group.items)
+  const matches = flattenItems(NAV_GROUPS.flatMap((group) => group.items))
     .map((item) => item.href)
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`));
   if (matches.length === 0) return null;
@@ -89,6 +119,9 @@ export default function OfficeLayout({
 }>) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Only holds sections the user has explicitly toggled; anything absent falls
+  // back to "open when it contains the active route".
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const activeHref = findActiveHref(pathname);
 
   useEffect(() => {
@@ -101,7 +134,7 @@ export default function OfficeLayout({
   return (
     <RequireAuth>
       <RequireOffice>
-      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-56">
+      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-64">
         {sidebarOpen && (
           <button
             type="button"
@@ -113,7 +146,7 @@ export default function OfficeLayout({
 
         <aside
           aria-label="Main navigation"
-          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-56 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
+          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-64 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -133,8 +166,80 @@ export default function OfficeLayout({
                   {group.label}
                 </p>
                 {group.items.map((item) => {
-                  const active = activeHref === item.href;
                   const Icon = item.icon;
+
+                  if (item.children) {
+                    const sectionActive = item.children.some(
+                      (child) => activeHref === child.href,
+                    );
+                    const open = openSections[item.label] ?? sectionActive;
+                    return (
+                      <div key={item.label} className="flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          onClick={() =>
+                            setOpenSections((sections) => ({
+                              ...sections,
+                              [item.label]: !open,
+                            }))
+                          }
+                          className={`group flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                            sectionActive
+                              ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
+                              : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                          }`}
+                        >
+                          <Icon
+                            size={16}
+                            aria-hidden
+                            className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
+                              sectionActive ? "opacity-90" : "opacity-60"
+                            }`}
+                          />
+                          <span className="flex-1 text-left">{item.label}</span>
+                          <ChevronDown
+                            size={14}
+                            aria-hidden
+                            className={`transition-transform duration-[var(--duration-base)] ease-[var(--ease-standard)] ${
+                              open ? "rotate-180" : ""
+                            } ${sectionActive ? "opacity-90" : "opacity-60"}`}
+                          />
+                        </button>
+
+                        {open && (
+                          <div className="animate-fade-in flex flex-col gap-0.5 rounded-lg bg-surface-container-low py-1 dark:bg-zinc-900">
+                            {item.children.map((child) => {
+                              const childActive = activeHref === child.href;
+                              const ChildIcon = child.icon;
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  aria-current={childActive ? "page" : undefined}
+                                  onClick={() => setSidebarOpen(false)}
+                                  className={`group flex min-h-9 items-center gap-2.5 rounded-lg py-1 pl-8 pr-3 text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                                    childActive
+                                      ? "bg-surface-container font-medium text-primary dark:bg-zinc-800 dark:text-blue-400"
+                                      : "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                  }`}
+                                >
+                                  <ChildIcon
+                                    size={15}
+                                    aria-hidden
+                                    className="opacity-70 transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110"
+                                  />
+                                  {child.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const active = activeHref === item.href;
                   return (
                     <Link
                       key={item.href}

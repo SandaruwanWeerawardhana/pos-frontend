@@ -40,7 +40,10 @@ export const ROUTES = {
   suppliers: "/suppliers",
   reports: "/reports",
   discounts: "/discounts",
-  users: "/users",
+  users: {
+    root: "/users",
+    permissions: "/users/permissions",
+  },
   settings: {
     root: "/settings",
     hardware: "/settings/hardware",

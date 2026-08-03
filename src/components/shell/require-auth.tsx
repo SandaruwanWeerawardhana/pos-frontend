@@ -58,10 +58,10 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <output
         aria-label="Checking your session"
-        className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-56"
+        className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-64"
       >
         {/* Sidebar skeleton — hidden on mobile, mirrors the real sidebar width */}
-        <aside className="fixed bottom-0 left-0 top-0 z-[80] hidden h-dvh w-56 flex-col border-r border-outline-variant bg-surface-container-lowest p-3 pt-14 md:flex dark:border-zinc-800 dark:bg-zinc-950">
+        <aside className="fixed bottom-0 left-0 top-0 z-[80] hidden h-dvh w-64 flex-col border-r border-outline-variant bg-surface-container-lowest p-3 pt-14 md:flex dark:border-zinc-800 dark:bg-zinc-950">
           <div className="flex flex-col gap-3">
             {Array.from({ length: 5 }, (_, i) => (
               <Skeleton key={i} className="h-10 w-full rounded-lg" />

@@ -43,7 +43,8 @@ const NAV_COMMANDS: CommandItem[] = [
   { id: "nav-suppliers", label: "Suppliers", group: "Navigate", icon: <Truck size={16} />, href: ROUTES.suppliers },
   { id: "nav-reports", label: "Reports", group: "Navigate", icon: <BarChart2 size={16} />, href: ROUTES.reports },
   { id: "nav-discounts", label: "Discounts & promotions", group: "Navigate", icon: <Tag size={16} />, href: ROUTES.discounts },
-  { id: "nav-users", label: "Cashiers & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
+  { id: "nav-users", label: "Users", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users.root },
+  { id: "nav-permissions", label: "Group permissions", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users.permissions },
   { id: "nav-settings", label: "Settings", group: "Navigate", icon: <Settings size={16} />, href: ROUTES.settings.root },
 ];
 
