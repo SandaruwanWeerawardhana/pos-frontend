@@ -104,6 +104,7 @@ export function BasicInformationSection({
 }: Readonly<BasicInformationSectionProps>) {
   const { control, register, setValue, formState } = form;
   const errors = formState.errors;
+  const nameField = register("name");
 
   const [name, category, brand, sku, barcode, barcodeSource, symbology] = useWatch({
     control,
@@ -130,6 +131,16 @@ export function BasicInformationSection({
       shouldDirty: true,
       shouldValidate: true,
     });
+  }
+
+  /**
+   * Fires on name blur so a fresh product gets a SKU without an extra click.
+   * Skipped once the field holds anything, generated or hand-typed, so it
+   * never clobbers a value the user already set.
+   */
+  function autoFillSku() {
+    if (sku || !name) return;
+    fillSku();
   }
 
   function writeBarcode(value: string) {
@@ -182,7 +193,11 @@ export function BasicInformationSection({
           autoComplete="off"
           enterKeyHint="next"
           error={errors.name?.message}
-          {...register("name")}
+          {...nameField}
+          onBlur={(event) => {
+            nameField.onBlur(event);
+            autoFillSku();
+          }}
         />
 
         <Controller

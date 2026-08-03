@@ -212,7 +212,7 @@ export default function ProductAddPage() {
   const [saving, setSaving] = useState(false);
   const [pluginValues, setPluginValues] = useState<PluginFieldValues>({});
   const [draftPromptOpen, setDraftPromptOpen] = useState(true);
-
+  
   const values = useWatch({ control }) as ProductFormValues;
   const options = useProductCatalogueOptions();
   const duplicates = useProductDuplicates(values.sku ?? "", values.barcode ?? "");

@@ -367,12 +367,17 @@ export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
 /**
  * Opening stock is entered per warehouse; `stock_quantity` is their sum, which
  * is the number every till and report reads.
+ *
+ * The argument is deliberately sparse: this is fed live from `useWatch`, where
+ * a warehouse whose field has never been touched is absent or `undefined`
+ * rather than "". Treating those as zero is what "no opening stock entered"
+ * means, so they are skipped rather than parsed.
  */
 export function totalOpeningStock(
-  openingStock: ProductFormValues["opening_stock"],
+  openingStock: Record<string, string | undefined> | undefined,
 ): number {
-  return Object.values(openingStock).reduce(
-    (total, quantity) => total + (toNumber(quantity) ?? 0),
+  return Object.values(openingStock ?? {}).reduce<number>(
+    (total, quantity) => total + (quantity ? (toNumber(quantity) ?? 0) : 0),
     0,
   );
 }
@@ -467,16 +472,22 @@ export function toProduct(values: ProductFormValues, id: string): Product {
   const costCents = optionalCents(values.cost_price);
   const stock = totalOpeningStock(values.opening_stock);
 
-  const openingStock: ProductOpeningStock[] = Object.entries(
-    values.opening_stock,
-  )
-    .map(([warehouseId, quantity]) => ({
-      warehouse_id: warehouseId,
-      quantity: toNumber(quantity) ?? 0,
-      ...(optional(values.rack_locations[warehouseId]?.trim())
-        ? { location: values.rack_locations[warehouseId].trim() }
-        : {}),
-    }))
+  // Both records are keyed by warehouse id and either may be missing a key
+  // entirely — a warehouse whose two fields were never touched.
+  const warehouseIds = new Set([
+    ...Object.keys(values.opening_stock ?? {}),
+    ...Object.keys(values.rack_locations ?? {}),
+  ]);
+
+  const openingStock: ProductOpeningStock[] = Array.from(warehouseIds)
+    .map((warehouseId) => {
+      const location = values.rack_locations?.[warehouseId]?.trim();
+      return {
+        warehouse_id: warehouseId,
+        quantity: toNumber(values.opening_stock?.[warehouseId] ?? "") ?? 0,
+        ...(location ? { location } : {}),
+      };
+    })
     .filter((entry) => entry.quantity > 0 || entry.location !== undefined);
 
   const writesBatch =
