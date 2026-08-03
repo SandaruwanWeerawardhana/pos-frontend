@@ -43,7 +43,7 @@ export function Modal({
   size = "md",
   hideCloseButton = false,
 }: Readonly<ModalProps>) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDialogElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -128,14 +128,14 @@ export function Modal({
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default"
       />
-      <div
+      <dialog
         ref={panelRef}
-        role="dialog"
+        open
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`animate-slide-up-sheet relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 shadow-popover outline-none sm:animate-scale-in sm:rounded-2xl ${
+        className={`animate-slide-up-sheet relative m-0 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 text-inherit shadow-popover outline-none sm:animate-scale-in sm:rounded-2xl ${
           SIZE_CLASSES[size]
         } ${
           glass
@@ -181,7 +181,7 @@ export function Modal({
           </div>
         )}
         {children}
-      </div>
+      </dialog>
     </div>
   );
 }
