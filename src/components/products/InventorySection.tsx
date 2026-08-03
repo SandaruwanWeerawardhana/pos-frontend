@@ -1,10 +1,15 @@
 "use client";
 
+import { Input } from "@/components/ui/Input";
 import { NumberField } from "@/components/ui/NumberField";
-import { WEIGHT_UNITS } from "@/lib/products/constants";
-import { Boxes } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import {
+  PRODUCT_TYPE_OPTIONS,
+  PRODUCT_UNIT_OPTIONS,
+} from "@/lib/products/constants";
+import { Package } from "lucide-react";
 import { Controller, useWatch } from "react-hook-form";
-import { FormSection } from "./FormSection";
+import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
 interface InventorySectionProps extends ProductSectionProps {
@@ -12,72 +17,181 @@ interface InventorySectionProps extends ProductSectionProps {
 }
 
 /**
- * Opening stock and the minimum level. Weighed goods arrive as 12.5 kg, not 12
- * units, so the stepper works in fractions for them and whole numbers for
- * everything else.
+ * Product type, the three units, the low-stock trigger and the shipping
+ * envelope. Opening quantities live in their own section because they are
+ * per-warehouse; everything here is a property of the product itself.
+ *
+ * A service carries no stock, so the alert and the shipping figures are hidden
+ * for it rather than collected and ignored.
  */
 export function InventorySection({
   form,
   errorCount,
 }: Readonly<InventorySectionProps>) {
-  const { control, formState } = form;
+  const { control, register, formState } = form;
   const errors = formState.errors;
 
-  const [unit, minStock] = useWatch({
-    control,
-    name: ["unit", "min_stock_level"],
-  });
-
-  const weighed = WEIGHT_UNITS.includes(unit);
-  const stockStep = weighed ? 0.5 : 1;
-  const stockPrecision = weighed ? 3 : 0;
+  const [productType, unit] = useWatch({ control, name: ["product_type", "unit"] });
+  const stocked = productType !== "service";
+  const weighedUnit = unit !== "unit";
 
   return (
     <FormSection
       id="inventory"
       title="Inventory"
-      icon={<Boxes size={18} />}
+      icon={<Package size={18} />}
       errorCount={errorCount}
       plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Controller
           control={control}
-          name="initial_stock"
+          name="product_type"
           render={({ field }) => (
-            <NumberField
-              label="Initial stock"
+            <Select
+              label={
+                <>
+                  Type
+                  <RequiredMark />
+                </>
+              }
+              options={PRODUCT_TYPE_OPTIONS}
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
-              step={stockStep}
-              precision={stockPrecision}
-              suffix={unit === "unit" ? undefined : unit}
-              error={errors.initial_stock?.message}
+              error={errors.product_type?.message}
             />
           )}
         />
 
         <Controller
           control={control}
-          name="min_stock_level"
+          name="unit"
           render={({ field }) => (
-            <NumberField
-              label="Minimum stock level"
+            <Select
+              label={
+                <>
+                  Product Unit
+                  <RequiredMark />
+                </>
+              }
+              options={PRODUCT_UNIT_OPTIONS}
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
-              placeholder="0"
-              error={errors.min_stock_level?.message}
+              error={errors.unit?.message}
             />
           )}
         />
+
+        <Controller
+          control={control}
+          name="sale_unit"
+          render={({ field }) => (
+            <Select
+              label={
+                <>
+                  Sale Unit
+                  <RequiredMark />
+                </>
+              }
+              options={PRODUCT_UNIT_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.sale_unit?.message}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="purchase_unit"
+          render={({ field }) => (
+            <Select
+              label={
+                <>
+                  Purchase Unit
+                  <RequiredMark />
+                </>
+              }
+              options={PRODUCT_UNIT_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.purchase_unit?.message}
+            />
+          )}
+        />
+
+        {stocked && (
+          <>
+            <Controller
+              control={control}
+              name="stock_alert"
+              render={({ field }) => (
+                <NumberField
+                  label="Stock Alert"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="0"
+                  hint="Flags the product as low once stock falls to this level."
+                  suffix={weighedUnit ? unit : undefined}
+                  error={errors.stock_alert?.message}
+                />
+              )}
+            />
+
+            <Input
+              label="Weight"
+              placeholder="0.00"
+              hint="Shipping weight in kilograms."
+              inputMode="decimal"
+              autoComplete="off"
+              className="text-right tabular-nums"
+              error={errors.weight?.message}
+              {...register("weight")}
+            />
+          </>
+        )}
       </div>
 
-      {minStock !== "" && (
-        <p className="sr-only" aria-live="polite">
-          Minimum stock {minStock}
-        </p>
+      {stocked && (
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-sm font-medium text-on-surface-variant dark:text-zinc-300">
+            Dimensions (in)
+          </legend>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              label="Length"
+              placeholder="0.00"
+              inputMode="decimal"
+              autoComplete="off"
+              className="text-right tabular-nums"
+              error={errors.length?.message}
+              {...register("length")}
+            />
+            <Input
+              label="Width"
+              placeholder="0.00"
+              inputMode="decimal"
+              autoComplete="off"
+              className="text-right tabular-nums"
+              error={errors.width?.message}
+              {...register("width")}
+            />
+            <Input
+              label="Height"
+              placeholder="0.00"
+              inputMode="decimal"
+              autoComplete="off"
+              className="text-right tabular-nums"
+              error={errors.height?.message}
+              {...register("height")}
+            />
+          </div>
+        </fieldset>
       )}
     </FormSection>
   );

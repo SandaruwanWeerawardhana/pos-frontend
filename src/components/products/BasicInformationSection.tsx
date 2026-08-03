@@ -3,10 +3,11 @@
 import { BarcodeScanner } from "@/components/hardware/BarcodeScanner";
 import { Combobox } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import type { CatalogueOptions } from "@/lib/hooks/use-product-catalogue-options";
 import type { DuplicateState } from "@/lib/hooks/use-product-duplicates";
-import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
+import { BARCODE_SYMBOLOGY_OPTIONS, SYMBOLOGY_LENGTHS } from "@/lib/products/constants";
 import {
   generateBarcode,
   generateSku,
@@ -14,14 +15,13 @@ import {
   isValidGtin,
 } from "@/lib/products/generate";
 import type { BarcodeSource } from "@/lib/products/schema";
-import type { ProductUnit } from "@/lib/types";
-import { Info, ScanLine, Sparkles } from "lucide-react";
+import { FileText, ScanLine, Sparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
-interface ProductInfoSectionProps extends ProductSectionProps {
+interface BasicInformationSectionProps extends ProductSectionProps {
   options: CatalogueOptions;
   duplicates: DuplicateState;
   errorCount: number;
@@ -46,7 +46,7 @@ function GenerateButton({
 
 const BARCODE_SOURCES: { value: BarcodeSource; label: string }[] = [
   { value: "package", label: "On package" },
-  { value: "generated", label: "Generate internal" },
+  { value: "generated", label: "In-store" },
 ];
 
 function BarcodeSourceToggle({
@@ -56,7 +56,7 @@ function BarcodeSourceToggle({
   return (
     <div
       role="radiogroup"
-      aria-label="Barcode source"
+      aria-label="Product code source"
       className="inline-flex gap-0.5 rounded-lg border border-outline-variant bg-surface-container-low p-0.5 dark:border-zinc-700 dark:bg-zinc-800/60"
     >
       {BARCODE_SOURCES.map((option) => {
@@ -87,23 +87,35 @@ function toOptions(values: string[]) {
 }
 
 /**
- * Name, category, SKU and barcode, plus the generators and the scanner.
+ * Name, code, taxonomy and description, plus the generators and the scanner.
+ *
+ * "Code product" is the scannable code itself — the SKU beside it is the
+ * internal reference the catalogue and the API key on, which is why both are
+ * asked for rather than one being derived from the other at save time.
  *
  * Only the fields the generators read are watched, so typing a description
  * does not re-render this section's derived bits.
  */
-export function ProductInfoSection({
+export function BasicInformationSection({
   form,
   options,
   duplicates,
   errorCount,
-}: Readonly<ProductInfoSectionProps>) {
+}: Readonly<BasicInformationSectionProps>) {
   const { control, register, setValue, formState } = form;
   const errors = formState.errors;
 
-  const [name, category, sku, barcode, barcodeSource] = useWatch({
+  const [name, category, brand, sku, barcode, barcodeSource, symbology] = useWatch({
     control,
-    name: ["name", "category", "sku", "barcode", "barcode_source"],
+    name: [
+      "name",
+      "category",
+      "brand",
+      "sku",
+      "barcode",
+      "barcode_source",
+      "barcode_symbology",
+    ],
   });
   const [scanning, setScanning] = useState(false);
 
@@ -111,10 +123,10 @@ export function ProductInfoSection({
     errors.sku?.message ?? (duplicates.skuTaken ? "SKU already exists" : undefined);
   const barcodeError =
     errors.barcode?.message ??
-    (duplicates.barcodeTaken ? "Barcode already exists" : undefined);
+    (duplicates.barcodeTaken ? "Product code already exists" : undefined);
 
   function fillSku() {
-    setValue("sku", generateSku({ name: name || "item", category }), {
+    setValue("sku", generateSku({ name: name || "item", category, brand }), {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -124,14 +136,16 @@ export function ProductInfoSection({
     setValue("barcode", value, { shouldDirty: true, shouldValidate: true });
   }
 
+  /**
+   * A minted code is always an EAN-13, so the symbology moves with it —
+   * printing an in-store EAN-13 as Code 39 would produce a label the till
+   * cannot read back.
+   */
   function fillBarcode() {
     writeBarcode(generateBarcode());
+    setValue("barcode_symbology", "EAN13", { shouldDirty: true, shouldValidate: true });
   }
 
-  /**
-   * Switching to an in-store code with nothing typed yet mints one straight
-   * away, since that is the only reason to pick this mode.
-   */
   function pickSource(next: BarcodeSource) {
     setValue("barcode_source", next, { shouldDirty: true, shouldValidate: true });
     setScanning(false);
@@ -139,56 +153,57 @@ export function ProductInfoSection({
   }
 
   function handleScan(code: string) {
-    const digits = code.replace(/\D/g, "");
-    if (!digits) return;
-    writeBarcode(digits);
+    const scanned = code.trim();
+    if (!scanned) return;
+    writeBarcode(scanned);
     setScanning(false);
   }
 
   const packageMode = barcodeSource === "package";
-  const checkable = packageMode && isGtinLength(barcode ?? "");
+  const fixedLength = SYMBOLOGY_LENGTHS[symbology ?? "CODE128"];
+  const checkable = isGtinLength(barcode ?? "");
 
   return (
     <FormSection
-      id="product-information"
-      title="Product information"
-      icon={<Info size={18} />}
+      id="basic-information"
+      title="Basic Information"
+      icon={<FileText size={18} />}
       errorCount={errorCount}
       plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Input
-            label={
-              <>
-                Product name
-                <RequiredMark />
-              </>
-            }
-            placeholder="e.g. Organic whole milk 2 L"
-            autoComplete="off"
-            enterKeyHint="next"
-            error={errors.name?.message}
-            {...register("name")}
-          />
-        </div>
-
         <Input
           label={
-            <span className="flex items-center justify-between gap-2">
-              <span>
-                SKU
-                <RequiredMark />
-              </span>
-              <GenerateButton onClick={fillSku} label="Generate" />
-            </span>
+            <>
+              Name
+              <RequiredMark />
+            </>
           }
-          placeholder="DAI-ANC-MILK-1042"
+          placeholder="Enter Name Product"
           autoComplete="off"
-          spellCheck={false}
-          className="font-mono"
-          error={skuError}
-          {...register("sku")}
+          enterKeyHint="next"
+          error={errors.name?.message}
+          {...register("name")}
+        />
+
+        <Controller
+          control={control}
+          name="barcode_symbology"
+          render={({ field }) => (
+            <Select
+              label={
+                <>
+                  Barcode Symbology
+                  <RequiredMark />
+                </>
+              }
+              options={BARCODE_SYMBOLOGY_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.barcode_symbology?.message}
+            />
+          )}
         />
 
         <div className="flex flex-col gap-2">
@@ -196,7 +211,7 @@ export function ProductInfoSection({
             label={
               <span className="flex flex-wrap items-center justify-between gap-2">
                 <span>
-                  Barcode
+                  Code Product
                   <RequiredMark />
                 </span>
                 <BarcodeSourceToggle
@@ -205,13 +220,13 @@ export function ProductInfoSection({
                 />
               </span>
             }
-            placeholder={packageMode ? "5901234123457" : "2000000000017"}
+            placeholder={fixedLength ? "5901234123457" : "75724471"}
             hint={
-              packageMode
-                ? "Scan or type the code printed on the package."
-                : "In-store EAN-13 (GS1 prefix 200) for items with no printed code."
+              fixedLength
+                ? `${symbology} — exactly ${fixedLength} digits.`
+                : "Scan the package code, or type your own shelf code."
             }
-            inputMode="numeric"
+            inputMode={fixedLength ? "numeric" : "text"}
             autoComplete="off"
             spellCheck={false}
             className="font-mono"
@@ -257,18 +272,37 @@ export function ProductInfoSection({
           )}
         </div>
 
+        <Input
+          label={
+            <span className="flex items-center justify-between gap-2">
+              <span>
+                SKU
+                <RequiredMark />
+              </span>
+              <GenerateButton onClick={fillSku} label="Generate" />
+            </span>
+          }
+          placeholder="DAI-ANC-MILK-1042"
+          hint="Internal reference used by the catalogue and stock reports."
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono"
+          error={skuError}
+          {...register("sku")}
+        />
+
         <Controller
           control={control}
           name="category"
           render={({ field }) => (
             <Combobox
-              label="Category"
+              label="Categories"
               required
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
               options={toOptions(options.categories)}
-              placeholder="Search or add a category"
+              placeholder="Choose Category"
               allowCustom
               emptyMessage="Type to add a new category"
               error={errors.category?.message}
@@ -278,25 +312,44 @@ export function ProductInfoSection({
 
         <Controller
           control={control}
-          name="unit"
+          name="subcategory"
           render={({ field }) => (
             <Combobox
-              label="Unit"
-              required
+              label="Subcategories"
               value={field.value}
-              onChange={(value) => field.onChange(value as ProductUnit)}
+              onChange={field.onChange}
               onBlur={field.onBlur}
-              options={PRODUCT_UNIT_OPTIONS}
-              placeholder="Search units"
-              error={errors.unit?.message}
+              options={toOptions(options.subcategories)}
+              placeholder="Choose Sub Category"
+              allowCustom
+              emptyMessage="Type to add a new subcategory"
+              error={errors.subcategory?.message}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="brand"
+          render={({ field }) => (
+            <Combobox
+              label="Brand"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              options={toOptions(options.brands)}
+              placeholder="Choose Brand"
+              allowCustom
+              emptyMessage="Type to add a new brand"
+              error={errors.brand?.message}
             />
           )}
         />
 
         <div className="sm:col-span-2">
           <Textarea
-            label="Product description"
-            placeholder="Shown on the product page and the shelf label."
+            label="Description"
+            placeholder="A few words …"
             hint="Optional — up to 1000 characters."
             error={errors.description?.message}
             {...register("description")}
@@ -307,7 +360,7 @@ export function ProductInfoSection({
       {(sku || barcode) && (
         <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-surface-container-low px-3 py-2 font-mono text-xs text-on-surface-variant dark:bg-zinc-800/60 dark:text-zinc-400">
           {sku && <span>SKU {sku}</span>}
-          {barcode && <span>EAN {barcode}</span>}
+          {barcode && <span>CODE {barcode}</span>}
           {duplicates.checking && <span>checking uniqueness…</span>}
         </p>
       )}

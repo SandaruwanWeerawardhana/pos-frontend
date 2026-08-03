@@ -527,6 +527,39 @@ export async function listBrands(): Promise<string[]> {
 }
 
 /**
+ * Subcategories in use, optionally narrowed to one parent category. The
+ * taxonomy is free-form — a subcategory exists because a product was filed
+ * under it — so there is no separate table to read.
+ */
+export async function listSubcategories(category?: string): Promise<string[]> {
+  const products = await db.products.toArray();
+  const needle = category?.trim().toLowerCase();
+  const names = new Set<string>();
+  for (const product of products) {
+    if (!product.subcategory?.trim()) continue;
+    if (needle && product.category?.trim().toLowerCase() !== needle) continue;
+    names.add(product.subcategory.trim());
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Rack/shelf references already in use, so the product form can offer the
+ * existing ones instead of inviting a second spelling of the same shelf.
+ */
+export async function listShelfLocations(): Promise<string[]> {
+  const products = await db.products.toArray();
+  const names = new Set<string>();
+  for (const product of products) {
+    if (product.shelf_location?.trim()) names.add(product.shelf_location.trim());
+    for (const entry of product.opening_stock ?? []) {
+      if (entry.location?.trim()) names.add(entry.location.trim());
+    }
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+/**
  * Persisted once on first access, never changed after that.
  */
 export async function getDeviceId(): Promise<string> {

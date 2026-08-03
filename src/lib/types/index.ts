@@ -13,6 +13,66 @@ export type SyncStatus = "pending" | "syncing" | "synced" | "conflict" | "error"
  */
 export type ProductUnit = "unit" | "kg" | "g" | "l" | "ml" | "pack" | "box";
 
+/**
+ * How a product behaves in the catalogue. "standard" is a single sellable
+ * line; "service" carries no stock; "variable" and "combo" are placeholders
+ * for Phase 2 variants and bundles.
+ */
+export type ProductType = "standard" | "variable" | "service" | "combo";
+
+/** Symbology the shelf label is printed in. */
+export type BarcodeSymbology =
+  | "CODE128"
+  | "CODE39"
+  | "EAN13"
+  | "EAN8"
+  | "UPCA"
+  | "UPCE";
+
+/** Whether `price_cents` already contains the tax or has it added on top. */
+export type TaxType = "exclusive" | "inclusive";
+
+/** Shape of a product's standing discount — not the cart-level DiscountType. */
+export type ProductDiscountType = "percent" | "fixed";
+
+export type WarrantyUnit = "days" | "months" | "years";
+
+export interface ProductWarranty {
+  period: number;
+  unit: WarrantyUnit;
+  /** Manufacturer guarantee on top of the warranty period. */
+  has_guarantee: boolean;
+  terms?: string;
+}
+
+/**
+ * Opening quantity per warehouse, captured once when the product is created.
+ * `stock_quantity` is the sum of these; the per-warehouse split is what the
+ * inventory screens read. `location` is a rack/shelf reference only — stock is
+ * tracked by warehouse, never by location.
+ */
+export interface ProductOpeningStock {
+  warehouse_id: string;
+  quantity: number;
+  location?: string;
+}
+
+/**
+ * Fields the pharmacy business type adds. Kept as one nested object so a
+ * grocery product carries none of them rather than eight empty strings.
+ */
+export interface ProductPharmacy {
+  /** Capture batch numbers and expiry dates on purchase and sale. */
+  track_batches: boolean;
+  prescription_required: boolean;
+  generic_name?: string;
+  strength?: string;
+  dosage_form?: string;
+  pack_size?: string;
+  manufacturer?: string;
+  drug_schedule?: string;
+}
+
 export interface ProductBatch {
   batch_no: string;
   /** ISO yyyy-mm-dd, null when not perishable. */
@@ -72,6 +132,47 @@ export interface Product {
    * PluginField.key. Opaque to the core app.
    */
   plugin_data?: Record<string, string | number | boolean>;
+
+  /* ── Catalogue detail ──────────────────────────────────────────────────
+   * Everything below is captured by the product form and stored locally.
+   * The Phase 1 API does not carry these yet (docs/API_CONTRACT.md), so a
+   * pull from the server leaves them untouched rather than clearing them.
+   */
+  subcategory?: string;
+  /** Symbology the shelf label prints `barcode` in. Defaults to CODE128. */
+  barcode_symbology?: BarcodeSymbology;
+  product_type?: ProductType;
+  /** Unit the till sells in, when it differs from `unit`. */
+  sale_unit?: ProductUnit;
+  /** Unit goods are bought in, when it differs from `unit`. */
+  purchase_unit?: ProductUnit;
+  /** Shipping weight in kilograms — not the sold quantity. */
+  weight?: number;
+  /** Packaging size in inches, for shipping estimates. */
+  dimensions?: { length: number; width: number; height: number };
+  /** Integer cents. */
+  wholesale_price_cents?: number;
+  /** Integer cents. Floor the till may not sell below. */
+  min_price_cents?: number;
+  tax_type?: TaxType;
+  discount_type?: ProductDiscountType;
+  /** Integer cents, set instead of `discount_percent` for fixed discounts. */
+  discount_cents?: number;
+  /** Loyalty points awarded per sale of this product. */
+  loyalty_points?: number;
+  warranty?: ProductWarranty;
+  opening_stock?: ProductOpeningStock[];
+  /** Each unit carries an IMEI/serial captured at sale time. */
+  has_serial?: boolean;
+  /** Stocked but not sellable — raw materials, packaging. */
+  not_for_selling?: boolean;
+  /** Inactive products stay in reports but leave the till's search. */
+  is_active?: boolean;
+  is_featured?: boolean;
+  hide_from_online?: boolean;
+  enable_preorder?: boolean;
+  pharmacy?: ProductPharmacy;
+
   /**
    * Created on this device and not yet accepted by the server. Cleared by the
    * sync manager once POST /products has stored it, so a pull can safely

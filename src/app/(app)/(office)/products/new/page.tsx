@@ -1,10 +1,11 @@
 "use client";
 
 import type { PluginFieldValues } from "@/components/plugin-slots/PluginProductForm";
+import { BasicInformationSection } from "@/components/products/BasicInformationSection";
 import { InventorySection } from "@/components/products/InventorySection";
+import { OnThisPageNav } from "@/components/products/OnThisPageNav";
 import { PricingSection } from "@/components/products/PricingSection";
 import { ProductFormSkeleton } from "@/components/products/ProductFormSkeleton";
-import { ProductInfoSection } from "@/components/products/ProductInfoSection";
 import { ProductSummaryPanel } from "@/components/products/ProductSummaryPanel";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -26,68 +27,170 @@ import {
 import { ROUTES } from "@/lib/types/routes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { History, Save, X } from "lucide-react";
+import {
+  CloudUpload,
+  Database,
+  FileText,
+  HeartPulse,
+  History,
+  Info,
+  MapPin,
+  Package,
+  Save,
+  ShieldCheck,
+  ShoppingBag,
+  Tags,
+  Upload,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useMemo, useState, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 /**
  * Below-the-fold sections are code-split: a cashier adding a quick line often
- * never opens Media, so its bundle should not block the first paint of the
- * fields everyone fills in.
+ * never opens Media or Pharmacy, so their bundles should not block the first
+ * paint of the fields everyone fills in.
  */
-const GrocerySection = lazy(() =>
-  import("@/components/products/GrocerySection").then((module) => ({
-    default: module.GrocerySection,
-  })),
-);
 const MediaSection = lazy(() =>
   import("@/components/products/MediaSection").then((module) => ({
     default: module.MediaSection,
   })),
 );
-const AdditionalSettingsSection = lazy(() =>
-  import("@/components/products/AdditionalSettingsSection").then((module) => ({
-    default: module.AdditionalSettingsSection,
+const WarrantySection = lazy(() =>
+  import("@/components/products/WarrantySection").then((module) => ({
+    default: module.WarrantySection,
+  })),
+);
+const OpeningStockSection = lazy(() =>
+  import("@/components/products/OpeningStockSection").then((module) => ({
+    default: module.OpeningStockSection,
+  })),
+);
+const LocationSection = lazy(() =>
+  import("@/components/products/LocationSection").then((module) => ({
+    default: module.LocationSection,
+  })),
+);
+const OptionsSection = lazy(() =>
+  import("@/components/products/OptionsSection").then((module) => ({
+    default: module.OptionsSection,
+  })),
+);
+const PharmacySection = lazy(() =>
+  import("@/components/products/PharmacySection").then((module) => ({
+    default: module.PharmacySection,
   })),
 );
 
 const DRAFT_KEY = "pos:draft:product-new";
 
-
-const SECTIONS: { id: string; label: string; fields: (keyof ProductFormValues)[] }[] =
-  [
-    {
-      id: "product-information",
-      label: "Product information",
-      fields: [
-        "name",
-        "sku",
-        "barcode",
-        "barcode_source",
-        "category",
-        "unit",
-        "description",
-      ],
-    },
-    {
-      id: "pricing",
-      label: "Pricing",
-      fields: ["selling_price", "cost_price", "tax_rate", "discount_percent"],
-    },
-    {
-      id: "inventory",
-      label: "Inventory",
-      fields: ["initial_stock", "min_stock_level"],
-    },
-    {
-      id: "grocery",
-      label: "Grocery information",
-      fields: ["expiry_date", "manufacturing_date"],
-    },
-    { id: "media", label: "Media", fields: ["images"] },
-    { id: "additional-settings", label: "Additional settings", fields: [] },
-  ];
+/**
+ * Drives both the jump list and the per-section issue counts, so a section
+ * cannot appear in one and not the other. `fields` are the form fields whose
+ * errors belong to that section; record fields (opening stock, locations) are
+ * counted separately because their errors are keyed by warehouse id.
+ */
+const SECTIONS: {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  fields: (keyof ProductFormValues)[];
+}[] = [
+  {
+    id: "basic-information",
+    label: "Basic Information",
+    icon: <FileText size={15} />,
+    fields: [
+      "name",
+      "barcode_symbology",
+      "barcode",
+      "barcode_source",
+      "sku",
+      "category",
+      "subcategory",
+      "brand",
+      "description",
+    ],
+  },
+  {
+    id: "images",
+    label: "Product images gallery",
+    icon: <Upload size={15} />,
+    fields: ["images"],
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: <Package size={15} />,
+    fields: [
+      "product_type",
+      "unit",
+      "sale_unit",
+      "purchase_unit",
+      "stock_alert",
+      "weight",
+      "length",
+      "width",
+      "height",
+    ],
+  },
+  {
+    id: "pricing",
+    label: "Pricing And Tax",
+    icon: <Tags size={15} />,
+    fields: [
+      "cost_price",
+      "selling_price",
+      "wholesale_price",
+      "min_selling_price",
+      "tax_rate",
+      "tax_type",
+      "discount_type",
+      "discount_value",
+      "points",
+    ],
+  },
+  {
+    id: "warranty",
+    label: "Warranty & Guarantee Tracking",
+    icon: <ShieldCheck size={15} />,
+    fields: ["warranty_period", "warranty_unit", "warranty_terms"],
+  },
+  {
+    id: "opening-stock",
+    label: "Opening Stock",
+    icon: <ShoppingBag size={15} />,
+    fields: ["opening_stock"],
+  },
+  {
+    id: "location",
+    label: "Internal Location (Rack/Shelf)",
+    icon: <MapPin size={15} />,
+    fields: ["rack_locations"],
+  },
+  {
+    id: "options",
+    label: "Options",
+    icon: <Database size={15} />,
+    fields: [],
+  },
+  {
+    id: "pharmacy",
+    label: "Pharmacy Settings",
+    icon: <HeartPulse size={15} />,
+    fields: [
+      "generic_name",
+      "strength",
+      "dosage_form",
+      "pack_size",
+      "manufacturer",
+      "drug_schedule",
+      "expiry_date",
+      "manufacturing_date",
+    ],
+  },
+];
 
 function SectionFallback() {
   return <Skeleton className="h-20 w-full rounded-2xl" />;
@@ -120,54 +223,74 @@ export default function ProductAddPage() {
   });
   const guard = useUnsavedChanges(dirty);
 
-  const sectionStatuses = SECTIONS.map((section) => ({
-    id: section.id,
-    label: section.label,
-    errorCount: section.fields.filter((field) => formState.errors[field]).length,
-  }));
-  const errorCount = sectionStatuses.reduce(
+  const errors = formState.errors;
+  const navSections = useMemo(
+    () =>
+      SECTIONS.map((section) => ({
+        id: section.id,
+        label: section.label,
+        icon: section.icon,
+        errorCount: section.fields.reduce((total, field) => {
+          const entry = errors[field];
+          if (!entry) return total;
+          // Record fields hold one error per warehouse rather than one message.
+          if (field === "opening_stock" || field === "rack_locations") {
+            return total + Object.keys(entry).length;
+          }
+          return total + 1;
+        }, 0),
+      })),
+    [errors],
+  );
+  const errorCount = navSections.reduce(
     (total, section) => total + section.errorCount,
     0,
   );
   const errorsFor = (id: string) =>
-    sectionStatuses.find((section) => section.id === id)?.errorCount ?? 0;
+    navSections.find((section) => section.id === id)?.errorCount ?? 0;
 
-  const onSubmit = handleSubmit(async (submitted) => {
-    if (duplicates.skuTaken) {
-      setError("sku", { type: "manual", message: "SKU already exists" });
-      setFocus("sku");
-      return;
-    }
-    if (duplicates.barcodeTaken) {
-      setError("barcode", { type: "manual", message: "Barcode already exists" });
-      setFocus("barcode");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const product = toProduct(submitted, crypto.randomUUID());
-      await addProduct(
-        Object.keys(pluginValues).length > 0
-          ? { ...product, plugin_data: pluginValues }
-          : product,
-      );
-      draft.discard();
-      reset(DEFAULT_PRODUCT_FORM_VALUES);
-      await queryClient.invalidateQueries({ queryKey: ["product-options"] });
-      showToast(`${product.name} added to the catalogue`, "success");
-      router.push(ROUTES.products);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to add product";
-      if (message.includes("SKU")) setError("sku", { type: "manual", message });
-      if (message.includes("Barcode")) {
-        setError("barcode", { type: "manual", message });
+  const onSubmit = handleSubmit(
+    async (submitted) => {
+      if (duplicates.skuTaken) {
+        setError("sku", { type: "manual", message: "SKU already exists" });
+        setFocus("sku");
+        return;
       }
-      showToast(message, "error");
-      setSaving(false);
-    }
-  }, () => showToast("Some fields need attention before saving", "error"));
+      if (duplicates.barcodeTaken) {
+        setError("barcode", {
+          type: "manual",
+          message: "Product code already exists",
+        });
+        setFocus("barcode");
+        return;
+      }
+
+      setSaving(true);
+      try {
+        const product = toProduct(submitted, crypto.randomUUID());
+        await addProduct(
+          Object.keys(pluginValues).length > 0
+            ? { ...product, plugin_data: pluginValues }
+            : product,
+        );
+        draft.discard();
+        reset(DEFAULT_PRODUCT_FORM_VALUES);
+        await queryClient.invalidateQueries({ queryKey: ["product-options"] });
+        showToast(`${product.name} added to the catalogue`, "success");
+        router.push(ROUTES.products);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to add product";
+        if (message.includes("SKU")) setError("sku", { type: "manual", message });
+        if (message.includes("Barcode")) {
+          setError("barcode", { type: "manual", message });
+        }
+        showToast(message, "error");
+        setSaving(false);
+      }
+    },
+    () => showToast("Some fields need attention before saving", "error"),
+  );
 
   useKeyboardShortcuts([
     { key: "s", ctrl: true, label: "Save product", handler: () => void onSubmit() },
@@ -232,61 +355,113 @@ export default function ProductAddPage() {
           noValidate
           className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
         >
-          <div className="min-w-0 rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-4 shadow-sm backdrop-blur-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div className="flex flex-col gap-8">
-              <ProductInfoSection
-                form={form}
-                options={options}
-                duplicates={duplicates}
-                errorCount={errorsFor("product-information")}
-              />
-              <PricingSection form={form} errorCount={errorsFor("pricing")} />
-              <InventorySection form={form} errorCount={errorsFor("inventory")} />
-              <Suspense fallback={<SectionFallback />}>
-                <GrocerySection form={form} errorCount={errorsFor("grocery")} />
-              </Suspense>
-              <Suspense fallback={<SectionFallback />}>
-                <MediaSection form={form} errorCount={errorsFor("media")} />
-              </Suspense>
-              <Suspense fallback={<SectionFallback />}>
-                <AdditionalSettingsSection
+          <div className="flex min-w-0 flex-col gap-5">
+            <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-4 shadow-sm backdrop-blur-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
+              <div className="flex flex-col gap-8">
+                <BasicInformationSection
                   form={form}
-                  pluginValues={pluginValues}
-                  onPluginChange={(key, value) =>
-                    setPluginValues((current) => ({ ...current, [key]: value }))
-                  }
+                  options={options}
+                  duplicates={duplicates}
+                  errorCount={errorsFor("basic-information")}
                 />
-              </Suspense>
+                <Suspense fallback={<SectionFallback />}>
+                  <MediaSection form={form} errorCount={errorsFor("images")} />
+                </Suspense>
+                <InventorySection
+                  form={form}
+                  errorCount={errorsFor("inventory")}
+                />
+                <PricingSection form={form} errorCount={errorsFor("pricing")} />
+                <Suspense fallback={<SectionFallback />}>
+                  <WarrantySection
+                    form={form}
+                    errorCount={errorsFor("warranty")}
+                  />
+                </Suspense>
+                <Suspense fallback={<SectionFallback />}>
+                  <OpeningStockSection
+                    form={form}
+                    warehouses={options.warehouses}
+                    errorCount={errorsFor("opening-stock")}
+                  />
+                </Suspense>
+                <Suspense fallback={<SectionFallback />}>
+                  <LocationSection
+                    form={form}
+                    warehouses={options.warehouses}
+                    knownLocations={options.locations}
+                    errorCount={errorsFor("location")}
+                  />
+                </Suspense>
+                <Suspense fallback={<SectionFallback />}>
+                  <OptionsSection
+                    form={form}
+                    pluginValues={pluginValues}
+                    onPluginChange={(key, value) =>
+                      setPluginValues((current) => ({ ...current, [key]: value }))
+                    }
+                  />
+                </Suspense>
+                <Suspense fallback={<SectionFallback />}>
+                  <PharmacySection
+                    form={form}
+                    errorCount={errorsFor("pharmacy")}
+                  />
+                </Suspense>
+              </div>
+            </div>
+
+            {/* Sticky rather than fixed so it rides the bottom of the viewport
+                while the long form scrolls behind it, at every width, and
+                still comes to rest inside the content column. */}
+            <div className="sticky bottom-0 z-40 -mx-1 flex flex-col gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-elevated backdrop-blur-md sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900/95">
+              <p className="flex items-center gap-2 text-xs text-on-surface-variant dark:text-zinc-400">
+                {errorCount > 0 ? (
+                  <>
+                    <Info size={14} aria-hidden className="text-error" />
+                    <span role="status" className="text-error">
+                      {errorCount} field{errorCount === 1 ? "" : "s"} need
+                      attention
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload size={14} aria-hidden />
+                    {draft.savedAt
+                      ? `Draft saved ${new Date(draft.savedAt).toLocaleTimeString()}`
+                      : "Review the form, then save your product."}
+                  </>
+                )}
+              </p>
+              <span className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => guard.requestNavigation(ROUTES.products)}
+                  disabled={saving}
+                  className="flex-1 sm:flex-none"
+                >
+                  <X size={17} />
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={saving}
+                  className="flex-[2] sm:flex-none"
+                >
+                  <Save size={17} />
+                  {saving ? "Saving…" : "Save Product"}
+                </Button>
+              </span>
             </div>
           </div>
 
-          <ProductSummaryPanel
-            values={values}
-            errorCount={errorCount}
-            draftSavedAt={draft.savedAt}
-            saving={saving}
-            onCancel={() => guard.requestNavigation(ROUTES.products)}
-          />
-
-          {/* Mobile/tablet action bar. Fixed rather than sticky so it stays
-              reachable with a thumb while the long form scrolls behind it. */}
-          <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-outline-variant bg-surface-container-lowest/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95">
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              onClick={() => guard.requestNavigation(ROUTES.products)}
-              disabled={saving}
-              className="flex-1"
-            >
-              <X size={17} />
-              Cancel
-            </Button>
-            <Button type="submit" size="lg" disabled={saving} className="flex-[2]">
-              <Save size={17} />
-              {saving ? "Saving…" : "Save product"}
-            </Button>
-          </div>
+          <aside className="hidden lg:sticky lg:top-20 lg:flex lg:h-fit lg:flex-col lg:gap-4">
+            <OnThisPageNav sections={navSections} />
+            <ProductSummaryPanel values={values} />
+          </aside>
         </form>
       )}
 
