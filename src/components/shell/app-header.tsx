@@ -13,11 +13,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import {
   Globe,
   KeyRound,
-  LayoutGrid,
   LogOut,
   Maximize2,
   Menu,
   Minimize2,
+  Monitor,
   Search,
   User as UserIcon,
   Wifi,
@@ -235,9 +235,9 @@ export function AppHeader() {
         {!posOnly && (
           <Link
             href={ROUTES.pos.root}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:scale-105 active:scale-95"
+            className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-on-primary transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:scale-105 active:scale-95"
           >
-            <LayoutGrid size={14} aria-hidden />
+            <Monitor size={14} aria-hidden />
             POS
           </Link>
         )}
