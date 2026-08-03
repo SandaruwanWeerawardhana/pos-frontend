@@ -1,8 +1,10 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { Plus, Scale, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSettings } from "@/lib/hooks/use-settings";
+import { staggerDelay } from "@/lib/motion";
 import type { Product, StoreSettings } from "@/lib/types";
 
 interface ProductGridProps {
@@ -47,11 +49,13 @@ function ProductCard({
   settings,
   money,
   onAdd,
+  style,
 }: Readonly<{
   product: Product;
   settings: StoreSettings;
   money: (cents: number) => string;
   onAdd: (product: Product) => void;
+  style?: CSSProperties;
 }>) {
   const disabled = product.stock_quantity <= 0;
 
@@ -60,8 +64,9 @@ function ProductCard({
       type="button"
       onClick={() => onAdd(product)}
       disabled={disabled}
+      style={style}
       aria-label={`Add ${product.name} to cart`}
-      className="group relative flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 text-left transition-shadow hover:shadow-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-900"
+      className="group animate-fade-in-up relative flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 text-left transition-[box-shadow,transform,border-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:border-outline hover:shadow-elevated active:translate-y-0 active:scale-[0.97] active:duration-[var(--duration-instant)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
     >
       <div className="relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-surface-container text-3xl font-semibold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-600">
         {product.image_url ? (
@@ -72,7 +77,7 @@ function ProductCard({
             src={product.image_url}
             alt=""
             loading="lazy"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-[var(--duration-slow)] ease-[var(--ease-standard)] group-hover:scale-105"
           />
         ) : (
           product.name.charAt(0).toUpperCase()
@@ -105,9 +110,13 @@ function ProductCard({
         <StockBadge product={product} threshold={settings.low_stock_threshold} />
         <span
           aria-hidden
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-on-secondary transition-colors group-hover:bg-secondary/90 group-active:scale-95 group-disabled:bg-zinc-300 dark:group-disabled:bg-zinc-700"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-on-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-spring)] group-hover:scale-110 group-hover:bg-secondary/90 group-active:scale-90 group-disabled:scale-100 group-disabled:bg-zinc-300 dark:group-disabled:bg-zinc-700"
         >
-          <Plus size={20} aria-hidden />
+          <Plus
+            size={20}
+            aria-hidden
+            className="transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:rotate-90"
+          />
         </span>
       </div>
     </button>
@@ -129,13 +138,14 @@ export function ProductGrid({ products, onAdd }: Readonly<ProductGridProps>) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
-      {products.map((product) => (
+      {products.map((product, index) => (
         <ProductCard
           key={product.id}
           product={product}
           settings={settings}
           money={money}
           onAdd={onAdd}
+          style={staggerDelay(index)}
         />
       ))}
     </div>

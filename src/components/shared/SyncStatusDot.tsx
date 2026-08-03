@@ -20,9 +20,23 @@ export function SyncStatusDot() {
     synced: "Synced",
   }[state];
 
+  /* Work still in flight gets an expanding halo; a settled "Synced" stays
+     still so the till is not permanently blinking at the cashier. */
+  const unsettled = state !== "synced";
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 transition-colors duration-[var(--duration-base)] dark:text-zinc-400">
+      <span className="relative inline-flex h-1.5 w-1.5">
+        {unsettled && (
+          <span
+            aria-hidden
+            className={`animate-pulse-ring absolute inset-0 rounded-full ${dotClass}`}
+          />
+        )}
+        <span
+          className={`relative h-1.5 w-1.5 rounded-full transition-colors duration-[var(--duration-base)] ${dotClass}`}
+        />
+      </span>
       {label}
     </span>
   );

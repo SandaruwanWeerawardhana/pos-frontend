@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { Spinner } from "./Spinner";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type ButtonSize = "sm" | "md" | "lg" | "xl";
@@ -7,6 +8,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
+  /** Shows an inline spinner and blocks input without collapsing the button width. */
+  loading?: boolean;
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -30,17 +33,38 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   xl: "min-h-16 px-8 py-4 text-lg",
 };
 
+const SPINNER_SIZES = {
+  sm: "sm",
+  md: "sm",
+  lg: "md",
+  xl: "md",
+} as const;
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "primary", size = "md", fullWidth = false, className = "", ...props },
+  {
+    variant = "primary",
+    size = "md",
+    fullWidth = false,
+    loading = false,
+    className = "",
+    children,
+    disabled,
+    ...props
+  },
   ref,
 ) {
   return (
     <button
       ref={ref}
-      className={`inline-flex select-none items-center justify-center gap-2 rounded-lg font-medium transition-all hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 disabled:hover:scale-100 ${
+      disabled={disabled ?? loading}
+      aria-busy={loading || undefined}
+      className={`inline-flex select-none items-center justify-center gap-2 rounded-lg font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] active:duration-[var(--duration-instant)] disabled:pointer-events-none disabled:opacity-50 disabled:hover:scale-100 ${
         VARIANT_CLASSES[variant]
       } ${SIZE_CLASSES[size]} ${fullWidth ? "w-full" : ""} ${className}`}
       {...props}
-    />
+    >
+      {loading && <Spinner size={SPINNER_SIZES[size]} label={null} />}
+      {children}
+    </button>
   );
 });

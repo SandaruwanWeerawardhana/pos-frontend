@@ -205,7 +205,7 @@ export function CommandPalette() {
   if (posOnly || !open) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-start justify-center bg-black/50 p-4 pt-[10vh] backdrop-blur-sm">
+    <div className="animate-fade-in fixed inset-0 z-[150] flex items-start justify-center bg-black/50 p-4 pt-[10vh] backdrop-blur-sm">
       <button
         type="button"
         aria-label="Close search"
@@ -217,7 +217,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Global search and commands"
-        className="relative flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        className="animate-scale-in relative flex w-full max-w-xl origin-top flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
       >
         <div className="flex items-center gap-3 border-b border-outline-variant px-4 dark:border-zinc-800">
           <Search size={18} className="shrink-0 text-on-surface-variant" aria-hidden />
@@ -242,7 +242,7 @@ export function CommandPalette() {
           className="max-h-[52vh] overflow-y-auto p-2"
         >
           {results.length === 0 && (
-            <li className="px-3 py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+            <li className="animate-fade-in px-3 py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
               No matches for “{query}”.
             </li>
           )}
@@ -263,13 +263,17 @@ export function CommandPalette() {
                   data-active={isActive}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectItem(item)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors duration-[var(--duration-instant)] ease-[var(--ease-standard)] ${
                     isActive
                       ? "bg-primary text-on-primary"
                       : "text-on-surface hover:bg-surface-container dark:text-zinc-100 dark:hover:bg-zinc-800"
                   }`}
                 >
-                  <span className={isActive ? "opacity-90" : "opacity-60"}>
+                  <span
+                    className={`transition-opacity duration-[var(--duration-instant)] ${
+                      isActive ? "opacity-90" : "opacity-60"
+                    }`}
+                  >
                     {item.icon}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
@@ -284,7 +288,13 @@ export function CommandPalette() {
                       {item.hint}
                     </span>
                   )}
-                  {isActive && <CornerDownLeft size={13} aria-hidden />}
+                  {isActive && (
+                    <CornerDownLeft
+                      size={13}
+                      className="animate-slide-in-right"
+                      aria-hidden
+                    />
+                  )}
                 </button>
               </li>
             );

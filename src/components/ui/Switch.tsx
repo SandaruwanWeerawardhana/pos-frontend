@@ -31,7 +31,7 @@ export function Switch({
   return (
     <label
       htmlFor={switchId}
-      className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-3.5 py-2.5 transition-colors hover:bg-surface-container-low has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/60 ${
+      className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-3.5 py-2.5 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-outline hover:bg-surface-container-low has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/60 ${
         disabled ? "cursor-not-allowed opacity-50" : ""
       }`}
     >
@@ -60,11 +60,11 @@ export function Switch({
           checked={checked}
           disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
-          className="peer h-7 w-12 cursor-pointer appearance-none rounded-full bg-surface-container-highest outline-none transition-colors checked:bg-secondary disabled:cursor-not-allowed dark:bg-zinc-700 dark:checked:bg-blue-500"
+          className="peer h-7 w-12 cursor-pointer appearance-none rounded-full bg-surface-container-highest outline-none transition-colors duration-[var(--duration-base)] ease-[var(--ease-standard)] checked:bg-secondary disabled:cursor-not-allowed dark:bg-zinc-700 dark:checked:bg-blue-500"
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-5"
+          className="pointer-events-none absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] peer-checked:translate-x-5"
         />
       </span>
     </label>

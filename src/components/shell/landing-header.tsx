@@ -7,7 +7,7 @@ export function LandingHeader() {
       <span className="text-lg font-semibold">POS</span>
       <Link
         href={ROUTES.auth.login}
-        className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-105 hover:bg-zinc-700 active:scale-95 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
         Login
       </Link>

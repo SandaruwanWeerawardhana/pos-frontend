@@ -34,7 +34,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ref={ref}
         id={selectId}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded-lg border bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition-colors focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 ${
+        className={`w-full cursor-pointer rounded-lg border bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition-[color,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-outline focus:border-secondary focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-zinc-600 ${
           error ? "border-error" : "border-outline-variant dark:border-zinc-700"
         } ${className}`}
         {...props}
@@ -46,7 +46,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           </option>
         ))}
       </select>
-      {error && <span className="text-xs text-error">{error}</span>}
+      {error && (
+        <span className="animate-fade-in text-xs text-error">{error}</span>
+      )}
     </div>
   );
 });

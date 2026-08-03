@@ -12,7 +12,7 @@ export interface DateRange {
   to: number; /* epoch ms, inclusive */
 }
 
-export type RangePreset = "today" | "7d" | "30d" | "90d" | "all";
+export type RangePreset = "today" | "7d" | "30d" | "90d" | "month" | "year" | "all";
 
 export function presetToRange(preset: RangePreset): DateRange {
   const end = new Date();
@@ -32,6 +32,12 @@ export function presetToRange(preset: RangePreset): DateRange {
     case "90d":
       start.setDate(start.getDate() - 89);
       break;
+    case "month":
+      start.setDate(1);
+      break;
+    case "year":
+      start.setMonth(0, 1);
+      break;
     case "all":
       start.setTime(0);
       break;
@@ -46,7 +52,7 @@ export function presetToRange(preset: RangePreset): DateRange {
  * early-morning one, depending on the offset) in the wrong bucket — and in a
  * "today" range, in a bucket outside the range that produced it.
  */
-function localDateKey(timestamp: number): string {
+export function localDateKey(timestamp: number): string {
   const date = new Date(timestamp);
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");

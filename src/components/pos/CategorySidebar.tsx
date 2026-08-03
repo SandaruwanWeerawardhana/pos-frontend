@@ -33,7 +33,7 @@ export function CategorySidebar({
     <aside
       suppressHydrationWarning
       aria-label="Product categories"
-      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-150 xl:flex dark:border-zinc-800 dark:bg-zinc-900 ${
+      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] xl:flex dark:border-zinc-800 dark:bg-zinc-900 ${
         collapsed ? "w-14" : "w-56"
       }`}
     >
@@ -42,13 +42,15 @@ export function CategorySidebar({
         onClick={() => setCollapsed((prev) => !prev)}
         aria-label={collapsed ? "Expand categories" : "Collapse categories"}
         aria-expanded={!collapsed}
-        className={`mb-1 flex items-center rounded-lg p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:hover:bg-zinc-800 ${
+        className={`mb-1 flex items-center rounded-lg p-2 text-on-surface-variant transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:hover:bg-zinc-800 ${
           collapsed ? "justify-center" : "justify-end"
         }`}
       >
         <ChevronLeft
           size={16}
-          className={collapsed ? "rotate-180 transition-transform" : "transition-transform"}
+          className={`transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] ${
+            collapsed ? "rotate-180" : ""
+          }`}
           aria-hidden
         />
       </button>
@@ -94,7 +96,7 @@ function CategoryRow({
       onClick={onClick}
       aria-pressed={active}
       title={collapsed ? label : undefined}
-      className={`flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+      className={`flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
         collapsed ? "justify-center" : "justify-between gap-2"
       } ${
         active

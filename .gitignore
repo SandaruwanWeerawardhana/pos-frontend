@@ -25,6 +25,7 @@
 *.pem
 *.md
 !README.md
+!AGENTS.md
 
 # debug
 npm-debug.log*
@@ -37,6 +38,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# claude code local config
+.claude/
 
 # typescript
 *.tsbuildinfo

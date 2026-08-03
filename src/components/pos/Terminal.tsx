@@ -190,7 +190,7 @@ export function Terminal() {
           type="button"
           aria-label="Back"
           onClick={() => router.back()}
-          className="absolute left-0 top-0 z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:bg-zinc-900 dark:hover:text-zinc-50"
+          className="absolute left-0 top-0 z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:-translate-x-0.5 hover:text-on-surface active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:bg-zinc-900 dark:hover:text-zinc-50"
         >
           <ArrowLeft size={18} />
         </button>
@@ -256,13 +256,16 @@ export function Terminal() {
         <button
           type="button"
           onClick={() => setCartSheetOpen(true)}
-          className="fixed inset-x-3 bottom-3 z-40 flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-secondary px-5 text-on-secondary shadow-2xl transition-transform active:scale-[0.99] lg:hidden"
+          className="animate-fade-in-up fixed inset-x-3 bottom-3 z-40 flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-secondary px-5 text-on-secondary shadow-2xl transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-[0.98] lg:hidden"
         >
           <span className="flex items-center gap-2 text-sm font-semibold">
             <ShoppingCart size={18} aria-hidden />
             {itemCount} item{itemCount === 1 ? "" : "s"}
           </span>
-          <span className="text-lg font-bold tabular-nums">
+          <span
+            key={total.total_cents}
+            className="animate-scale-in text-lg font-bold tabular-nums"
+          >
             {money(total.total_cents)}
           </span>
         </button>
@@ -324,7 +327,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+      className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
         active
           ? "bg-primary text-on-primary"
           : "bg-surface-container text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-300"

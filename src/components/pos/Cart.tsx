@@ -2,6 +2,7 @@
 
 import { ShoppingCart } from "lucide-react";
 import { CartItem } from "./CartItem";
+import { Spinner } from "@/components/ui/Spinner";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { formatQuantity } from "@/lib/format";
 import type {
@@ -51,7 +52,7 @@ export function Cart({
           type="button"
           onClick={onHold}
           disabled={empty}
-          className="rounded px-1 text-xs font-medium text-secondary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-zinc-300 dark:disabled:text-zinc-600"
+          className="rounded px-1 text-xs font-medium text-secondary transition-colors duration-[var(--duration-fast)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:text-zinc-300 dark:disabled:text-zinc-600"
         >
           Hold
         </button>
@@ -59,7 +60,7 @@ export function Cart({
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         {empty ? (
-          <p className="py-10 text-center text-sm text-on-surface-variant">
+          <p className="animate-fade-in py-10 text-center text-sm text-on-surface-variant">
             Cart is empty. Scan a barcode or tap a product to start.
           </p>
         ) : (
@@ -90,7 +91,12 @@ export function Cart({
           <span className="text-base font-semibold text-on-surface dark:text-zinc-50">
             Grand Total
           </span>
-          <span className="text-2xl font-bold tabular-nums text-on-surface dark:text-zinc-50">
+          {/* Keyed on the amount so the figure re-animates whenever the cart
+              changes — the cashier sees that the total moved. */}
+          <span
+            key={total.total_cents}
+            className="animate-scale-in text-2xl font-bold tabular-nums text-on-surface dark:text-zinc-50"
+          >
             {money(total.total_cents)}
           </span>
         </div>
@@ -100,8 +106,10 @@ export function Cart({
         type="button"
         disabled={empty || busy}
         onClick={() => onPay(DEFAULT_PAYMENT_METHOD)}
-        className="mt-3 min-h-14 rounded-xl bg-secondary px-2 text-base font-semibold text-on-secondary transition-colors hover:bg-secondary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
+        aria-busy={busy || undefined}
+        className="mt-3 inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-secondary px-2 text-base font-semibold text-on-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/90 hover:shadow-elevated active:scale-[0.98] active:duration-[var(--duration-instant)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:shadow-none"
       >
+        {busy && <Spinner size="md" label={null} />}
         {busy ? "Completing sale…" : `Pay ${money(total.total_cents)}`}
       </button>
     </div>

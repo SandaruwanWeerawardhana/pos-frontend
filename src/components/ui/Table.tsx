@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { staggerDelay } from "@/lib/motion";
 
 export interface TableColumn<T> {
   key: string;
@@ -25,7 +26,7 @@ export function Table<T>({
 }: TableProps<T>) {
   if (rows.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+      <p className="animate-fade-in py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
         {emptyMessage}
       </p>
     );
@@ -44,14 +45,15 @@ export function Table<T>({
           </tr>
         </thead>
         <tbody className="divide-y divide-outline-variant/50 dark:divide-zinc-800">
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const key = rowKey(row);
             const isSelected = selectedKey === key;
             return (
               <tr
                 key={key}
+                style={staggerDelay(index)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`transition-colors ${
+                className={`animate-fade-in transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] ${
                   isSelected
                     ? "bg-primary/10 font-semibold text-primary dark:bg-blue-900/30 dark:text-blue-300"
                     : "text-on-surface hover:bg-surface-container-low dark:text-zinc-50 dark:hover:bg-zinc-800/60"

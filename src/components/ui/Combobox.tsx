@@ -206,18 +206,20 @@ export function Combobox({
           onClick={handleOpen}
           onBlur={onBlur}
           onKeyDown={handleKeyDown}
-          className={`h-12 w-full rounded-lg border bg-surface-container-lowest pl-9 pr-9 text-sm text-on-surface outline-none transition-colors focus:border-secondary focus:ring-2 focus:ring-primary/40 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 ${
+          className={`h-12 w-full rounded-lg border bg-surface-container-lowest pl-9 pr-9 text-sm text-on-surface outline-none transition-[color,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-outline focus:border-secondary focus:ring-2 focus:ring-primary/40 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 ${
             error ? "border-error" : "border-outline-variant dark:border-zinc-700"
           }`}
         />
         <ChevronDown
           size={16}
           aria-hidden
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-zinc-500"
+          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-transform duration-[var(--duration-base)] ease-[var(--ease-standard)] dark:text-zinc-500 ${
+            open ? "-rotate-180" : ""
+          }`}
         />
 
         {open && (
-          <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="animate-scale-in absolute z-30 mt-1 w-full origin-top overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
             <ul
               id={listId}
               role="listbox"
@@ -235,7 +237,7 @@ export function Combobox({
                     event.preventDefault();
                     commit(option.value);
                   }}
-                  className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm text-on-surface dark:text-zinc-100 ${
+                  className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm text-on-surface transition-colors duration-[var(--duration-instant)] dark:text-zinc-100 ${
                     index === activeIndex
                       ? "bg-surface-container dark:bg-zinc-800"
                       : ""
@@ -265,7 +267,7 @@ export function Combobox({
                     event.preventDefault();
                     commit(trimmedQuery);
                   }}
-                  className={`flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium text-secondary dark:text-blue-400 ${
+                  className={`flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium text-secondary transition-colors duration-[var(--duration-instant)] dark:text-blue-400 ${
                     activeIndex === filtered.length
                       ? "bg-surface-container dark:bg-zinc-800"
                       : ""
@@ -290,7 +292,9 @@ export function Combobox({
           </div>
         )}
       </div>
-      {error && <span className="text-xs text-error">{error}</span>}
+      {error && (
+        <span className="animate-fade-in text-xs text-error">{error}</span>
+      )}
       {!error && hint && (
         <span className="text-xs text-on-surface-variant dark:text-zinc-500">
           {hint}

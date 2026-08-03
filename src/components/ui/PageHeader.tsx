@@ -23,7 +23,7 @@ export function PageHeader({
   breadcrumbs,
 }: Readonly<PageHeaderProps>) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="animate-fade-in-up flex flex-col gap-3">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1 text-xs text-on-surface-variant dark:text-zinc-500">
@@ -31,7 +31,10 @@ export function PageHeader({
               <li key={crumb.label} className="flex items-center gap-1">
                 {index > 0 && <ChevronRight size={12} aria-hidden />}
                 {crumb.href ? (
-                  <Link href={crumb.href} className="hover:underline">
+                  <Link
+                    href={crumb.href}
+                    className="rounded transition-colors duration-[var(--duration-fast)] hover:text-on-surface hover:underline dark:hover:text-zinc-200"
+                  >
                     {crumb.label}
                   </Link>
                 ) : (
@@ -86,7 +89,7 @@ export function Card({
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <div
-      className={`rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
+      className={`animate-fade-in-up rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-shadow duration-[var(--duration-base)] ease-[var(--ease-standard)] hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
     >
       {children}
     </div>
