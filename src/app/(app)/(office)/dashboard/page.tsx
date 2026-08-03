@@ -5,9 +5,10 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  Banknote,
   ChevronRight,
-  CreditCard,
   DollarSign,
+  FileText,
   Info,
   Receipt,
   RotateCcw,
@@ -17,6 +18,7 @@ import {
   TrendingUp,
   Undo2,
   Users,
+  Wallet,
 } from "lucide-react";
 import {
   Area,
@@ -57,7 +59,6 @@ import { useSettings } from "@/lib/hooks/use-settings";
 import { useTheme } from "@/components/providers/theme-provider";
 import { PluginDashboardWidget } from "@/components/plugin-slots/PluginDashboardWidget";
 import { Card, SectionHeader } from "@/components/ui/PageHeader";
-import { StatCard, type StatAccent } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Table, type TableColumn } from "@/components/ui/Table";
@@ -181,6 +182,36 @@ function DashboardHero({
           {rangeLabel(preset, locale)}
         </span>
       </div>
+    </div>
+  );
+}
+
+const KPI_TINTS = {
+  violet: "bg-violet-600 text-white dark:bg-violet-500",
+  emerald: "bg-emerald-500 text-white dark:bg-emerald-500",
+  amber: "bg-amber-500 text-white dark:bg-amber-500",
+  rose: "bg-rose-500 text-white dark:bg-rose-500",
+  sky: "bg-sky-500 text-white dark:bg-sky-500",
+  orange: "bg-orange-500 text-white dark:bg-orange-500",
+} as const;
+
+function KpiTile({
+  label,
+  value,
+  icon,
+  tint,
+}: Readonly<{ label: string; value: string; icon: React.ReactNode; tint: keyof typeof KPI_TINTS }>) {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <span
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${KPI_TINTS[tint]}`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm text-on-surface-variant dark:text-zinc-400">{label}</span>
+        <span className="block text-lg font-semibold text-on-surface dark:text-zinc-50">{value}</span>
+      </span>
     </div>
   );
 }
@@ -709,6 +740,8 @@ const EMPTY_OVERVIEW: DashboardOverview = {
   purchaseReturnCents: 0,
   invoiceCount: 0,
   profitCents: 0,
+  salesDueCents: 0,
+  purchaseDueCents: 0,
 };
 
 export default function DashboardPage() {
@@ -768,12 +801,20 @@ export default function DashboardPage() {
 
   const greeting = `Welcome back, ${staff?.name ?? user?.name ?? "there"}! Here's what's happening today.`;
 
-  const kpis: { label: string; value: number; icon: React.ReactNode; accent: StatAccent }[] = [
-    { label: "Sales", value: data.overview.salesCents, icon: <ShoppingCart size={20} />, accent: "info" },
-    { label: "Purchases", value: data.overview.purchasesCents, icon: <ShoppingBag size={20} />, accent: "orange" },
-    { label: "Sales return", value: data.overview.salesReturnCents, icon: <Undo2 size={20} />, accent: "error" },
-    { label: "Purchases return", value: data.overview.purchaseReturnCents, icon: <RotateCcw size={20} />, accent: "warning" },
-    { label: "Profit", value: data.overview.profitCents, icon: <TrendingUp size={20} />, accent: "success" },
+  const kpis: {
+    label: string;
+    value: string;
+    icon: React.ReactNode;
+    tint: keyof typeof KPI_TINTS;
+  }[] = [
+    { label: "Sales", value: money(data.overview.salesCents), icon: <ShoppingCart size={20} />, tint: "violet" },
+    { label: "Purchases", value: money(data.overview.purchasesCents), icon: <ShoppingBag size={20} />, tint: "emerald" },
+    { label: "Sales Return", value: money(data.overview.salesReturnCents), icon: <Undo2 size={20} />, tint: "amber" },
+    { label: "Purchases Return", value: money(data.overview.purchaseReturnCents), icon: <RotateCcw size={20} />, tint: "rose" },
+    { label: "Sales Due", value: money(data.overview.salesDueCents), icon: <Banknote size={20} />, tint: "sky" },
+    { label: "Total Purchase Due", value: money(data.overview.purchaseDueCents), icon: <Wallet size={20} />, tint: "orange" },
+    { label: "Invoice", value: String(data.overview.invoiceCount), icon: <FileText size={20} />, tint: "violet" },
+    { label: "Profit", value: money(data.overview.profitCents), icon: <Banknote size={20} />, tint: "emerald" },
   ];
 
   return (
@@ -785,16 +826,10 @@ export default function DashboardPage() {
         locale={settings.locale}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (
-          <StatCard key={kpi.label} label={kpi.label} value={money(kpi.value)} icon={kpi.icon} accent={kpi.accent} />
+          <KpiTile key={kpi.label} label={kpi.label} value={kpi.value} icon={kpi.icon} tint={kpi.tint} />
         ))}
-        <StatCard
-          label="Invoices"
-          value={String(data.overview.invoiceCount)}
-          icon={<CreditCard size={20} />}
-          accent="primary"
-        />
       </div>
 
       <SalesPurchasesChart series={data.series} money={money} colors={colors} />

@@ -53,6 +53,14 @@ export interface DashboardOverview {
   purchaseReturnCents: number;
   invoiceCount: number;
   profitCents: number;
+  /**
+   * Always 0 in this schema: the till has no credit-sale concept (every
+   * order is paid in full at checkout) and purchase orders carry no
+   * paid/due split. Kept as a real field rather than a literal in the UI so
+   * the "why" lives next to the number, not hidden in a component.
+   */
+  salesDueCents: number;
+  purchaseDueCents: number;
 }
 
 export async function getDashboardOverview(
@@ -95,6 +103,8 @@ export async function getDashboardOverview(
     purchaseReturnCents,
     invoiceCount,
     profitCents,
+    salesDueCents: 0,
+    purchaseDueCents: 0,
   };
 }
 
