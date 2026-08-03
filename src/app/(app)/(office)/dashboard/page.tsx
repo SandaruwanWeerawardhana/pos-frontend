@@ -161,7 +161,7 @@ function DashboardHero({
   locale: string;
 }>) {
   return (
-    <div className="flex animate-fade-in-up flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary transition-shadow duration-300 hover:shadow-elevated sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex animate-fade-in-up flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary transition-shadow duration-[var(--duration-base)] hover:shadow-elevated sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="font-display text-xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-on-primary/80">{greeting}</p>
@@ -170,7 +170,7 @@ function DashboardHero({
         <select
           value={preset}
           onChange={(event) => onPresetChange(event.target.value as RangePreset)}
-          className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-200 hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
+          className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
         >
           {RANGE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -178,7 +178,7 @@ function DashboardHero({
             </option>
           ))}
         </select>
-        <span className="rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm transition-colors duration-300">
+        <span className="rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm transition-colors duration-[var(--duration-base)]">
           {rangeLabel(preset, locale)}
         </span>
       </div>
@@ -211,16 +211,16 @@ function KpiTile({
   return (
     <div
       style={{ animationDelay: `${delayMs}ms` }}
-      className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-fast)] hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 ${KPI_TINTS[tint]}`}
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-fast)] ${KPI_TINTS[tint]}`}
       >
         {icon}
       </span>
       <span className="min-w-0">
         <span className="block text-sm text-on-surface-variant dark:text-zinc-400">{label}</span>
-        <span className="block text-lg font-semibold text-on-surface transition-all duration-300 dark:text-zinc-50">{value}</span>
+        <span className="block text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">{value}</span>
       </span>
     </div>
   );
@@ -505,7 +505,7 @@ function PaymentBreakdownCard({
             </div>
             <div className="h-1.5 w-full rounded-full bg-surface-container dark:bg-zinc-800">
               <div
-                className="h-1.5 rounded-full transition-all duration-500 ease-out"
+                className="h-1.5 rounded-full transition-all duration-[var(--duration-slow)] ease-out"
                 style={{ width: `${row.percent}%`, backgroundColor: dotColor[row.method] }}
               />
             </div>
@@ -650,7 +650,7 @@ function StockAlertTable({ rows }: Readonly<{ rows: StockAlertRow[] }>) {
         action={
           <Link
             href={ROUTES.inventory.alerts}
-            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
           >
             View all
             <ChevronRight size={13} aria-hidden />
@@ -703,7 +703,7 @@ function TopProductsTable({
                 key={value}
                 type="button"
                 onClick={() => onPresetChange(value)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 active:scale-95 ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-[var(--duration-fast)] active:scale-95 ${
                   preset === value
                     ? "bg-surface-container-lowest text-on-surface shadow-sm dark:bg-zinc-900 dark:text-zinc-50"
                     : "text-on-surface-variant hover:text-on-surface dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -736,7 +736,7 @@ function RecentSalesTable({
       render: (row) => (
         <Link
           href={ROUTES.sales.detail(row.client_generated_id)}
-          className="font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+          className="font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
         >
           {row.receipt_no ?? row.client_generated_id.slice(0, 8)}
         </Link>
@@ -783,7 +783,7 @@ function RecentSalesTable({
         action={
           <Link
             href={ROUTES.sales.root}
-            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
           >
             View all
             <ChevronRight size={13} aria-hidden />

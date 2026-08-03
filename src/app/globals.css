@@ -79,12 +79,14 @@
   --shadow-card: 0 1px 2px rgba(11, 28, 55, 0.04), 0 4px 12px -4px rgba(11, 28, 55, 0.08);
   --shadow-popover: 0 4px 8px rgba(11, 28, 55, 0.08), 0 24px 48px -12px rgba(11, 28, 55, 0.28);
 
-  /* Motion tokens. Durations stay short: a till runs on cheap hardware and
-     the cashier is faster than any animation worth watching. */
-  --duration-instant: 90ms;
-  --duration-fast: 150ms;
-  --duration-base: 200ms;
-  --duration-slow: 320ms;
+  /* Motion tokens. Longer than a stock UI kit so transitions read as deliberate
+     rather than snapped-to, but capped: the cashier is still faster than any
+     animation worth watching, and a till runs on cheap hardware. Press/hover
+     feedback stays under ~250ms so the screen never feels behind the finger. */
+  --duration-instant: 120ms;
+  --duration-fast: 220ms;
+  --duration-base: 340ms;
+  --duration-slow: 520ms;
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
@@ -163,7 +165,7 @@
 }
 
 @utility animate-fade-in-up {
-  animation: fade-in-up 0.4s ease-out both;
+  animation: fade-in-up var(--duration-slow) var(--ease-decelerate) both;
 }
 
 @keyframes fade-in {
