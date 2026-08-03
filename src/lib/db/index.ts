@@ -150,6 +150,24 @@ export class PosDB extends Dexie {
     this.version(7).stores({
       warehouseLocations: "id, warehouse_id, name",
     });
+    /**
+     * v8: locations gain a short code ("A3-04") separate from an optional
+     * longer name. The code is the identifier written onto the product, so
+     * rows created under v7 have their name promoted to it.
+     */
+    this.version(8)
+      .stores({
+        warehouseLocations: "id, warehouse_id, code",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Record<string, unknown>>("warehouseLocations")
+          .toCollection()
+          .modify((location) => {
+            location.code ??= location.name ?? "";
+            delete location.name;
+          });
+      });
   }
 }
 
@@ -564,10 +582,10 @@ export async function listSubcategories(category?: string): Promise<string[]> {
 }
 
 /**
- * Named rack/shelf locations, newest names included, sorted for the picker.
- * Locations created before this table existed still appear: any reference
- * already written onto a product is folded in, so the list never loses a shelf
- * the catalogue is using.
+ * Rack/shelf locations, sorted by code for the picker. Locations created
+ * before this table existed still appear: any code already written onto a
+ * product is folded in, so the list never loses a shelf the catalogue is
+ * using.
  */
 export async function listWarehouseLocations(): Promise<WarehouseLocation[]> {
   const [saved, products] = await Promise.all([
@@ -576,54 +594,57 @@ export async function listWarehouseLocations(): Promise<WarehouseLocation[]> {
   ]);
 
   const seen = new Set(
-    saved.map((entry) => `${entry.warehouse_id}::${entry.name.toLowerCase()}`),
+    saved.map((entry) => `${entry.warehouse_id}::${entry.code.toLowerCase()}`),
   );
   const derived: WarehouseLocation[] = [];
 
   for (const product of products) {
     for (const entry of product.opening_stock ?? []) {
-      const name = entry.location?.trim();
-      if (!name) continue;
-      const key = `${entry.warehouse_id}::${name.toLowerCase()}`;
+      const code = entry.location?.trim();
+      if (!code) continue;
+      const key = `${entry.warehouse_id}::${code.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
       derived.push({
         id: key,
         warehouse_id: entry.warehouse_id,
-        name,
+        code,
         created_at: "",
       });
     }
   }
 
-  return [...saved, ...derived].sort((a, b) => a.name.localeCompare(b.name));
+  return [...saved, ...derived].sort((a, b) => a.code.localeCompare(b.code));
 }
 
 /**
- * Adds a location to one warehouse. Names are unique per warehouse, not
- * globally — "A1" in the back store and "A1" in the shop floor are different
+ * Adds a location to one warehouse. Codes are unique per warehouse, not
+ * globally — "A1" in the back store and "A1" on the shop floor are different
  * shelves and both are legitimate.
  */
 export async function addWarehouseLocation(input: {
   warehouse_id: string;
-  name: string;
+  code: string;
+  name?: string;
 }): Promise<WarehouseLocation> {
-  const name = input.name.trim();
+  const code = input.code.trim();
+  const name = input.name?.trim();
   if (!input.warehouse_id) throw new Error("Warehouse is required");
-  if (!name) throw new Error("Location name is required");
+  if (!code) throw new Error("Rack/location code is required");
 
   return db.transaction("rw", db.warehouseLocations, async () => {
     const clash = await db.warehouseLocations
       .where("warehouse_id")
       .equals(input.warehouse_id)
-      .filter((entry) => entry.name.toLowerCase() === name.toLowerCase())
+      .filter((entry) => entry.code.toLowerCase() === code.toLowerCase())
       .first();
-    if (clash) throw new Error("That location already exists in this warehouse");
+    if (clash) throw new Error("That code already exists in this warehouse");
 
     const location: WarehouseLocation = {
       id: crypto.randomUUID(),
       warehouse_id: input.warehouse_id,
-      name,
+      code,
+      ...(name ? { name } : {}),
       created_at: new Date().toISOString(),
     };
     await db.warehouseLocations.add(location);

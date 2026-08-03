@@ -21,9 +21,11 @@ interface LocationSectionProps extends ProductSectionProps {
 }
 
 /**
- * The "Create Location" popup opened by the "+" beside a warehouse. Locations
- * are scoped to the warehouse whose button was pressed, so the same shelf name
- * can exist in two warehouses without either being ambiguous.
+ * The "Create Warehouse Location" popup opened by the "+" beside a warehouse.
+ *
+ * The warehouse field is shown but locked: which warehouse the location belongs
+ * to is decided by the "+" that was pressed, and letting it be changed here
+ * would silently file the new shelf under a row the user is not looking at.
  */
 function CreateLocationModal({
   warehouse,
@@ -35,19 +37,21 @@ function CreateLocationModal({
   onCreated: (location: WarehouseLocation) => void;
 }>) {
   const queryClient = useQueryClient();
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   function reset() {
+    setCode("");
     setName("");
     setError(null);
   }
 
   async function handleSubmit() {
     if (!warehouse) return;
-    if (!name.trim()) {
-      setError("Location name is required");
+    if (!code.trim()) {
+      setError("Rack/location code is required");
       return;
     }
     setSaving(true);
@@ -55,6 +59,7 @@ function CreateLocationModal({
     try {
       const location = await addWarehouseLocation({
         warehouse_id: warehouse.id,
+        code,
         name,
       });
       await queryClient.invalidateQueries({
@@ -81,8 +86,7 @@ function CreateLocationModal({
         reset();
         onClose();
       }}
-      title="Create Location"
-      description={warehouse ? `In ${warehouse.name}` : undefined}
+      title="Create Warehouse Location"
       size="sm"
     >
       {/* The modal is portalled out of the product form's DOM, but React still
@@ -96,16 +100,36 @@ function CreateLocationModal({
           void handleSubmit();
         }}
       >
-        <Input
+        <Select
           label={
             <>
-              Location
+              Warehouse
               <RequiredMark />
             </>
           }
-          placeholder="e.g. Rack A / Shelf 3"
-          hint="Rack, shelf, zone or bin — whatever your pickers actually say."
+          options={
+            warehouse ? [{ value: warehouse.id, label: warehouse.name }] : []
+          }
+          value={warehouse?.id ?? ""}
+          disabled
+          onChange={() => undefined}
+          className="cursor-not-allowed bg-surface-container text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-400"
+        />
+        <Input
+          label={
+            <>
+              Rack/Location Code
+              <RequiredMark />
+            </>
+          }
+          placeholder="Enter Rack/Location Code"
           autoFocus
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+        />
+        <Input
+          label="Location Name"
+          placeholder="Enter Location Name"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
@@ -156,11 +180,15 @@ export function LocationSection({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {warehouses.map((warehouse) => {
+            // The code is what gets stored; the name only widens the label so
+            // "A3-04" is recognisable to someone who knows it as "Chiller 2".
             const options = locations
               .filter((location) => location.warehouse_id === warehouse.id)
               .map((location) => ({
-                value: location.name,
-                label: location.name,
+                value: location.code,
+                label: location.name
+                  ? `${location.code} — ${location.name}`
+                  : location.code,
               }));
 
             return (
@@ -204,7 +232,7 @@ export function LocationSection({
         warehouse={creatingFor}
         onClose={() => setCreatingFor(null)}
         onCreated={(created) => {
-          setValue(`rack_locations.${created.warehouse_id}`, created.name, {
+          setValue(`rack_locations.${created.warehouse_id}`, created.code, {
             shouldDirty: true,
             shouldValidate: true,
           });

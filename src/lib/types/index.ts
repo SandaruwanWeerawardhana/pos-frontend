@@ -425,14 +425,19 @@ export interface Warehouse {
 }
 
 /**
- * A named rack/shelf/zone/bin inside one warehouse, created from the product
- * form's "+" beside Internal Location. Reference data for picking only — stock
- * is tracked against the warehouse, never against a location.
+ * A rack/shelf/zone/bin inside one warehouse, created from the product form's
+ * "+" beside Internal Location. Reference data for picking only — stock is
+ * tracked against the warehouse, never against a location.
+ *
+ * `code` is the short identifier pickers actually call out ("A3-04") and is
+ * what gets written onto the product; `name` is an optional longer label shown
+ * beside it in pickers.
  */
 export interface WarehouseLocation {
   id: string;
   warehouse_id: string;
-  name: string;
+  code: string;
+  name?: string;
   created_at: string;
 }
 
