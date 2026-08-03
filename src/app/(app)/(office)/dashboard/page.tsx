@@ -5,353 +5,833 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
-  CheckCircle2,
   ChevronRight,
+  CreditCard,
   DollarSign,
-  Package,
-  RefreshCw,
+  Info,
+  Receipt,
+  RotateCcw,
   ShoppingBag,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  Undo2,
+  Users,
 } from "lucide-react";
 import {
-  db,
-  getInventoryAlerts,
-  getTodaysOrderSummary,
-  type InventoryAlerts,
-  type TodaysOrderSummary,
-} from "@/lib/db";
-import { useSyncStatus } from "@/lib/sync/use-sync-status";
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  getDashboardInsights,
+  getDashboardOverview,
+  getPaymentBreakdown,
+  getRecentSalesRows,
+  getSalesPurchasesSeries,
+  getStockAlertRows,
+  getStockValueSummary,
+  getTopSellingProducts,
+  getTopSellingProductsTable,
+  type DashboardInsight,
+  type DashboardOverview,
+  type PaymentBreakdownRow,
+  type SeriesPoint,
+  type StockAlertRow,
+  type StockValueSummary,
+  type TopProductsResult,
+  type TopProductTableRow,
+} from "@/lib/db/dashboard";
+import { presetToRange, type RangePreset } from "@/lib/db/reports";
+import { useAuth } from "@/lib/hooks/use-auth";
 import { useSettings } from "@/lib/hooks/use-settings";
+import { useTheme } from "@/components/providers/theme-provider";
 import { PluginDashboardWidget } from "@/components/plugin-slots/PluginDashboardWidget";
 import { Card, SectionHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, type StatAccent } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
+import { Table, type TableColumn } from "@/components/ui/Table";
 import { formatDateTime } from "@/lib/format";
-import type { PendingOrder } from "@/lib/types";
+import type { PaymentMethod, PendingOrder } from "@/lib/types";
 import { ROUTES } from "@/lib/types/routes";
 
-const DAILY_REVENUE_DAYS = 7;
-
-interface DailyRevenuePoint {
-  date: string;
-  label: string;
-  revenueCents: number;
+/**
+ * Series colours follow the dataviz skill's validated 8-hue categorical
+ * ramp (see the skill's palette.md). Sales/Purchases and the payment-method
+ * breakdown reuse the same entity -> hue mapping across every chart on this
+ * page, so "blue" always means the same thing wherever it appears.
+ */
+interface ChartPalette {
+  sales: string;
+  purchases: string;
+  cash: string;
+  card: string;
+  qr: string;
+  other: string;
+  donutOther: string;
+  grid: string;
+  ink: string;
+  muted: string;
+  surface: string;
 }
 
-function getDefaultDailyRevenue(): DailyRevenuePoint[] {
-  const today = new Date();
-  return Array.from({ length: DAILY_REVENUE_DAYS }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (DAILY_REVENUE_DAYS - 1 - index));
-    return {
-      date: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString("en-US", { weekday: "short" }),
-      revenueCents: 0,
-    };
-  });
+const CHART_COLORS: Record<"light" | "dark", ChartPalette> = {
+  light: {
+    sales: "#2a78d6",
+    purchases: "#eb6834",
+    cash: "#2a78d6",
+    card: "#eb6834",
+    qr: "#1baf7a",
+    other: "#eda100",
+    donutOther: "#898781",
+    grid: "#e1e0d9",
+    ink: "#52514e",
+    muted: "#898781",
+    surface: "#fcfcfb",
+  },
+  dark: {
+    sales: "#3987e5",
+    purchases: "#d95926",
+    cash: "#3987e5",
+    card: "#d95926",
+    qr: "#199e70",
+    other: "#c98500",
+    donutOther: "#898781",
+    grid: "#2c2c2a",
+    ink: "#c3c2b7",
+    muted: "#898781",
+    surface: "#1a1a19",
+  },
+};
+
+const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  cash: "Cash",
+  card: "Card",
+  qr: "QR",
+  other: "Other",
+};
+
+const RANGE_OPTIONS: { value: RangePreset; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "month", label: "This month" },
+  { value: "year", label: "This year" },
+];
+
+interface DashboardData {
+  overview: DashboardOverview;
+  series: SeriesPoint[];
+  payments: PaymentBreakdownRow[];
+  donut: TopProductsResult;
+  stockValue: StockValueSummary;
+  stockAlerts: StockAlertRow[];
+  recentSales: PendingOrder[];
+  insights: DashboardInsight[];
 }
 
-function buildDailyRevenue(orders: PendingOrder[]): DailyRevenuePoint[] {
-  const points = getDefaultDailyRevenue();
-  const revenueByDate = new Map(points.map((point) => [point.date, 0]));
-
-  for (const order of orders) {
-    if (order.refunded) continue;
-    const date = new Date(order.created_at).toISOString().slice(0, 10);
-    if (revenueByDate.has(date)) {
-      revenueByDate.set(date, (revenueByDate.get(date) ?? 0) + order.total_cents);
-    }
-  }
-
-  return points.map((point) => ({
-    ...point,
-    revenueCents: revenueByDate.get(point.date) ?? 0,
-  }));
+function rangeLabel(preset: RangePreset, locale: string): string {
+  const range = presetToRange(preset);
+  const fmt = (ts: number) =>
+    new Date(ts).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+  return `${fmt(range.from)} - ${fmt(range.to)}`;
 }
 
-function chartPoints(values: number[], width = 720, height = 150): string {
-  const max = Math.max(...values, 1);
-  return values
-    .map((value, index) => {
-      const x = (index / Math.max(values.length - 1, 1)) * width;
-      const y = height - (value / max) * height;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
-
-function DailyRevenueChart({
-  points,
-  money,
-}: Readonly<{ points: DailyRevenuePoint[]; money: (cents: number) => string }>) {
-  const values = points.map((point) => point.revenueCents);
-  const coordinates = chartPoints(values)
-    .split(" ")
-    .map((point) => point.split(",").map(Number));
-  const total = values.reduce((sum, value) => sum + value, 0);
-
+function DashboardHero({
+  greeting,
+  preset,
+  onPresetChange,
+  locale,
+}: Readonly<{
+  greeting: string;
+  preset: RangePreset;
+  onPresetChange: (value: RangePreset) => void;
+  locale: string;
+}>) {
   return (
-    <Card>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-on-surface dark:text-zinc-50">
-            Daily revenue
-          </h3>
-          <p className="mt-1 text-xs text-on-surface-variant dark:text-zinc-400">
-            Last {DAILY_REVENUE_DAYS} days
-          </p>
-        </div>
-        <p className="text-right text-sm font-semibold text-on-surface dark:text-zinc-50">
-          {money(total)}
-        </p>
+    <div className="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-on-primary/80">{greeting}</p>
       </div>
-      <svg
-        viewBox="0 0 720 190"
-        className="h-48 w-full overflow-visible sm:h-56"
-        role="img"
-        aria-label={`Daily revenue for the last ${DAILY_REVENUE_DAYS} days, totalling ${money(total)}`}
-      >
-        {[38, 76, 114, 152].map((y) => (
-          <line
-            key={y}
-            x1="0"
-            x2="720"
-            y1={y}
-            y2={y}
-            className="stroke-outline-variant/60 dark:stroke-zinc-800"
-            strokeDasharray="4 6"
-          />
-        ))}
-        <polyline
-          fill="none"
-          points={chartPoints(values)}
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="4"
-          className="text-primary dark:text-blue-400"
-        />
-        {points.map((point, index) => {
-          const [x, y] = coordinates[index];
-          return (
-            <g key={point.date}>
-              <circle
-                cx={x}
-                cy={y}
-                r="4"
-                className="fill-surface-container-lowest stroke-primary dark:fill-zinc-900 dark:stroke-blue-400"
-                strokeWidth="3"
-              />
-              <text
-                x={x}
-                y="185"
-                textAnchor="middle"
-                className="fill-on-surface-variant text-[10px] dark:fill-zinc-400"
-              >
-                {point.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </Card>
-  );
-}
-
-function SyncPanel({
-  pendingCount,
-  conflictCount,
-}: Readonly<{ pendingCount: number; conflictCount: number }>) {
-  const isConflict = conflictCount > 0;
-  const isPending = !isConflict && pendingCount > 0;
-  const isOk = !isConflict && !isPending;
-
-  let containerClass =
-    "border-[#004b1e] bg-[#004b1e]/8 dark:border-green-800/40 dark:bg-green-950/10";
-  let iconClass = "bg-[#004b1e] text-[#4ade80] dark:bg-green-900/40";
-  let title = "All data synced";
-  let body = "Your local data is up to date with the server.";
-
-  if (isConflict) {
-    containerClass =
-      "border-error/30 bg-error-container/10 dark:border-red-800/40 dark:bg-red-950/20";
-    iconClass = "bg-error text-on-error";
-    title = `${conflictCount} sync conflict${conflictCount > 1 ? "s" : ""} need attention`;
-    body = "Review conflicts to prevent data loss.";
-  } else if (isPending) {
-    containerClass =
-      "border-outline-variant bg-surface-container-lowest dark:border-zinc-800 dark:bg-zinc-900";
-    iconClass = "bg-primary/10 text-primary dark:bg-blue-900/30 dark:text-blue-400";
-    title = `${pendingCount} record${pendingCount > 1 ? "s" : ""} pending sync`;
-    body = "These upload automatically when the connection returns.";
-  }
-
-  return (
-    <div
-      className={`flex items-start gap-4 rounded-2xl border p-5 transition-colors ${containerClass}`}
-    >
-      <span
-        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
-      >
-        {isConflict && <AlertTriangle size={18} />}
-        {isOk && <CheckCircle2 size={18} />}
-        {isPending && <RefreshCw size={18} />}
-      </span>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-on-surface dark:text-zinc-100">
-          {title}
-        </p>
-        <p className="mt-0.5 text-xs text-on-surface-variant dark:text-zinc-400">
-          {body}
-        </p>
+      <div className="flex flex-col gap-2 sm:items-end">
+        <select
+          value={preset}
+          onChange={(event) => onPresetChange(event.target.value as RangePreset)}
+          className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
+        >
+          {RANGE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm">
+          {rangeLabel(preset, locale)}
+        </span>
       </div>
     </div>
   );
 }
 
-export default function DashboardPage() {
-  const { money } = useSettings();
-  const { pendingCount, conflictCount } = useSyncStatus();
-
-  const [summary, setSummary] = useState<TodaysOrderSummary | null>(null);
-  const [alerts, setAlerts] = useState<InventoryAlerts | null>(null);
-  const [recentSales, setRecentSales] = useState<PendingOrder[]>([]);
-  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenuePoint[]>(() =>
-    getDefaultDailyRevenue(),
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  money,
+}: Readonly<{
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+  money: (cents: number) => string;
+}>) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-xs shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="mb-1 font-semibold text-on-surface dark:text-zinc-100">{label}</p>
+      {payload.map((entry) => (
+        <p key={entry.name} className="flex items-center gap-2 text-on-surface-variant dark:text-zinc-400">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+          {entry.name}: {money(entry.value)}
+        </p>
+      ))}
+    </div>
   );
+}
 
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  }, []);
-
-  useEffect(() => {
-    getTodaysOrderSummary().then(setSummary);
-    getInventoryAlerts().then(setAlerts);
-    db.pendingOrders
-      .orderBy("created_at")
-      .reverse()
-      .toArray()
-      .then((orders) => {
-        setDailyRevenue(buildDailyRevenue(orders));
-        setRecentSales(orders.slice(0, 6));
-      });
-  }, []);
-
-  const lowStockCount = alerts
-    ? alerts.lowStock.length + alerts.outOfStock.length
-    : null;
-  const expiryCount = alerts
-    ? alerts.nearExpiry.length + alerts.expired.length
-    : null;
+function SalesPurchasesChart({
+  series,
+  money,
+  colors,
+}: Readonly<{
+  series: SeriesPoint[];
+  money: (cents: number) => string;
+  colors: ChartPalette;
+}>) {
+  const data = series.map((point) => ({
+    label: point.label,
+    Sales: point.salesCents,
+    Purchases: point.purchasesCents,
+  }));
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-sm text-on-surface-variant dark:text-zinc-400">
-          Here is how the store is doing today.
-        </p>
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Sales &amp; Purchases
+      </h3>
+      <div className="h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} barGap={4} barCategoryGap="24%">
+            <CartesianGrid vertical={false} stroke={colors.grid} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: colors.muted, fontSize: 11 }}
+              axisLine={{ stroke: colors.grid }}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: colors.muted, fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value: number) => money(value)}
+              width={80}
+            />
+            <Tooltip content={<ChartTooltip money={money} />} cursor={{ fill: colors.grid, opacity: 0.4 }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.ink }} />
+            <Bar dataKey="Sales" fill={colors.sales} radius={[4, 4, 0, 0]} maxBarSize={22} />
+            <Bar dataKey="Purchases" fill={colors.purchases} radius={[4, 4, 0, 0]} maxBarSize={22} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+    </Card>
+  );
+}
 
-      <section className="flex flex-col gap-3">
-        <SectionHeader title="Today's overview" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard
-            label="Revenue today"
-            value={summary ? money(summary.totalCents) : "—"}
-            icon={<DollarSign size={20} />}
-            accent="primary"
-          />
-          <StatCard
-            label="Orders today"
-            value={summary ? String(summary.orderCount) : "—"}
-            icon={<ShoppingBag size={20} />}
-            accent="secondary"
-          />
-          <StatCard
-            label="Stock alerts"
-            value={lowStockCount === null ? "—" : String(lowStockCount)}
-            icon={<Package size={20} />}
-            accent={lowStockCount ? "warning" : "secondary"}
-            href={ROUTES.inventory.alerts}
-          />
-          <StatCard
-            label="Expiry alerts"
-            value={expiryCount === null ? "—" : String(expiryCount)}
-            icon={<AlertTriangle size={20} />}
-            accent={expiryCount ? "warning" : "secondary"}
-            href={ROUTES.inventory.alerts}
-          />
+function TopSellingDonut({
+  donut,
+  colors,
+}: Readonly<{ donut: TopProductsResult; colors: ChartPalette }>) {
+  const slotColors = [colors.sales, colors.purchases, colors.qr];
+  const data = donut.items.map((item, index) => ({
+    name: `${item.name} (${item.percent}%)`,
+    value: item.quantitySold,
+    fill: slotColors[index] ?? colors.donutOther,
+  }));
+  if (donut.otherQuantity > 0) {
+    const otherPercent =
+      donut.totalQuantity > 0 ? Math.round((donut.otherQuantity / donut.totalQuantity) * 100) : 0;
+    data.push({
+      name: `Other (${otherPercent}%)`,
+      value: donut.otherQuantity,
+      fill: colors.donutOther,
+    });
+  }
+
+  return (
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Top selling products
+      </h3>
+      {data.length === 0 ? (
+        <EmptyState icon={<ShoppingBag size={20} />} title="No sales in this period" />
+      ) : (
+        <div className="relative h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                innerRadius="60%"
+                outerRadius="85%"
+                paddingAngle={2}
+                stroke="none"
+              />
+              <Tooltip formatter={(value) => `${value} sold`} />
+              <Legend position="bottom" wrapperStyle={{ fontSize: 12, color: colors.ink }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 top-2 flex flex-col items-center justify-center">
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400">total sold</p>
+            <p className="text-2xl font-bold text-on-surface dark:text-zinc-50">
+              {donut.totalQuantity}
+            </p>
+          </div>
         </div>
-        <DailyRevenueChart points={dailyRevenue} money={money} />
-      </section>
+      )}
+    </Card>
+  );
+}
 
-        <div className="flex flex-col gap-3">
-          <SectionHeader
-            title="Recent sales"
+function PaymentBreakdownCard({
+  rows,
+  money,
+  colors,
+}: Readonly<{
+  rows: PaymentBreakdownRow[];
+  money: (cents: number) => string;
+  colors: ChartPalette;
+}>) {
+  const dotColor: Record<PaymentMethod, string> = {
+    cash: colors.cash,
+    card: colors.card,
+    qr: colors.qr,
+    other: colors.other,
+  };
+
+  return (
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Sales by payment
+      </h3>
+      <ul className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <li key={row.method}>
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-on-surface dark:text-zinc-100">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: dotColor[row.method] }}
+                />
+                {PAYMENT_LABELS[row.method]}
+              </span>
+              <span className="text-on-surface-variant dark:text-zinc-400">
+                {money(row.amountCents)} ({row.percent}%)
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-surface-container dark:bg-zinc-800">
+              <div
+                className="h-1.5 rounded-full"
+                style={{ width: `${row.percent}%`, backgroundColor: dotColor[row.method] }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function StockValueCard({
+  summary,
+  money,
+}: Readonly<{ summary: StockValueSummary; money: (cents: number) => string }>) {
+  return (
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Stock value
+      </h3>
+      <ul className="flex flex-col gap-4">
+        <li className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white dark:bg-sky-500">
+            <DollarSign size={18} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-xs text-on-surface-variant dark:text-zinc-400">
+              Stock value by cost
+            </span>
+            <span className="block text-sm font-semibold text-on-surface dark:text-zinc-50">
+              {money(summary.costCents)}
+            </span>
+          </span>
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white dark:bg-orange-500">
+            <Receipt size={18} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-xs text-on-surface-variant dark:text-zinc-400">
+              Stock value by retail
+            </span>
+            <span className="block text-sm font-semibold text-on-surface dark:text-zinc-50">
+              {money(summary.retailCents)}
+            </span>
+          </span>
+        </li>
+      </ul>
+    </Card>
+  );
+}
+
+function PaymentSentReceivedChart({
+  series,
+  money,
+  colors,
+}: Readonly<{
+  series: SeriesPoint[];
+  money: (cents: number) => string;
+  colors: ChartPalette;
+}>) {
+  const data = series.map((point) => ({
+    label: point.label,
+    Received: point.salesCents,
+    Sent: point.purchasesCents,
+  }));
+
+  return (
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Payment sent &amp; received
+      </h3>
+      <div className="h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <CartesianGrid vertical={false} stroke={colors.grid} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: colors.muted, fontSize: 11 }}
+              axisLine={{ stroke: colors.grid }}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: colors.muted, fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value: number) => money(value)}
+              width={80}
+            />
+            <Tooltip content={<ChartTooltip money={money} />} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.ink }} />
+            <Area
+              type="monotone"
+              dataKey="Sent"
+              stroke={colors.purchases}
+              fill={colors.purchases}
+              fillOpacity={0.1}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 5 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="Received"
+              stroke={colors.sales}
+              fill={colors.sales}
+              fillOpacity={0.1}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 5 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+function StockAlertTable({ rows }: Readonly<{ rows: StockAlertRow[] }>) {
+  const columns: TableColumn<StockAlertRow>[] = [
+    { key: "sku", header: "Code", render: (row) => row.sku },
+    { key: "name", header: "Product name", render: (row) => row.name },
+    { key: "quantity", header: "Quantity", render: (row) => row.quantity },
+    {
+      key: "alert",
+      header: "Alert quantity",
+      render: (row) => (
+        <Badge variant={row.severity === "out" ? "danger" : "warning"}>
+          {row.alertQuantity}
+        </Badge>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader
+        title="Stock alert"
+        action={
+          <Link
+            href={ROUTES.inventory.alerts}
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400"
+          >
+            View all
+            <ChevronRight size={13} aria-hidden />
+          </Link>
+        }
+      />
+      <Table
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.productId}
+        emptyMessage="No products at or below reorder level."
+      />
+    </div>
+  );
+}
+
+function TopProductsTable({
+  rows,
+  money,
+  preset,
+  onPresetChange,
+}: Readonly<{
+  rows: TopProductTableRow[];
+  money: (cents: number) => string;
+  preset: "month" | "year";
+  onPresetChange: (preset: "month" | "year") => void;
+}>) {
+  const columns: TableColumn<TopProductTableRow>[] = [
+    { key: "name", header: "Product name", render: (row) => row.name },
+    { key: "qty", header: "Total sales", render: (row) => row.quantitySold },
+    {
+      key: "amount",
+      header: "Total amount",
+      render: (row) => (
+        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+          {money(row.revenueCents)}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader
+        title="Top selling products"
+        action={
+          <div className="flex gap-1 rounded-lg bg-surface-container p-0.5 dark:bg-zinc-800">
+            {(["month", "year"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onPresetChange(value)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  preset === value
+                    ? "bg-surface-container-lowest text-on-surface shadow-sm dark:bg-zinc-900 dark:text-zinc-50"
+                    : "text-on-surface-variant dark:text-zinc-400"
+                }`}
+              >
+                {value === "month" ? "This month" : "This year"}
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <Table
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.productId}
+        emptyMessage="No sales in this period."
+      />
+    </div>
+  );
+}
+
+function RecentSalesTable({
+  orders,
+  money,
+}: Readonly<{ orders: PendingOrder[]; money: (cents: number) => string }>) {
+  const columns: TableColumn<PendingOrder>[] = [
+    {
+      key: "reference",
+      header: "Reference",
+      render: (row) => (
+        <Link
+          href={ROUTES.sales.detail(row.client_generated_id)}
+          className="font-medium text-primary hover:underline dark:text-blue-400"
+        >
+          {row.receipt_no ?? row.client_generated_id.slice(0, 8)}
+        </Link>
+      ),
+    },
+    { key: "items", header: "Items", render: (row) => row.items.length },
+    {
+      key: "date",
+      header: "Date",
+      render: (row) => formatDateTime(row.created_at),
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      render: (row) => PAYMENT_LABELS[row.payment_method],
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (row) => (
+        <span className="font-semibold text-on-surface dark:text-zinc-50">
+          {money(row.total_cents)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => {
+        if (row.refunded) return <Badge variant="danger">Refunded</Badge>;
+        if (row.sync_status === "synced") return <Badge variant="success">Synced</Badge>;
+        if (row.sync_status === "conflict" || row.sync_status === "error") {
+          return <Badge variant="warning">{row.sync_status}</Badge>;
+        }
+        return <Badge variant="neutral">{row.sync_status}</Badge>;
+      },
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader
+        title="Recent sales"
+        action={
+          <Link
+            href={ROUTES.sales.root}
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400"
+          >
+            View all
+            <ChevronRight size={13} aria-hidden />
+          </Link>
+        }
+      />
+      {orders.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<ShoppingBag size={20} />}
+            title="No sales yet"
+            description="Sales recorded at the till appear here."
             action={
               <Link
-                href={ROUTES.sales.root}
-                className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400"
+                href={ROUTES.pos.root}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-secondary px-5 text-sm font-medium text-on-secondary dark:bg-white dark:text-zinc-900"
               >
-                View all
-                <ChevronRight size={13} aria-hidden />
+                Open till
+                <ArrowRight size={15} aria-hidden />
               </Link>
             }
           />
-          <Card>
-            {recentSales.length === 0 ? (
-              <EmptyState
-                icon={<ShoppingBag size={20} />}
-                title="No sales yet"
-                description="Sales recorded at the till appear here."
-                action={
-                  <Link
-                    href={ROUTES.pos.root}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-secondary px-5 text-sm font-medium text-on-secondary dark:bg-white dark:text-zinc-900"
-                  >
-                    Open till
-                    <ArrowRight size={15} aria-hidden />
-                  </Link>
-                }
-              />
-            ) : (
-              <ul className="flex flex-col gap-1">
-                {recentSales.map((order) => (
-                  <li key={order.client_generated_id}>
-                    <Link
-                      href={ROUTES.sales.detail(order.client_generated_id)}
-                      className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-surface-container dark:hover:bg-zinc-800"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-on-surface dark:text-zinc-100">
-                          {order.receipt_no ??
-                            order.client_generated_id.slice(0, 8)}
-                        </span>
-                        <span className="block text-xs text-on-surface-variant dark:text-zinc-400">
-                          {order.items.length} items ·{" "}
-                          {formatDateTime(order.created_at)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-on-surface dark:text-zinc-50">
-                        {money(order.total_cents)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
+        </Card>
+      ) : (
+        <Table columns={columns} rows={orders} rowKey={(row) => row.client_generated_id} />
+      )}
+    </div>
+  );
+}
 
-      <section className="flex flex-col gap-3">
-        <SectionHeader title="Cloud sync" />
-        <SyncPanel pendingCount={pendingCount} conflictCount={conflictCount} />
-      </section>
+const INSIGHT_ICON = {
+  up: TrendingUp,
+  down: TrendingDown,
+  warning: AlertTriangle,
+  neutral: Info,
+};
+
+const INSIGHT_CLASSES = {
+  up: "bg-[#004b1e] text-[#4ade80] dark:bg-green-900/40",
+  down: "bg-error/15 text-error dark:bg-red-900/40 dark:text-red-400",
+  warning: "bg-amber-500/15 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+  neutral: "bg-sky-500/15 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
+};
+
+function InsightsCard({ insights }: Readonly<{ insights: DashboardInsight[] }>) {
+  return (
+    <Card>
+      <h3 className="mb-4 text-sm font-semibold text-on-surface dark:text-zinc-50">
+        Insights
+      </h3>
+      {insights.length === 0 ? (
+        <p className="text-sm text-on-surface-variant dark:text-zinc-400">
+          Not enough data yet to generate insights for this period.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {insights.map((insight) => {
+            const Icon = INSIGHT_ICON[insight.tone];
+            return (
+              <li key={insight.text} className="flex items-start gap-3">
+                <span
+                  className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${INSIGHT_CLASSES[insight.tone]}`}
+                >
+                  <Icon size={14} aria-hidden />
+                </span>
+                <p className="text-sm text-on-surface dark:text-zinc-100">{insight.text}</p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+const EMPTY_OVERVIEW: DashboardOverview = {
+  salesCents: 0,
+  purchasesCents: 0,
+  salesReturnCents: 0,
+  purchaseReturnCents: 0,
+  invoiceCount: 0,
+  profitCents: 0,
+};
+
+export default function DashboardPage() {
+  const { money, settings } = useSettings();
+  const { user, staff } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const colors = CHART_COLORS[resolvedTheme];
+
+  const [preset, setPreset] = useState<RangePreset>("7d");
+  const [topProductsPreset, setTopProductsPreset] = useState<"month" | "year">("month");
+  const [data, setData] = useState<DashboardData>({
+    overview: EMPTY_OVERVIEW,
+    series: [],
+    payments: [],
+    donut: { items: [], otherQuantity: 0, totalQuantity: 0 },
+    stockValue: { costCents: 0, retailCents: 0 },
+    stockAlerts: [],
+    recentSales: [],
+    insights: [],
+  });
+  const [topProductsRows, setTopProductsRows] = useState<TopProductTableRow[]>([]);
+
+  const range = useMemo(() => presetToRange(preset), [preset]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getDashboardOverview(range),
+      getSalesPurchasesSeries(range, settings.locale),
+      getPaymentBreakdown(range),
+      getTopSellingProducts(range),
+      getStockValueSummary(),
+      getStockAlertRows(),
+      getRecentSalesRows(),
+      getDashboardInsights(range),
+    ]).then(
+      ([overview, series, payments, donut, stockValue, stockAlerts, recentSales, insights]) => {
+        if (cancelled) return;
+        setData({ overview, series, payments, donut, stockValue, stockAlerts, recentSales, insights });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [range, settings.locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const productsRange = presetToRange(topProductsPreset);
+    getTopSellingProductsTable(productsRange).then((rows) => {
+      if (!cancelled) setTopProductsRows(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [topProductsPreset]);
+
+  const greeting = `Welcome back, ${staff?.name ?? user?.name ?? "there"}! Here's what's happening today.`;
+
+  const kpis: { label: string; value: number; icon: React.ReactNode; accent: StatAccent }[] = [
+    { label: "Sales", value: data.overview.salesCents, icon: <ShoppingCart size={20} />, accent: "info" },
+    { label: "Purchases", value: data.overview.purchasesCents, icon: <ShoppingBag size={20} />, accent: "orange" },
+    { label: "Sales return", value: data.overview.salesReturnCents, icon: <Undo2 size={20} />, accent: "error" },
+    { label: "Purchases return", value: data.overview.purchaseReturnCents, icon: <RotateCcw size={20} />, accent: "warning" },
+    { label: "Profit", value: data.overview.profitCents, icon: <TrendingUp size={20} />, accent: "success" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6 pb-8">
+      <DashboardHero
+        greeting={greeting}
+        preset={preset}
+        onPresetChange={setPreset}
+        locale={settings.locale}
+      />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        {kpis.map((kpi) => (
+          <StatCard key={kpi.label} label={kpi.label} value={money(kpi.value)} icon={kpi.icon} accent={kpi.accent} />
+        ))}
+        <StatCard
+          label="Invoices"
+          value={String(data.overview.invoiceCount)}
+          icon={<CreditCard size={20} />}
+          accent="primary"
+        />
+      </div>
+
+      <SalesPurchasesChart series={data.series} money={money} colors={colors} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TopSellingDonut donut={data.donut} colors={colors} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <PaymentBreakdownCard rows={data.payments} money={money} colors={colors} />
+          <StockValueCard summary={data.stockValue} money={money} />
+        </div>
+      </div>
+
+      <PaymentSentReceivedChart series={data.series} money={money} colors={colors} />
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Top customers" />
+        <Card>
+          <EmptyState
+            icon={<Users size={20} />}
+            title="Customer tracking isn't recorded on sales yet"
+            description="Sales made at the till aren't linked to a customer record, so this widget has nothing real to show. Adding customer selection at checkout would unlock it."
+          />
+        </Card>
+      </div>
+
+      <InsightsCard insights={data.insights} />
+
+      <StockAlertTable rows={data.stockAlerts} />
+
+      <TopProductsTable
+        rows={topProductsRows}
+        money={money}
+        preset={topProductsPreset}
+        onPresetChange={setTopProductsPreset}
+      />
+
+      <RecentSalesTable orders={data.recentSales} money={money} />
 
       <PluginDashboardWidget />
     </div>

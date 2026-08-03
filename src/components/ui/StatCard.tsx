@@ -2,7 +2,14 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
-export type StatAccent = "primary" | "secondary" | "warning" | "error" | "success";
+export type StatAccent =
+  | "primary"
+  | "secondary"
+  | "warning"
+  | "error"
+  | "success"
+  | "info"
+  | "orange";
 
 interface StatCardProps {
   label: string;
@@ -21,6 +28,8 @@ const ACCENT_CLASSES: Record<StatAccent, string> = {
   warning: "bg-amber-500 text-white",
   error: "bg-error text-on-error",
   success: "bg-[#004b1e] text-[#22c55e]",
+  info: "bg-sky-600 text-white dark:bg-sky-500",
+  orange: "bg-orange-600 text-white dark:bg-orange-500",
 };
 
 export function StatCard({
