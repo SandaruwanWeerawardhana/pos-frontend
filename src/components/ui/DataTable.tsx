@@ -21,6 +21,8 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string;
   emptyMessage?: string;
   pageSize?: number;
+  /** Supplying this adds a "Rows per page" select; the first value is the initial page size. */
+  pageSizeOptions?: number[];
   onRowClick?: (row: T) => void;
   caption?: string;
 }
@@ -41,11 +43,13 @@ export function DataTable<T>({
   rowKey,
   emptyMessage = "No data",
   pageSize = 25,
+  pageSizeOptions,
   onRowClick,
   caption,
 }: Readonly<DataTableProps<T>>) {
   const [sort, setSort] = useState<SortState>(null);
   const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(pageSizeOptions?.[0] ?? pageSize);
   const captionId = useId();
 
   const sortColumn = sort
@@ -63,13 +67,13 @@ export function DataTable<T>({
         })
       : rows;
 
-  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
   // Filtering can shrink the list under the current page; clamp rather than
   // rendering an empty page the user has to click their way out of.
   const currentPage = Math.min(page, pageCount - 1);
   const visible = sorted.slice(
-    currentPage * pageSize,
-    currentPage * pageSize + pageSize,
+    currentPage * rowsPerPage,
+    currentPage * rowsPerPage + rowsPerPage,
   );
 
   function toggleSort(column: DataColumn<T>) {
@@ -200,41 +204,60 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {pageCount > 1 && (
-        <nav
-          aria-label="Pagination"
-          className="flex items-center justify-between gap-3 text-sm"
-        >
+      <nav
+        aria-label="Pagination"
+        className="flex flex-wrap items-center justify-between gap-3 text-sm"
+      >
+        <div className="flex items-center gap-4">
+          {pageSizeOptions && (
+            <label className="flex items-center gap-2 text-on-surface-variant dark:text-zinc-400">
+              Rows per page:
+              <select
+                value={rowsPerPage}
+                onChange={(event) => {
+                  setRowsPerPage(Number(event.target.value));
+                  setPage(0);
+                }}
+                className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-on-surface outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              >
+                {pageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <p className="text-on-surface-variant dark:text-zinc-400">
-            {currentPage * pageSize + 1}–
-            {Math.min((currentPage + 1) * pageSize, sorted.length)} of{" "}
+            {sorted.length === 0 ? 0 : currentPage * rowsPerPage + 1}–
+            {Math.min((currentPage + 1) * rowsPerPage, sorted.length)} of{" "}
             {sorted.length}
           </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={currentPage === 0}
-              aria-label="Previous page"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:-translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-2 text-on-surface-variant dark:text-zinc-400">
-              {currentPage + 1} / {pageCount}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-              disabled={currentPage >= pageCount - 1}
-              aria-label="Next page"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </nav>
-      )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={currentPage === 0}
+            aria-label="Previous page"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:-translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="px-2 text-on-surface-variant dark:text-zinc-400">
+            {currentPage + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            disabled={currentPage >= pageCount - 1}
+            aria-label="Next page"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:translate-x-0.5 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

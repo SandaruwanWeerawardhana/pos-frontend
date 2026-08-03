@@ -370,6 +370,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export interface Role {
   id: string;
   name: string;
+  description?: string;
   permissions: Permission[];
   is_system?: boolean; /* seeded role, cannot be deleted */
   created_at: number;
@@ -377,7 +378,24 @@ export interface Role {
 
 export interface StaffUser {
   id: string;
+  /**
+   * Display name, kept as the single source for receipts, shift reports and
+   * the till sign-in screen. `first_name`/`last_name` are the fields the users
+   * screen edits; rows created before they existed only have `name`, so
+   * readers fall back to splitting it (see `nameParts` in lib/db/users).
+   */
   name: string;
+  first_name?: string;
+  last_name?: string;
+  /** Optional login handle shown in the users table; defaults to `name`. */
+  username?: string;
+  phone?: string;
+  /** Profile picture as a data URL — local-first, same as product images. */
+  avatar?: string;
+  /** Lets the user see every record on list screens, not only their own. */
+  view_all_records?: boolean;
+  /** Warehouses the user may work in. Undefined means all of them. */
+  warehouse_ids?: string[];
   email: string;
   role_id: string;
   /**

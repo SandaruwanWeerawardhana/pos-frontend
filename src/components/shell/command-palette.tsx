@@ -43,7 +43,8 @@ const NAV_COMMANDS: CommandItem[] = [
   { id: "nav-suppliers", label: "Suppliers", group: "Navigate", icon: <Truck size={16} />, href: ROUTES.suppliers },
   { id: "nav-reports", label: "Reports", group: "Navigate", icon: <BarChart2 size={16} />, href: ROUTES.reports },
   { id: "nav-discounts", label: "Discounts & promotions", group: "Navigate", icon: <Tag size={16} />, href: ROUTES.discounts },
-  { id: "nav-users", label: "Cashiers & roles", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users },
+  { id: "nav-users", label: "Users", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users.root },
+  { id: "nav-permissions", label: "Group permissions", group: "Navigate", icon: <ShieldCheck size={16} />, href: ROUTES.users.permissions },
   { id: "nav-settings", label: "Settings", group: "Navigate", icon: <Settings size={16} />, href: ROUTES.settings.root },
 ];
 
@@ -217,7 +218,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Global search and commands"
-        className="animate-scale-in relative flex w-full max-w-xl origin-top flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        className="animate-scale-in relative flex w-full max-w-xl origin-top flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
       >
         <div className="flex items-center gap-3 border-b border-outline-variant px-4 dark:border-zinc-800">
           <Search size={18} className="shrink-0 text-on-surface-variant" aria-hidden />

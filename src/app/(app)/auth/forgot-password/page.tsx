@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
           <MailCheck size={20} />
         </span>
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
             Check your email
           </h1>
           {/* Deliberately does not confirm whether the address is registered:
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-on-surface dark:text-zinc-50">
           Forgot your password?
         </h1>
         <p className="text-sm text-on-surface-variant dark:text-zinc-400">

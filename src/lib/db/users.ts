@@ -6,19 +6,22 @@ import { PERMISSIONS, type Permission, type Role, type StaffUser } from "@/lib/t
 export const ADMIN_ROLE_ID = "role_admin";
 export const CASHIER_ROLE_ID = "role_cashier";
 
-// The only two roles the app has. Admin carries every permission so an install
-// always has an account that can reach this screen; Cashier is till-only.
-// Custom roles are deliberately not supported — see `ensureSystemRoles`.
+// Roles every install starts with. Admin carries every permission so there is
+// always an account that can reach the users screen, and is not deletable for
+// that reason; Cashier is till-only. Anything beyond these two is created by
+// the manager on the group permissions screen.
 const SYSTEM_ROLES: Omit<Role, "created_at">[] = [
   {
     id: ADMIN_ROLE_ID,
     name: "Admin",
+    description: "Full access to every screen and setting",
     permissions: [...PERMISSIONS],
     is_system: true,
   },
   {
     id: CASHIER_ROLE_ID,
     name: "Cashier",
+    description: "Till only — sell, look up products and stock",
     permissions: ["pos.sell", "products.view", "inventory.view"],
     is_system: true,
   },
@@ -42,35 +45,107 @@ export function isPosOnly(permissions: Permission[]): boolean {
   );
 }
 
-// Reconciles the roles table down to Admin and Cashier. Installs seeded before
-// the app dropped custom roles still hold Owner/Manager rows (and possibly
-// hand-made ones); those are removed and anyone assigned to them is moved to
-// Admin, which is the closest match and never strands an account without a way
-// back into the users screen.
+/**
+ * Seeds Admin and Cashier if they are missing, and nothing else: this runs on
+ * every boot, so overwriting existing rows would wipe permission edits made on
+ * the group permissions screen, and deleting unknown rows would wipe the
+ * manager's own roles. Users left pointing at a role that no longer exists are
+ * moved to Admin, which never strands an account outside the users screen.
+ */
 export async function ensureSystemRoles(): Promise<void> {
-  const keep = new Set(SYSTEM_ROLES.map((role) => role.id));
   await db.transaction("rw", db.roles, db.staffUsers, async () => {
     const existing = await db.roles.toArray();
-    const stale = existing.filter((role) => !keep.has(role.id));
+    const known = new Set(existing.map((role) => role.id));
 
-    await db.roles.bulkPut(
-      SYSTEM_ROLES.map((role) => ({
-        ...role,
-        created_at:
-          existing.find((row) => row.id === role.id)?.created_at ?? Date.now(),
-      })),
+    const missing = SYSTEM_ROLES.filter((role) => !known.has(role.id)).map(
+      (role) => ({ ...role, created_at: Date.now() }),
     );
+    if (missing.length > 0) {
+      await db.roles.bulkAdd(missing);
+      for (const role of missing) known.add(role.id);
+    }
 
-    if (stale.length === 0) return;
-    await db.roles.bulkDelete(stale.map((role) => role.id));
-    const staleIds = new Set(stale.map((role) => role.id));
     const orphans = await db.staffUsers
-      .filter((user) => staleIds.has(user.role_id))
+      .filter((user) => !known.has(user.role_id))
       .toArray();
+    if (orphans.length === 0) return;
     await db.staffUsers.bulkPut(
       orphans.map((user) => ({ ...user, role_id: ADMIN_ROLE_ID })),
     );
   });
+}
+
+export async function createRole(
+  input: Pick<Role, "name" | "description" | "permissions">,
+): Promise<Role> {
+  const name = input.name.trim();
+  if (!name) throw new Error("Role name is required");
+  const clash = await db.roles
+    .filter((role) => role.name.toLowerCase() === name.toLowerCase())
+    .first();
+  if (clash) throw new Error("A role with that name already exists");
+
+  const role: Role = {
+    id: crypto.randomUUID(),
+    name,
+    description: input.description?.trim() || undefined,
+    permissions: input.permissions,
+    created_at: Date.now(),
+  };
+  await db.roles.add(role);
+  return role;
+}
+
+/**
+ * System roles keep their identity: Admin must stay all-permissions so an
+ * install cannot lock itself out, so only the description is editable there.
+ */
+export async function updateRole(
+  id: string,
+  changes: Partial<Pick<Role, "name" | "description" | "permissions">>,
+): Promise<void> {
+  const role = await db.roles.get(id);
+  if (!role) throw new Error("That role no longer exists");
+
+  const next: Partial<Role> = { description: changes.description?.trim() };
+
+  if (!role.is_system) {
+    if (changes.name !== undefined) {
+      const name = changes.name.trim();
+      if (!name) throw new Error("Role name is required");
+      const clash = await db.roles
+        .filter(
+          (other) =>
+            other.id !== id && other.name.toLowerCase() === name.toLowerCase(),
+        )
+        .first();
+      if (clash) throw new Error("A role with that name already exists");
+      next.name = name;
+    }
+    if (changes.permissions) next.permissions = changes.permissions;
+  } else if (id !== ADMIN_ROLE_ID && changes.permissions) {
+    next.permissions = changes.permissions;
+  }
+
+  await db.roles.update(id, next);
+}
+
+/**
+ * Refuses while the role still has members: silently moving someone to another
+ * role would change what they can do at the till without anyone being told.
+ */
+export async function deleteRole(id: string): Promise<void> {
+  const role = await db.roles.get(id);
+  if (!role) return;
+  if (role.is_system) throw new Error("Built-in roles cannot be deleted");
+
+  const members = await db.staffUsers.where("role_id").equals(id).count();
+  if (members > 0) {
+    throw new Error(
+      `${members} user${members === 1 ? "" : "s"} still have this role. Move them first.`,
+    );
+  }
+  await db.roles.delete(id);
 }
 
 export async function listRoles(): Promise<Role[]> {
@@ -83,6 +158,35 @@ export async function getRole(id: string): Promise<Role | undefined> {
 
 export async function listStaffUsers(): Promise<StaffUser[]> {
   return db.staffUsers.orderBy("email").toArray();
+}
+
+export async function getStaffUser(id: string): Promise<StaffUser | undefined> {
+  return db.staffUsers.get(id);
+}
+
+/**
+ * First/last name for display. Rows created before the split fields existed
+ * carry only `name`, so it is divided on the first space — everything after it
+ * counts as the surname, which is right for "Maria del Carmen Ruiz".
+ */
+export function nameParts(user: StaffUser): {
+  first: string;
+  last: string;
+} {
+  if (user.first_name || user.last_name) {
+    return { first: user.first_name ?? "", last: user.last_name ?? "" };
+  }
+  const trimmed = user.name.trim();
+  const space = trimmed.indexOf(" ");
+  if (space === -1) return { first: trimmed, last: "" };
+  return {
+    first: trimmed.slice(0, space),
+    last: trimmed.slice(space + 1).trim(),
+  };
+}
+
+export function displayUsername(user: StaffUser): string {
+  return user.username?.trim() || user.name;
 }
 
 export const PIN_PATTERN = /^\d{4,6}$/;
@@ -157,7 +261,22 @@ export async function authenticateStaff(
 export async function updateStaffUser(
   id: string,
   // PIN changes go through `setStaffPin`, which does the salting and hashing.
-  changes: Partial<Pick<StaffUser, "name" | "email" | "role_id" | "active">>,
+  changes: Partial<
+    Pick<
+      StaffUser,
+      | "name"
+      | "first_name"
+      | "last_name"
+      | "username"
+      | "phone"
+      | "avatar"
+      | "view_all_records"
+      | "warehouse_ids"
+      | "email"
+      | "role_id"
+      | "active"
+    >
+  >,
 ): Promise<void> {
   await db.staffUsers.update(id, changes);
 }

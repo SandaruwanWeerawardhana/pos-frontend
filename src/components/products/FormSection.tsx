@@ -79,7 +79,7 @@ export function FormSection({
           <ChevronDown
             size={18}
             aria-hidden
-            className={`shrink-0 text-on-surface-variant transition-transform duration-200 dark:text-zinc-500 ${
+            className={`shrink-0 text-on-surface-variant transition-transform duration-[var(--duration-fast)] dark:text-zinc-500 ${
               open ? "rotate-180" : ""
             }`}
           />

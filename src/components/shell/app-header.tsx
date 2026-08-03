@@ -13,11 +13,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import {
   Globe,
   KeyRound,
-  LayoutGrid,
   LogOut,
   Maximize2,
   Menu,
   Minimize2,
+  Monitor,
   Search,
   User as UserIcon,
   Wifi,
@@ -40,7 +40,7 @@ const OFFICE_SIDEBAR_PATHS = [
   ROUTES.suppliers,
   ROUTES.reports,
   ROUTES.discounts,
-  ROUTES.users,
+  ROUTES.users.root,
   ROUTES.settings.root,
   ROUTES.profile,
   ROUTES.admin,
@@ -172,7 +172,7 @@ export function AppHeader() {
   if (!hydrated) {
     return (
       <header
-        className="fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 md:left-56"
+        className="fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 md:left-64"
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Skeleton className="h-5 w-24 rounded" />
@@ -190,7 +190,7 @@ export function AppHeader() {
   return (
     <header
       className={`fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 ${
-        hasOfficeSidebar ? "md:left-56" : ""
+        hasOfficeSidebar ? "md:left-64" : ""
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -199,7 +199,7 @@ export function AppHeader() {
           type="button"
           aria-label="Toggle sidebar"
           onClick={handleToggleSidebar}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:text-on-surface active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container hover:text-on-surface active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 md:hidden"
         >
           <Menu size={18} />
         </button>
@@ -208,7 +208,7 @@ export function AppHeader() {
         <button
           type="button"
           onClick={openCommandPalette}
-          className="group ml-2 hidden min-w-0 max-w-xs flex-1 items-center gap-2 rounded-lg border border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-primary/40 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:flex dark:border-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-800"
+          className="group ml-2 hidden min-w-0 max-w-xs flex-1 items-center gap-2 rounded-xl border border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:border-primary/40 hover:bg-surface-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:flex dark:border-zinc-800 dark:text-zinc-500 dark:hover:bg-zinc-800"
         >
           <Search
             size={13}
@@ -220,13 +220,20 @@ export function AppHeader() {
         )}
       </div>
 
+      <span className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-center text-xs font-medium text-on-surface-variant xl:block dark:text-zinc-400">
+        <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
+          {now ? formatTime(now) : "--:--"}
+        </span>
+        {now ? formatDate(now) : "..."}
+      </span>
+
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {!posOnly && (
         <button
           type="button"
           onClick={openCommandPalette}
           aria-label="Search"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:hidden dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:hidden dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           <Search size={15} />
         </button>
@@ -235,9 +242,9 @@ export function AppHeader() {
         {!posOnly && (
           <Link
             href={ROUTES.pos.root}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:scale-105 active:scale-95"
+            className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-on-primary transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:scale-105 active:scale-95"
           >
-            <LayoutGrid size={14} aria-hidden />
+            <Monitor size={14} aria-hidden />
             POS
           </Link>
         )}
@@ -265,7 +272,7 @@ export function AppHeader() {
           type="button"
           onClick={handleToggleFullscreen}
           aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
@@ -277,14 +284,14 @@ export function AppHeader() {
             aria-expanded={langOpen}
             aria-haspopup="menu"
             aria-label="Change language"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
             <Globe size={15} />
           </button>
           {langOpen && (
             <div
               role="menu"
-              className="animate-scale-in absolute right-0 top-10 z-[120] w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+              className="animate-scale-in absolute right-0 top-10 z-[120] w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
             >
               {LOCALE_OPTIONS.map((option) => (
                 <button
@@ -325,7 +332,7 @@ export function AppHeader() {
             {menuOpen && (
               <div
                 role="menu"
-                className="animate-scale-in absolute right-0 top-10 z-[120] w-56 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+                className="animate-scale-in absolute right-0 top-10 z-[120] w-56 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <div className="border-b border-outline-variant px-4 py-3 dark:border-zinc-800">
                   <p className="truncate text-sm font-semibold text-on-surface dark:text-zinc-50">
@@ -376,12 +383,6 @@ export function AppHeader() {
           </div>
         )}
 
-        <span className="hidden min-w-[5.5rem] whitespace-nowrap text-right text-xs font-medium text-on-surface-variant xl:block dark:text-zinc-400">
-          <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
-            {now ? formatTime(now) : "--:--"}
-          </span>
-          {now ? formatDate(now) : "..."}
-        </span>
       </div>
     </header>
   );

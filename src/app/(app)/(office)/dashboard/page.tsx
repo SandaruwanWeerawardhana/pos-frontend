@@ -161,16 +161,16 @@ function DashboardHero({
   locale: string;
 }>) {
   return (
-    <div className="flex animate-fade-in-up flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary transition-shadow duration-300 hover:shadow-elevated sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex animate-fade-in-up flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary transition-shadow duration-[var(--duration-base)] hover:shadow-elevated sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-on-primary/80">{greeting}</p>
       </div>
       <div className="flex flex-col gap-2 sm:items-end">
         <select
           value={preset}
           onChange={(event) => onPresetChange(event.target.value as RangePreset)}
-          className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-200 hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
+          className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
         >
           {RANGE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -178,7 +178,7 @@ function DashboardHero({
             </option>
           ))}
         </select>
-        <span className="rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm transition-colors duration-300">
+        <span className="rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm transition-colors duration-[var(--duration-base)]">
           {rangeLabel(preset, locale)}
         </span>
       </div>
@@ -211,16 +211,16 @@ function KpiTile({
   return (
     <div
       style={{ animationDelay: `${delayMs}ms` }}
-      className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-fast)] hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 ${KPI_TINTS[tint]}`}
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-fast)] ${KPI_TINTS[tint]}`}
       >
         {icon}
       </span>
       <span className="min-w-0">
         <span className="block text-sm text-on-surface-variant dark:text-zinc-400">{label}</span>
-        <span className="block text-lg font-semibold text-on-surface transition-all duration-300 dark:text-zinc-50">{value}</span>
+        <span className="block text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">{value}</span>
       </span>
     </div>
   );
@@ -251,6 +251,82 @@ function ChartTooltip({
   );
 }
 
+/*
+ * Lightens (amount > 0) or darkens (amount < 0) a #rrggbb colour. The lit top
+ * face and shaded side face of an extruded bar are derived from the series'
+ * own hue this way, so the 3D shading never introduces a colour outside the
+ * validated palette.
+ */
+function shadeHex(hex: string, amount: number): string {
+  const value = Number.parseInt(hex.replace("#", ""), 16);
+  const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  return `#${channels
+    .map((channel) => {
+      const mixed =
+        amount >= 0
+          ? channel + (255 - channel) * amount
+          : channel * (1 + amount);
+      return Math.min(255, Math.max(0, Math.round(mixed)))
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("")}`;
+}
+
+/*
+ * Extrusion depth in px. Deliberately shallow: the top cap of a 3D bar sits
+ * above the value it encodes, so the deeper the prism the more the eye
+ * over-reads the magnitude. The gridlines and y-axis stay aligned to the
+ * front face, which is the true value.
+ */
+const BAR_DEPTH_PX = 7;
+
+interface Bar3DProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  gradientId?: string;
+}
+
+function Bar3D({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  fill = "#000000",
+  gradientId,
+}: Readonly<Bar3DProps>) {
+  if (width <= 0 || height <= 0) return null;
+
+  const depth = Math.min(BAR_DEPTH_PX, width * 0.4);
+  const right = x + width;
+  const bottom = y + height;
+
+  return (
+    <g>
+      {/* Side face — the darkest plane, so the light reads as coming from the
+          upper left across every bar in the chart. */}
+      <path
+        d={`M ${right} ${y} L ${right + depth} ${y - depth} L ${right + depth} ${bottom - depth} L ${right} ${bottom} Z`}
+        fill={shadeHex(fill, -0.3)}
+      />
+      <path
+        d={`M ${x} ${y} L ${x + depth} ${y - depth} L ${right + depth} ${y - depth} L ${right} ${y} Z`}
+        fill={shadeHex(fill, 0.24)}
+      />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={gradientId ? `url(#${gradientId})` : fill}
+      />
+    </g>
+  );
+}
+
 function SalesPurchasesChart({
   series,
   money,
@@ -273,7 +349,25 @@ function SalesPurchasesChart({
       </h3>
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barGap={4} barCategoryGap="24%">
+          {/* The extra top and right margin is the room the extrusion needs —
+              without it the tallest bar's cap and the rightmost bar's side
+              face clip against the plot edge. */}
+          <BarChart
+            data={data}
+            barGap={6}
+            barCategoryGap="26%"
+            margin={{ top: BAR_DEPTH_PX + 4, right: BAR_DEPTH_PX + 4, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="bar3d-sales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={shadeHex(colors.sales, 0.12)} />
+                <stop offset="100%" stopColor={colors.sales} />
+              </linearGradient>
+              <linearGradient id="bar3d-purchases" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={shadeHex(colors.purchases, 0.12)} />
+                <stop offset="100%" stopColor={colors.purchases} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke={colors.grid} />
             <XAxis
               dataKey="label"
@@ -290,19 +384,21 @@ function SalesPurchasesChart({
             />
             <Tooltip content={<ChartTooltip money={money} />} cursor={{ fill: colors.grid, opacity: 0.4 }} />
             <Legend wrapperStyle={{ fontSize: 12, color: colors.ink }} />
+            {/* `fill` stays a flat hex so the legend swatch resolves — the
+                gradient only reaches the front face, via the custom shape. */}
             <Bar
               dataKey="Sales"
               fill={colors.sales}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={22}
+              shape={<Bar3D gradientId="bar3d-sales" />}
+              maxBarSize={26}
               animationDuration={700}
               animationEasing="ease-out"
             />
             <Bar
               dataKey="Purchases"
               fill={colors.purchases}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={22}
+              shape={<Bar3D gradientId="bar3d-purchases" />}
+              maxBarSize={26}
               animationDuration={700}
               animationEasing="ease-out"
             />
@@ -409,7 +505,7 @@ function PaymentBreakdownCard({
             </div>
             <div className="h-1.5 w-full rounded-full bg-surface-container dark:bg-zinc-800">
               <div
-                className="h-1.5 rounded-full transition-all duration-500 ease-out"
+                className="h-1.5 rounded-full transition-all duration-[var(--duration-slow)] ease-out"
                 style={{ width: `${row.percent}%`, backgroundColor: dotColor[row.method] }}
               />
             </div>
@@ -554,7 +650,7 @@ function StockAlertTable({ rows }: Readonly<{ rows: StockAlertRow[] }>) {
         action={
           <Link
             href={ROUTES.inventory.alerts}
-            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
           >
             View all
             <ChevronRight size={13} aria-hidden />
@@ -607,7 +703,7 @@ function TopProductsTable({
                 key={value}
                 type="button"
                 onClick={() => onPresetChange(value)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 active:scale-95 ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-[var(--duration-fast)] active:scale-95 ${
                   preset === value
                     ? "bg-surface-container-lowest text-on-surface shadow-sm dark:bg-zinc-900 dark:text-zinc-50"
                     : "text-on-surface-variant hover:text-on-surface dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -640,7 +736,7 @@ function RecentSalesTable({
       render: (row) => (
         <Link
           href={ROUTES.sales.detail(row.client_generated_id)}
-          className="font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+          className="font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
         >
           {row.receipt_no ?? row.client_generated_id.slice(0, 8)}
         </Link>
@@ -687,7 +783,7 @@ function RecentSalesTable({
         action={
           <Link
             href={ROUTES.sales.root}
-            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-150"
+            className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline dark:text-blue-400 transition-colors duration-[var(--duration-fast)]"
           >
             View all
             <ChevronRight size={13} aria-hidden />
