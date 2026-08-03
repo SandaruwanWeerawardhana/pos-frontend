@@ -87,7 +87,9 @@ const isoDate = z
     "Enter a valid date",
   );
 
-const unitEnum = z.enum(["unit", "kg", "g", "l", "ml", "pack", "box"]);
+// Not a fixed enum: the catalogue's "+" lets a user define a custom unit
+// (see `ProductUnitRecord`), so any non-empty short name is valid here.
+const unitField = z.string().trim().min(1, "Unit is required");
 
 const baseProductSchema = z.object({
   /* ── Basic information ─────────────────────────────────────────────── */
@@ -118,9 +120,9 @@ const baseProductSchema = z.object({
 
   /* ── Inventory ─────────────────────────────────────────────────────── */
   product_type: z.enum(["standard", "variable", "service", "combo"]),
-  unit: unitEnum,
-  sale_unit: unitEnum,
-  purchase_unit: unitEnum,
+  unit: unitField,
+  sale_unit: unitField,
+  purchase_unit: unitField,
   stock_alert: quantityField("Stock alert", { integer: true }),
   weight: quantityField("Weight"),
   length: quantityField("Length"),

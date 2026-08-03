@@ -369,7 +369,11 @@ export default function ProductAddPage() {
             <Suspense fallback={<SectionFallback />}>
               <MediaSection form={form} errorCount={errorsFor("images")} />
             </Suspense>
-            <InventorySection form={form} errorCount={errorsFor("inventory")} />
+            <InventorySection
+              form={form}
+              errorCount={errorsFor("inventory")}
+              productUnits={options.productUnits}
+            />
             <PricingSection form={form} errorCount={errorsFor("pricing")} />
             <Suspense fallback={<SectionFallback />}>
               <WarrantySection form={form} errorCount={errorsFor("warranty")} />

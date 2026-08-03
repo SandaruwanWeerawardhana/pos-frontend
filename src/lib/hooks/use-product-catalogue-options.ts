@@ -5,11 +5,12 @@ import {
   ensureDefaultWarehouse,
   listBrands,
   listCategories,
+  listProductUnits,
   listShelfLocations,
   listSubcategories,
   listWarehouses,
 } from "@/lib/db";
-import type { Warehouse } from "@/lib/types";
+import type { ProductUnitRecord, Warehouse } from "@/lib/types";
 
 export interface CatalogueOptions {
   categories: string[];
@@ -18,6 +19,8 @@ export interface CatalogueOptions {
   warehouses: Warehouse[];
   /** Rack/shelf references already used, for the location typeahead. */
   locations: string[];
+  /** Custom units created from the product form's "+", alongside the fixed list. */
+  productUnits: ProductUnitRecord[];
   loading: boolean;
 }
 
@@ -66,17 +69,25 @@ export function useProductCatalogueOptions(): CatalogueOptions {
     staleTime: STALE_MS,
   });
 
+  const productUnits = useQuery({
+    queryKey: ["product-options", "product-units"],
+    queryFn: listProductUnits,
+    staleTime: STALE_MS,
+  });
+
   return {
     categories: categories.data ?? [],
     subcategories: subcategories.data ?? [],
     brands: brands.data ?? [],
     warehouses: warehouses.data ?? [],
     locations: locations.data ?? [],
+    productUnits: productUnits.data ?? [],
     loading:
       categories.isPending ||
       subcategories.isPending ||
       brands.isPending ||
       warehouses.isPending ||
-      locations.isPending,
+      locations.isPending ||
+      productUnits.isPending,
   };
 }

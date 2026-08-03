@@ -1,7 +1,8 @@
 "use client";
 
 import { BarcodeScanner } from "@/components/hardware/BarcodeScanner";
-import { Combobox } from "@/components/ui/Combobox";
+import { Button } from "@/components/ui/Button";
+import { Combobox, type ComboboxOption } from "@/components/ui/Combobox";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
@@ -16,7 +17,7 @@ import {
   isValidGtin,
 } from "@/lib/products/generate";
 import type { BarcodeSource } from "@/lib/products/schema";
-import { Barcode, FileText, RefreshCw, ScanLine, Sparkles } from "lucide-react";
+import { Barcode, FileText, Plus, RefreshCw, ScanLine, Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import { FormSection, RequiredMark } from "./FormSection";
@@ -73,6 +74,109 @@ function SourceToggleIcon({
 
 function toOptions(values: string[]) {
   return values.map((value) => ({ value, label: value }));
+}
+
+interface QuickAddComboboxProps {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+  options: ComboboxOption[];
+  placeholder: string;
+  emptyMessage: string;
+  error?: string;
+}
+
+/**
+ * Category and brand are free text — Combobox already lets you type a new
+ * one, but the "+" gives that the same explicit affordance a fixed picker
+ * would have, for anyone who would not otherwise think to just type.
+ */
+function QuickAddCombobox({
+  label,
+  required,
+  value,
+  onChange,
+  onBlur,
+  options,
+  placeholder,
+  emptyMessage,
+  error,
+}: Readonly<QuickAddComboboxProps>) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  function submitDraft() {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    onChange(trimmed);
+    setDialogOpen(false);
+  }
+
+  return (
+    <div className="flex items-end gap-2">
+      <div className="min-w-0 flex-1">
+        <Combobox
+          label={label}
+          required={required}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          options={options}
+          placeholder={placeholder}
+          allowCustom
+          emptyMessage={emptyMessage}
+          error={error}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft("");
+          setDialogOpen(true);
+        }}
+        aria-label={`Add new ${label.toLowerCase()}`}
+        title={`Add new ${label.toLowerCase()}`}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-secondary text-on-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/90 active:scale-95 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600"
+      >
+        <Plus size={18} />
+      </button>
+
+      <Modal
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={`Add ${label}`}
+        size="sm"
+      >
+        {/* The modal is portalled out of the product form's DOM, but React
+            still bubbles events up the component tree — without stopping it,
+            adding a category would submit the whole product. */}
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            submitDraft();
+          }}
+        >
+          <Input
+            label={label}
+            autoFocus
+            placeholder={placeholder}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
 }
 
 /**
@@ -314,7 +418,7 @@ export function BasicInformationSection({
           control={control}
           name="category"
           render={({ field }) => (
-            <Combobox
+            <QuickAddCombobox
               label="Categories"
               required
               value={field.value}
@@ -322,7 +426,6 @@ export function BasicInformationSection({
               onBlur={field.onBlur}
               options={toOptions(options.categories)}
               placeholder="Choose Category"
-              allowCustom
               emptyMessage="Type to add a new category"
               error={errors.category?.message}
             />
@@ -351,14 +454,13 @@ export function BasicInformationSection({
           control={control}
           name="brand"
           render={({ field }) => (
-            <Combobox
+            <QuickAddCombobox
               label="Brand"
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
               options={toOptions(options.brands)}
               placeholder="Choose Brand"
-              allowCustom
               emptyMessage="Type to add a new brand"
               error={errors.brand?.message}
             />

@@ -10,8 +10,34 @@ export type SyncStatus = "pending" | "syncing" | "synced" | "conflict" | "error"
  * How a product's quantity is entered at the till. "unit" products are
  * counted (1 tin, 2 loaves); "weight" products are priced per kg and the
  * cart quantity carries a fractional weight read from the scale.
+ *
+ * The built-in literals stay for autocomplete; `(string & {})` keeps the
+ * type from collapsing to plain `string` while still accepting a custom
+ * unit's `short_name` (see `ProductUnitRecord`) created from the catalogue.
  */
-export type ProductUnit = "unit" | "kg" | "g" | "l" | "ml" | "pack" | "box";
+export type ProductUnit =
+  | "unit"
+  | "kg"
+  | "g"
+  | "l"
+  | "ml"
+  | "pack"
+  | "box"
+  | (string & {});
+
+/**
+ * A user-defined unit of measure (e.g. "Meter"/"m"), created from the product
+ * form rather than shipped as a fixed option. `base_unit` is an optional
+ * reference to another unit's `short_name`, for grouping only — no
+ * conversion factor is stored or applied.
+ */
+export interface ProductUnitRecord {
+  id: string;
+  name: string;
+  short_name: string;
+  base_unit?: string;
+  created_at: string;
+}
 
 /**
  * How a product behaves in the catalogue. "standard" is a single sellable

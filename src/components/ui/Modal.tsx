@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 type ModalSize = "sm" | "md" | "lg" | "xl";
@@ -110,9 +111,19 @@ export function Modal({
     };
   }, [open, onClose, trapFocus]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  /**
+   * Rendered into document.body rather than in place. A modal opened from
+   * inside a <form> — the product form's scanner and quick-add dialogs — would
+   * otherwise nest its own <form> inside that one, which is invalid HTML and
+   * breaks hydration. The portal also keeps the overlay clear of any ancestor
+   * `overflow` or stacking context.
+   *
+   * React still routes events through the component tree, so a dialog's own
+   * submit must stop propagation to avoid also submitting the host form.
+   */
+  return createPortal(
     <div
       className={`animate-fade-in fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4 ${
         glass ? "backdrop-blur-sm" : ""
@@ -182,6 +193,7 @@ export function Modal({
         )}
         {children}
       </dialog>
-    </div>
+    </div>,
+    document.body,
   );
 }

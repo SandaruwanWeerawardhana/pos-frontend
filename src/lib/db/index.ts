@@ -12,6 +12,7 @@ import type {
   PaymentSplit,
   PendingOrder,
   Product,
+  ProductUnitRecord,
   PurchaseOrder,
   PurchaseReturn,
   Role,
@@ -47,6 +48,7 @@ export class PosDB extends Dexie {
   staffUsers!: Table<StaffUser, string>;
   notifications!: Table<AppNotification, string>;
   deletedProducts!: Table<DeletedProductRecord, string>;
+  productUnits!: Table<ProductUnitRecord, string>;
 
   constructor() {
     super("posDB");
@@ -130,6 +132,13 @@ export class PosDB extends Dexie {
             delete product.status;
           });
       });
+    /**
+     * v6: custom units of measure, created from the product form's "+" next
+     * to Product Unit rather than shipped as a fixed list.
+     */
+    this.version(6).stores({
+      productUnits: "id, short_name",
+    });
   }
 }
 
@@ -557,6 +566,43 @@ export async function listShelfLocations(): Promise<string[]> {
     }
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+export async function listProductUnits(): Promise<ProductUnitRecord[]> {
+  const units = await db.productUnits.toArray();
+  return units.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Custom unit created from the product form. `short_name` is what actually
+ * gets stored on `product.unit` / `sale_unit` / `purchase_unit`, so it must
+ * be unique against both existing custom units and the built-in options
+ * (checked by the caller, which knows the fixed list).
+ */
+export async function addProductUnit(input: {
+  name: string;
+  short_name: string;
+  base_unit?: string;
+}): Promise<ProductUnitRecord> {
+  const name = input.name.trim();
+  const shortName = input.short_name.trim();
+  if (!name) throw new Error("Unit name is required");
+  if (!shortName) throw new Error("Short name is required");
+
+  return db.transaction("rw", db.productUnits, async () => {
+    const existing = await db.productUnits.where("short_name").equals(shortName).first();
+    if (existing) throw new Error("Short name already exists");
+
+    const unit: ProductUnitRecord = {
+      id: crypto.randomUUID(),
+      name,
+      short_name: shortName,
+      base_unit: input.base_unit?.trim() || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.productUnits.add(unit);
+    return unit;
+  });
 }
 
 /**

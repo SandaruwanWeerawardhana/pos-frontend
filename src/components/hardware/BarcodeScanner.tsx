@@ -58,11 +58,37 @@ export function BarcodeScanner({
     const run = pendingRef.current.then(async () => {
       if (token !== startTokenRef.current) return;
 
-      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] =
+        await Promise.all([
+          import("@zxing/browser"),
+          import("@zxing/library"),
+        ]);
       if (token !== startTokenRef.current || !videoRef.current) return;
 
+      /**
+       * Without a format list ZXing tries every reader it ships — Micro QR,
+       * Aztec, PDF417 and the rest — on every frame, and each miss logs a
+       * NotFoundException. Naming the formats a shop actually prints cuts both
+       * the console noise and the per-frame decode cost.
+       */
+      const hints = new Map([
+        [
+          DecodeHintType.POSSIBLE_FORMATS,
+          [
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.ITF,
+            BarcodeFormat.QR_CODE,
+          ],
+        ],
+      ]);
+
       try {
-        controls = await new BrowserMultiFormatReader().decodeFromConstraints(
+        controls = await new BrowserMultiFormatReader(hints).decodeFromConstraints(
           { video: { facingMode: "environment" } },
           videoRef.current,
           (result) => {
