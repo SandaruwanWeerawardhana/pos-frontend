@@ -22,7 +22,6 @@ export function MediaSection({ form, errorCount }: Readonly<MediaSectionProps>) 
       description="The first image is the main one"
       icon={<Upload size={18} />}
       errorCount={errorCount}
-      plain
     >
       <p className="mb-3 text-xs text-on-surface-variant dark:text-zinc-400">
         Upload one or more images. The first image is stored in the product

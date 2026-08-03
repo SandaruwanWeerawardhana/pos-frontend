@@ -34,7 +34,6 @@ export function LocationSection({
       title="Internal Location (Rack/Shelf)"
       icon={<MapPin size={18} />}
       errorCount={errorCount}
-      plain
     >
       <p className="mb-3 rounded-xl bg-surface-container-low px-3 py-2 text-xs text-on-surface-variant dark:bg-zinc-800/60 dark:text-zinc-400">
         Optional. Identifies where the product sits in the warehouse (rack /

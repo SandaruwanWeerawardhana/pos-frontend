@@ -169,7 +169,6 @@ export function BasicInformationSection({
       title="Basic Information"
       icon={<FileText size={18} />}
       errorCount={errorCount}
-      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input

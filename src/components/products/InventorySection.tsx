@@ -41,7 +41,6 @@ export function InventorySection({
       title="Inventory"
       icon={<Package size={18} />}
       errorCount={errorCount}
-      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Controller

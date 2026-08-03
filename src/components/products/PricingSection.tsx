@@ -113,7 +113,6 @@ export function PricingSection({
       title="Pricing And Tax"
       icon={<Tags size={18} />}
       errorCount={errorCount}
-      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input

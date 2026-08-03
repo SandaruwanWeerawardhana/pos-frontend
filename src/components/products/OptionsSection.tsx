@@ -74,7 +74,6 @@ export function OptionsSection({
       title="Options"
       description="How the till and the storefront are allowed to treat this product"
       icon={<Database size={18} />}
-      plain
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {TOGGLES.map((toggle) => (

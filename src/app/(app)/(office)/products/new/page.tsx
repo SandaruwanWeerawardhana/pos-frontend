@@ -355,61 +355,52 @@ export default function ProductAddPage() {
           noValidate
           className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
         >
-          <div className="flex min-w-0 flex-col gap-5">
-            <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest/80 p-4 shadow-sm backdrop-blur-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
-              <div className="flex flex-col gap-8">
-                <BasicInformationSection
-                  form={form}
-                  options={options}
-                  duplicates={duplicates}
-                  errorCount={errorsFor("basic-information")}
-                />
-                <Suspense fallback={<SectionFallback />}>
-                  <MediaSection form={form} errorCount={errorsFor("images")} />
-                </Suspense>
-                <InventorySection
-                  form={form}
-                  errorCount={errorsFor("inventory")}
-                />
-                <PricingSection form={form} errorCount={errorsFor("pricing")} />
-                <Suspense fallback={<SectionFallback />}>
-                  <WarrantySection
-                    form={form}
-                    errorCount={errorsFor("warranty")}
-                  />
-                </Suspense>
-                <Suspense fallback={<SectionFallback />}>
-                  <OpeningStockSection
-                    form={form}
-                    warehouses={options.warehouses}
-                    errorCount={errorsFor("opening-stock")}
-                  />
-                </Suspense>
-                <Suspense fallback={<SectionFallback />}>
-                  <LocationSection
-                    form={form}
-                    warehouses={options.warehouses}
-                    knownLocations={options.locations}
-                    errorCount={errorsFor("location")}
-                  />
-                </Suspense>
-                <Suspense fallback={<SectionFallback />}>
-                  <OptionsSection
-                    form={form}
-                    pluginValues={pluginValues}
-                    onPluginChange={(key, value) =>
-                      setPluginValues((current) => ({ ...current, [key]: value }))
-                    }
-                  />
-                </Suspense>
-                <Suspense fallback={<SectionFallback />}>
-                  <PharmacySection
-                    form={form}
-                    errorCount={errorsFor("pharmacy")}
-                  />
-                </Suspense>
-              </div>
-            </div>
+          {/* One card per section, each collapsible on its own: a grocery
+              product fills three of these and a pharmacy line fills nine, so
+              folding the ones you are not using is what keeps the page
+              workable on a tablet. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <BasicInformationSection
+              form={form}
+              options={options}
+              duplicates={duplicates}
+              errorCount={errorsFor("basic-information")}
+            />
+            <Suspense fallback={<SectionFallback />}>
+              <MediaSection form={form} errorCount={errorsFor("images")} />
+            </Suspense>
+            <InventorySection form={form} errorCount={errorsFor("inventory")} />
+            <PricingSection form={form} errorCount={errorsFor("pricing")} />
+            <Suspense fallback={<SectionFallback />}>
+              <WarrantySection form={form} errorCount={errorsFor("warranty")} />
+            </Suspense>
+            <Suspense fallback={<SectionFallback />}>
+              <OpeningStockSection
+                form={form}
+                warehouses={options.warehouses}
+                errorCount={errorsFor("opening-stock")}
+              />
+            </Suspense>
+            <Suspense fallback={<SectionFallback />}>
+              <LocationSection
+                form={form}
+                warehouses={options.warehouses}
+                knownLocations={options.locations}
+                errorCount={errorsFor("location")}
+              />
+            </Suspense>
+            <Suspense fallback={<SectionFallback />}>
+              <OptionsSection
+                form={form}
+                pluginValues={pluginValues}
+                onPluginChange={(key, value) =>
+                  setPluginValues((current) => ({ ...current, [key]: value }))
+                }
+              />
+            </Suspense>
+            <Suspense fallback={<SectionFallback />}>
+              <PharmacySection form={form} errorCount={errorsFor("pharmacy")} />
+            </Suspense>
 
             {/* Sticky rather than fixed so it rides the bottom of the viewport
                 while the long form scrolls behind it, at every width, and
@@ -419,10 +410,10 @@ export default function ProductAddPage() {
                 {errorCount > 0 ? (
                   <>
                     <Info size={14} aria-hidden className="text-error" />
-                    <span role="status" className="text-error">
+                    <output className="text-error">
                       {errorCount} field{errorCount === 1 ? "" : "s"} need
                       attention
-                    </span>
+                    </output>
                   </>
                 ) : (
                   <>

@@ -44,7 +44,6 @@ export function OpeningStockSection({
       title="Opening Stock"
       icon={<ShoppingBag size={18} />}
       errorCount={errorCount}
-      plain
     >
       {warehouses.length === 0 ? (
         <p className="rounded-xl bg-surface-container-low px-3 py-2 text-sm text-on-surface-variant dark:bg-zinc-800/60 dark:text-zinc-400">

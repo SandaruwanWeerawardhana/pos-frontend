@@ -38,7 +38,6 @@ export function PharmacySection({
       title="Pharmacy Settings"
       icon={<HeartPulse size={18} />}
       errorCount={errorCount}
-      plain
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Controller
