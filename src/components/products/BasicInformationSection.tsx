@@ -64,7 +64,7 @@ function SourceToggleIcon({
         packageMode ? "Switch to in-store generated code" : "Switch to on-package code"
       }
       title={packageMode ? "Switch to in-store code" : "Switch to on-package code"}
-      className="pointer-events-auto rounded-md p-0.5 transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 hover:text-secondary active:scale-95 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+      className="pointer-events-auto rounded-md bg-secondary/10 p-1 text-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/20 active:scale-95 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
     >
       {packageMode ? <Sparkles size={15} /> : <ScanLine size={15} />}
     </button>
@@ -224,7 +224,7 @@ export function BasicInformationSection({
                 onClick={() => setScanning(true)}
                 aria-label="Scan barcode"
                 title="Scan barcode"
-                className="rounded-md p-0.5 transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/10 hover:text-secondary active:scale-95 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+                className="rounded-md bg-secondary/10 p-1 text-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-secondary/20 active:scale-95 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
               >
                 <Barcode size={15} />
               </button>
