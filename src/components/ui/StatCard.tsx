@@ -72,7 +72,7 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className="text-2xl font-bold tracking-tight text-on-surface sm:text-3xl dark:text-zinc-50">
+        <p className="font-display text-2xl font-bold tracking-tight text-on-surface sm:text-3xl dark:text-zinc-50">
           {value}
         </p>
         <p className="mt-0.5 text-sm text-on-surface-variant dark:text-zinc-400">

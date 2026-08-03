@@ -121,7 +121,7 @@ export default function OfficeLayout({
             <span className="flex h-7 w-7 select-none items-center justify-center rounded-lg bg-gradient-to-r from-primary to-secondary">
               <Image src="/logo.png" alt="PSI POS" width={28} height={28} className="rounded-lg" />
             </span>
-            <span className="text-sm font-semibold text-on-surface dark:text-zinc-100">
+            <span className="font-display text-sm font-semibold text-on-surface dark:text-zinc-100">
               PSI POS
             </span>
           </div>

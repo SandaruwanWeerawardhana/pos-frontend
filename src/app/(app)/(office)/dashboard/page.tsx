@@ -163,7 +163,7 @@ function DashboardHero({
   return (
     <div className="flex animate-fade-in-up flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary transition-shadow duration-300 hover:shadow-elevated sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-on-primary/80">{greeting}</p>
       </div>
       <div className="flex flex-col gap-2 sm:items-end">

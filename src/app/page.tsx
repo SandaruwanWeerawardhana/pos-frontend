@@ -40,7 +40,7 @@ export default function LandingPage() {
           <span className="rounded-full border border-[#E63946]/30 bg-[#E63946]/10 px-4 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[#ff8a9a]">
             Local-first · works offline
           </span>
-          <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Point of sale that never
             <br />
             waits for a{" "}
