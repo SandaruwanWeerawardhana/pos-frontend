@@ -72,8 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-// Longest-prefix match, so /inventory/alerts highlights "Stock alerts" rather
-// than also lighting up the parent "Inventory" link.
+
 function findActiveHref(pathname: string | null): string | null {
   if (!pathname) return null;
   const matches = NAV_GROUPS.flatMap((group) => group.items)
@@ -128,7 +127,7 @@ export default function OfficeLayout({
           }`}
         >
           <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-outline-variant px-4 dark:border-zinc-800">
-            <span className="flex h-7 w-7 select-none items-center justify-center rounded-lg bg-primary">
+            <span className="flex h-7 w-7 select-none items-center justify-center rounded-lg bg-gradient-to-r from-primary to-secondary">
               <Image src="/logo.png" alt="PSI POS" width={28} height={28} className="rounded-lg" />
             </span>
             <span className="text-sm font-semibold text-on-surface dark:text-zinc-100">
@@ -153,7 +152,7 @@ export default function OfficeLayout({
                       onClick={() => setSidebarOpen(false)}
                       className={`group flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         active
-                          ? "bg-primary text-on-primary shadow-sm"
+                          ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
                           : "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                       }`}
                     >
