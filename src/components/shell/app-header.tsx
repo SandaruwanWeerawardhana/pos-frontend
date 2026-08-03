@@ -220,6 +220,13 @@ export function AppHeader() {
         )}
       </div>
 
+      <span className="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-center text-xs font-medium text-on-surface-variant xl:block dark:text-zinc-400">
+        <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
+          {now ? formatTime(now) : "--:--"}
+        </span>
+        {now ? formatDate(now) : "..."}
+      </span>
+
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {!posOnly && (
         <button
@@ -376,12 +383,6 @@ export function AppHeader() {
           </div>
         )}
 
-        <span className="hidden min-w-[5.5rem] whitespace-nowrap text-right text-xs font-medium text-on-surface-variant xl:block dark:text-zinc-400">
-          <span className="block text-sm font-semibold text-on-surface dark:text-zinc-100">
-            {now ? formatTime(now) : "--:--"}
-          </span>
-          {now ? formatDate(now) : "..."}
-        </span>
       </div>
     </header>
   );

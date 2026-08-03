@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ROUTES } from "@/lib/types/routes";
-import { useAuth } from "@/lib/hooks/use-auth";
 import { RequireAuth } from "@/components/shell/require-auth";
 import { RequireOffice } from "@/components/shell/require-office";
 import {
@@ -14,7 +13,6 @@ import {
   Boxes,
   DollarSign,
   LayoutDashboard,
-  LogOut,
   Monitor,
   PackagePlus,
   Settings,
@@ -90,8 +88,6 @@ export default function OfficeLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const activeHref = findActiveHref(pathname);
 
@@ -101,11 +97,6 @@ export default function OfficeLayout({
     return () =>
       window.removeEventListener("swiftpos:toggle-sidebar", toggleSidebar);
   }, []);
-
-  function handleLogout() {
-    logout();
-    router.replace(ROUTES.auth.login);
-  }
 
   return (
     <RequireAuth>
@@ -170,17 +161,6 @@ export default function OfficeLayout({
               </div>
             ))}
           </nav>
-
-          <div className="shrink-0 border-t border-outline-variant p-3 dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:translate-x-0.5 hover:bg-error-container/20 hover:text-error focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
-            >
-              <LogOut size={16} className="opacity-60" aria-hidden />
-              Logout
-            </button>
-          </div>
         </aside>
 
         <main className="min-w-0 flex-1 overflow-y-auto scroll-smooth bg-surface dark:bg-zinc-950">
