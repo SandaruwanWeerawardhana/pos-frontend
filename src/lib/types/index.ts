@@ -377,7 +377,18 @@ export interface Role {
 
 export interface StaffUser {
   id: string;
+  /**
+   * Display name, kept as the single source for receipts, shift reports and
+   * the till sign-in screen. `first_name`/`last_name` are the fields the users
+   * screen edits; rows created before they existed only have `name`, so
+   * readers fall back to splitting it (see `nameParts` in lib/db/users).
+   */
   name: string;
+  first_name?: string;
+  last_name?: string;
+  /** Optional login handle shown in the users table; defaults to `name`. */
+  username?: string;
+  phone?: string;
   email: string;
   role_id: string;
   /**

@@ -85,6 +85,31 @@ export async function listStaffUsers(): Promise<StaffUser[]> {
   return db.staffUsers.orderBy("email").toArray();
 }
 
+/**
+ * First/last name for display. Rows created before the split fields existed
+ * carry only `name`, so it is divided on the first space — everything after it
+ * counts as the surname, which is right for "Maria del Carmen Ruiz".
+ */
+export function nameParts(user: StaffUser): {
+  first: string;
+  last: string;
+} {
+  if (user.first_name || user.last_name) {
+    return { first: user.first_name ?? "", last: user.last_name ?? "" };
+  }
+  const trimmed = user.name.trim();
+  const space = trimmed.indexOf(" ");
+  if (space === -1) return { first: trimmed, last: "" };
+  return {
+    first: trimmed.slice(0, space),
+    last: trimmed.slice(space + 1).trim(),
+  };
+}
+
+export function displayUsername(user: StaffUser): string {
+  return user.username?.trim() || user.name;
+}
+
 export const PIN_PATTERN = /^\d{4,6}$/;
 
 function toHex(bytes: Uint8Array): string {
@@ -157,7 +182,19 @@ export async function authenticateStaff(
 export async function updateStaffUser(
   id: string,
   // PIN changes go through `setStaffPin`, which does the salting and hashing.
-  changes: Partial<Pick<StaffUser, "name" | "email" | "role_id" | "active">>,
+  changes: Partial<
+    Pick<
+      StaffUser,
+      | "name"
+      | "first_name"
+      | "last_name"
+      | "username"
+      | "phone"
+      | "email"
+      | "role_id"
+      | "active"
+    >
+  >,
 ): Promise<void> {
   await db.staffUsers.update(id, changes);
 }
