@@ -85,6 +85,10 @@ export async function listStaffUsers(): Promise<StaffUser[]> {
   return db.staffUsers.orderBy("email").toArray();
 }
 
+export async function getStaffUser(id: string): Promise<StaffUser | undefined> {
+  return db.staffUsers.get(id);
+}
+
 /**
  * First/last name for display. Rows created before the split fields existed
  * carry only `name`, so it is divided on the first space — everything after it

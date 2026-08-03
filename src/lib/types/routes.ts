@@ -43,6 +43,7 @@ export const ROUTES = {
   users: {
     root: "/users",
     new: "/users/new",
+    edit: (id: string) => `/users/${id}`,
     permissions: "/users/permissions",
   },
   settings: {

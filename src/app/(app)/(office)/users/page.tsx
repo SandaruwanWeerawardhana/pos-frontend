@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   FileSpreadsheet,
   FileText,
-  KeyRound,
   Pencil,
   Plus,
   Search,
@@ -13,22 +12,17 @@ import {
   X,
 } from "lucide-react";
 import {
-  CASHIER_ROLE_ID,
-  PIN_PATTERN,
   deleteStaffUser,
   displayUsername,
   listRoles,
   listStaffUsers,
   nameParts,
-  setStaffPin,
   updateStaffUser,
 } from "@/lib/db";
 import { type Role, type StaffUser } from "@/lib/types";
 import { exportExcel, exportPdf, type ExportColumn } from "@/lib/export";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -62,19 +56,6 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  const [editTarget, setEditTarget] = useState<StaffUser | null>(null);
-  const [editFirstName, setEditFirstName] = useState("");
-  const [editLastName, setEditLastName] = useState("");
-  const [editUsername, setEditUsername] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editRoleId, setEditRoleId] = useState(CASHIER_ROLE_ID);
-  const [editError, setEditError] = useState("");
-
-  const [pinTarget, setPinTarget] = useState<StaffUser | null>(null);
-  const [newPin, setNewPin] = useState("");
-  const [pinError, setPinError] = useState("");
-
   const [pendingDelete, setPendingDelete] = useState<StaffUser | null>(null);
 
   const visibleUsers = useMemo(() => {
@@ -104,55 +85,6 @@ export default function UsersPage() {
   useEffect(() => {
     void refresh();
   }, []);
-
-  function openEditModal(user: StaffUser) {
-    const { first, last } = nameParts(user);
-    setEditTarget(user);
-    setEditFirstName(first);
-    setEditLastName(last);
-    setEditUsername(displayUsername(user));
-    setEditPhone(user.phone ?? "");
-    setEditEmail(user.email);
-    setEditRoleId(user.role_id);
-    setEditError("");
-  }
-
-  async function handleSaveEdit() {
-    if (!editTarget) return;
-    const first = editFirstName.trim();
-    const last = editLastName.trim();
-    if (!first || !editEmail.trim()) {
-      setEditError("First name and email are both required.");
-      return;
-    }
-    const fullName = [first, last].filter(Boolean).join(" ");
-    await updateStaffUser(editTarget.id, {
-      name: fullName,
-      first_name: first,
-      last_name: last,
-      username: editUsername.trim() || fullName,
-      phone: editPhone.trim(),
-      email: editEmail.trim().toLowerCase(),
-      role_id: editRoleId,
-    });
-    setEditTarget(null);
-    await refresh();
-    showToast("User updated", "success");
-  }
-
-  async function handleResetPin() {
-    if (!pinTarget) return;
-    setPinError("");
-    if (!PIN_PATTERN.test(newPin)) {
-      setPinError("Password must be 4 to 6 digits.");
-      return;
-    }
-    await setStaffPin(pinTarget.id, newPin);
-    setPinTarget(null);
-    setNewPin("");
-    await refresh();
-    showToast(`New password set for ${pinTarget.name}`, "success");
-  }
 
   async function handleToggleActive(user: StaffUser) {
     await updateStaffUser(user.id, { active: !user.active });
@@ -244,26 +176,13 @@ export default function UsersPage() {
       header: "Action",
       render: (user) => (
         <span className="flex items-center gap-2">
-          <button
-            type="button"
+          <Link
+            href={ROUTES.users.edit(user.id)}
             aria-label={`Edit ${user.name}`}
-            onClick={() => openEditModal(user)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-600/30 text-emerald-600 transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-emerald-50 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
           >
             <Pencil size={14} />
-          </button>
-          <button
-            type="button"
-            aria-label={`Reset password for ${user.name}`}
-            onClick={() => {
-              setPinTarget(user);
-              setNewPin("");
-              setPinError("");
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:bg-surface-container active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            <KeyRound size={14} />
-          </button>
+          </Link>
           <button
             type="button"
             aria-label={`Remove ${user.name}`}
@@ -406,85 +325,6 @@ export default function UsersPage() {
           pageSizeOptions={[10, 25, 50]}
         />
       </div>
-
-      <Modal
-        open={editTarget !== null}
-        onClose={() => setEditTarget(null)}
-        title={editTarget ? `Edit ${editTarget.name}` : "Edit user"}
-      >
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="First name"
-              value={editFirstName}
-              onChange={(event) => setEditFirstName(event.target.value)}
-              autoFocus
-            />
-            <Input
-              label="Last name"
-              value={editLastName}
-              onChange={(event) => setEditLastName(event.target.value)}
-            />
-          </div>
-          <Input
-            label="Username"
-            value={editUsername}
-            onChange={(event) => setEditUsername(event.target.value)}
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={editEmail}
-            onChange={(event) => setEditEmail(event.target.value)}
-          />
-          <Input
-            label="Phone"
-            type="tel"
-            inputMode="tel"
-            value={editPhone}
-            onChange={(event) => setEditPhone(event.target.value)}
-          />
-          <Select
-            label="Role"
-            value={editRoleId}
-            onChange={(event) => setEditRoleId(event.target.value)}
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-          />
-          {editError && (
-            <p className="text-sm text-error" role="alert">
-              {editError}
-            </p>
-          )}
-          <Button type="button" onClick={handleSaveEdit}>
-            Save changes
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={pinTarget !== null}
-        onClose={() => setPinTarget(null)}
-        title={pinTarget ? `Password for ${pinTarget.name}` : "Password"}
-      >
-        <div className="flex flex-col gap-3">
-          <Input
-            label="New password"
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={newPin}
-            onChange={(event) =>
-              setNewPin(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            error={pinError}
-            hint="4 to 6 digits. The old password stops working immediately."
-            autoFocus
-          />
-          <Button type="button" onClick={handleResetPin}>
-            Save password
-          </Button>
-        </div>
-      </Modal>
 
       <ConfirmDialog
         open={pendingDelete !== null}
