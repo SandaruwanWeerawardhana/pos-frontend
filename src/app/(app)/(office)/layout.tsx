@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,36 +39,21 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Grouped so the sidebar stays navigable as the module count grows — a flat
-// list of fifteen links is hard to scan on a till screen.
+type SidebarOpenSetter = Dispatch<SetStateAction<boolean>>;
+type OpenSectionsSetter = Dispatch<SetStateAction<Record<string, boolean>>>;
+
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Operate",
+    label: "Menu",
     items: [
       { href: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
-      { href: ROUTES.pos.root, label: "POS Terminal", icon: Monitor },
       { href: ROUTES.sales.root, label: "Sales", icon: DollarSign },
-    ],
-  },
-  {
-    label: "Catalogue",
-    items: [
       { href: ROUTES.products, label: "Products", icon: PackagePlus },
       { href: ROUTES.inventory.root, label: "Inventory", icon: Boxes },
       { href: ROUTES.inventory.alerts, label: "Stock alerts", icon: Bell },
       { href: ROUTES.discounts, label: "Promotions", icon: Tag },
-    ],
-  },
-  {
-    label: "Supply",
-    items: [
       { href: ROUTES.purchases.root, label: "Purchases", icon: ShoppingCart },
       { href: ROUTES.suppliers, label: "Suppliers", icon: Truck },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
       {
         href: ROUTES.users.root,
         label: "User Management",
@@ -83,11 +68,6 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { href: ROUTES.profile, label: "My profile", icon: UserCog },
-    ],
-  },
-  {
-    label: "Insight & setup",
-    items: [
       { href: ROUTES.reports, label: "Reports", icon: BarChart2 },
       { href: ROUTES.settings.root, label: "Settings", icon: Settings },
     ],
@@ -106,9 +86,166 @@ function findActiveHref(pathname: string | null): string | null {
   const matches = flattenItems(NAV_GROUPS.flatMap((group) => group.items))
     .map((item) => item.href)
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`));
-  if (matches.length === 0) return null;
-  return matches.reduce((longest, href) =>
-    href.length > longest.length ? href : longest,
+  return (
+    matches.reduce(
+      (longest, href) => (href.length > longest.length ? href : longest),
+      "",
+    ) || null
+  );
+}
+
+function NavItemLink({
+  item,
+  active,
+  onNavigate,
+  child = false,
+}: Readonly<{
+  item: NavItem;
+  active: boolean;
+  onNavigate: () => void;
+  child?: boolean;
+}>) {
+  const Icon = item.icon;
+  const activeClasses = child
+    ? "bg-surface-container font-medium text-primary dark:bg-zinc-800 dark:text-blue-400"
+    : "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm";
+  const inactiveClasses =
+    "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      onClick={onNavigate}
+      className={`group flex items-center gap-2.5 rounded-lg text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        child ? "min-h-9 py-1 pl-8 pr-3" : "min-h-10 px-3 font-medium"
+      } ${active ? activeClasses : inactiveClasses}`}
+    >
+      <Icon
+        size={child ? 15 : 16}
+        aria-hidden
+        className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
+          active && !child ? "opacity-90" : "opacity-70"
+        }`}
+      />
+      {item.label}
+    </Link>
+  );
+}
+
+function ParentNavItem({
+  item,
+  activeHref,
+  openSections,
+  setOpenSections,
+  onNavigate,
+}: Readonly<{
+  item: NavItem;
+  activeHref: string | null;
+  openSections: Record<string, boolean>;
+  setOpenSections: OpenSectionsSetter;
+  onNavigate: () => void;
+}>) {
+  const children = item.children ?? [];
+  const Icon = item.icon;
+  const sectionActive = children.some((child) => activeHref === child.href);
+  const open = openSections[item.label] ?? sectionActive;
+
+  function handleToggle() {
+    setOpenSections((sections) => ({
+      ...sections,
+      [item.label]: !open,
+    }));
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={handleToggle}
+        className={`group flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+          sectionActive
+            ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
+            : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        }`}
+      >
+        <Icon
+          size={16}
+          aria-hidden
+          className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
+            sectionActive ? "opacity-90" : "opacity-60"
+          }`}
+        />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronDown
+          size={14}
+          aria-hidden
+          className={`transition-transform duration-[var(--duration-base)] ease-[var(--ease-standard)] ${
+            open ? "rotate-180" : ""
+          } ${sectionActive ? "opacity-90" : "opacity-60"}`}
+        />
+      </button>
+
+      {open && (
+        <div className="animate-fade-in flex flex-col gap-0.5 rounded-lg bg-surface-container-low py-1 dark:bg-zinc-900">
+          {children.map((child) => (
+            <NavItemLink
+              key={child.href}
+              item={child}
+              active={activeHref === child.href}
+              onNavigate={onNavigate}
+              child
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavGroupSection({
+  group,
+  activeHref,
+  openSections,
+  setOpenSections,
+  setSidebarOpen,
+}: Readonly<{
+  group: NavGroup;
+  activeHref: string | null;
+  openSections: Record<string, boolean>;
+  setOpenSections: OpenSectionsSetter;
+  setSidebarOpen: SidebarOpenSetter;
+}>) {
+  function handleNavigate() {
+    setSidebarOpen(false);
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/50 dark:text-zinc-600">
+        {group.label}
+      </p>
+      {group.items.map((item) =>
+        item.children ? (
+          <ParentNavItem
+            key={item.label}
+            item={item}
+            activeHref={activeHref}
+            openSections={openSections}
+            setOpenSections={setOpenSections}
+            onNavigate={handleNavigate}
+          />
+        ) : (
+          <NavItemLink
+            key={item.href}
+            item={item}
+            active={activeHref === item.href}
+            onNavigate={handleNavigate}
+          />
+        ),
+      )}
+    </div>
   );
 }
 
@@ -161,109 +298,14 @@ export default function OfficeLayout({
 
           <nav className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
             {NAV_GROUPS.map((group) => (
-              <div key={group.label} className="flex flex-col gap-0.5">
-                <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/50 dark:text-zinc-600">
-                  {group.label}
-                </p>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-
-                  if (item.children) {
-                    const sectionActive = item.children.some(
-                      (child) => activeHref === child.href,
-                    );
-                    const open = openSections[item.label] ?? sectionActive;
-                    return (
-                      <div key={item.label} className="flex flex-col gap-0.5">
-                        <button
-                          type="button"
-                          aria-expanded={open}
-                          onClick={() =>
-                            setOpenSections((sections) => ({
-                              ...sections,
-                              [item.label]: !open,
-                            }))
-                          }
-                          className={`group flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                            sectionActive
-                              ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
-                              : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                          }`}
-                        >
-                          <Icon
-                            size={16}
-                            aria-hidden
-                            className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
-                              sectionActive ? "opacity-90" : "opacity-60"
-                            }`}
-                          />
-                          <span className="flex-1 text-left">{item.label}</span>
-                          <ChevronDown
-                            size={14}
-                            aria-hidden
-                            className={`transition-transform duration-[var(--duration-base)] ease-[var(--ease-standard)] ${
-                              open ? "rotate-180" : ""
-                            } ${sectionActive ? "opacity-90" : "opacity-60"}`}
-                          />
-                        </button>
-
-                        {open && (
-                          <div className="animate-fade-in flex flex-col gap-0.5 rounded-lg bg-surface-container-low py-1 dark:bg-zinc-900">
-                            {item.children.map((child) => {
-                              const childActive = activeHref === child.href;
-                              const ChildIcon = child.icon;
-                              return (
-                                <Link
-                                  key={child.href}
-                                  href={child.href}
-                                  aria-current={childActive ? "page" : undefined}
-                                  onClick={() => setSidebarOpen(false)}
-                                  className={`group flex min-h-9 items-center gap-2.5 rounded-lg py-1 pl-8 pr-3 text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                                    childActive
-                                      ? "bg-surface-container font-medium text-primary dark:bg-zinc-800 dark:text-blue-400"
-                                      : "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                                  }`}
-                                >
-                                  <ChildIcon
-                                    size={15}
-                                    aria-hidden
-                                    className="opacity-70 transition-transform duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110"
-                                  />
-                                  {child.label}
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  const active = activeHref === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`group flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        active
-                          ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
-                          : "text-on-surface-variant hover:translate-x-0.5 hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                      }`}
-                    >
-                      <Icon
-                        size={16}
-                        aria-hidden
-                        className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
-                          active ? "opacity-90" : "opacity-60"
-                        }`}
-                      />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
+              <NavGroupSection
+                key={group.label}
+                group={group}
+                activeHref={activeHref}
+                openSections={openSections}
+                setOpenSections={setOpenSections}
+                setSidebarOpen={setSidebarOpen}
+              />
             ))}
           </nav>
         </aside>
