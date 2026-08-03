@@ -24,3 +24,9 @@ The file looks messy or poorly structured
 You think the whole thing could be improved
 The change requested is small (one line, one word)
 You're adding new content
+
+## Avoid
+No `any` type, use `unknown` and narrow instead
+No default exports
+No unnecessary comments, only comment where the code isn't self-explanatory
+No single-line comments, always use multiline comment blocks
