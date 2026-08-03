@@ -10,6 +10,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { ROUTES } from "@/lib/types/routes";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SIDEBAR_HEADER_OFFSET_CLASS } from "@/lib/layout";
 import {
   Globe,
   KeyRound,
@@ -172,7 +173,7 @@ export function AppHeader() {
   if (!hydrated) {
     return (
       <header
-        className="fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 md:left-64"
+        className={`fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 ${SIDEBAR_HEADER_OFFSET_CLASS}`}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Skeleton className="h-5 w-24 rounded" />
@@ -190,7 +191,7 @@ export function AppHeader() {
   return (
     <header
       className={`fixed left-0 right-0 top-0 z-[70] flex h-14 shrink-0 items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-3 shadow-sm sm:px-4 dark:border-zinc-800 dark:bg-zinc-950 ${
-        hasOfficeSidebar ? "md:left-64" : ""
+        hasOfficeSidebar ? SIDEBAR_HEADER_OFFSET_CLASS : ""
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">

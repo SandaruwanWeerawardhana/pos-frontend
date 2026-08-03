@@ -19,6 +19,17 @@ export const ROUTES = {
   dashboard: "/dashboard",
   products: "/products",
   productsNew: "/products/new",
+  catalogue: {
+    import: "/products/import",
+    importUpdate: "/products/import-update",
+    openingStock: "/products/opening-stock",
+    printLabels: "/products/print-labels",
+    countStock: "/products/count-stock",
+    categories: "/products/categories",
+    brands: "/products/brands",
+    units: "/products/units",
+    batches: "/products/batches",
+  },
   inventory: {
     root: "/inventory",
     new: "/inventory/new",
