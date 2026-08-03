@@ -219,7 +219,7 @@ export function Combobox({
         />
 
         {open && (
-          <div className="animate-scale-in absolute z-30 mt-1 w-full origin-top overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="animate-scale-in absolute z-30 mt-1 w-full origin-top overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-popover dark:border-zinc-700 dark:bg-zinc-900">
             <ul
               id={listId}
               role="listbox"

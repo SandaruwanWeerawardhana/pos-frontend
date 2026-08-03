@@ -135,7 +135,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`animate-slide-up-sheet relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 shadow-xl outline-none sm:animate-scale-in sm:rounded-2xl ${
+        className={`animate-slide-up-sheet relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl p-6 shadow-popover outline-none sm:animate-scale-in sm:rounded-2xl ${
           SIZE_CLASSES[size]
         } ${
           glass

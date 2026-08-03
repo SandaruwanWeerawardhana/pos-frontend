@@ -56,7 +56,27 @@
   --color-on-background: #0b1c30;
   --color-surface-variant: #d3e4fe;
 
-  --shadow-elevated: 0px 4px 12px rgba(0, 0, 0, 0.05);
+  /* Midnight Navy — replaces Tailwind's neutral zinc scale with a
+     brand-tinted dark ramp (same navy hue as --color-primary) so every
+     existing `dark:*-zinc-*` utility across the app inherits a cohesive
+     dark theme instead of generic gray, with no per-component edits. */
+  --color-zinc-50: #f4f6fb;
+  --color-zinc-100: #e7ebf5;
+  --color-zinc-200: #cbd3e6;
+  --color-zinc-300: #aab4cf;
+  --color-zinc-400: #8791ac;
+  --color-zinc-500: #6b7390;
+  --color-zinc-600: #545b76;
+  --color-zinc-700: #2c3350;
+  --color-zinc-800: #1c2138;
+  --color-zinc-900: #12152a;
+  --color-zinc-950: #0a0c1a;
+
+  /* Layered, brand-tinted (not pure black) elevation. Premium reads as soft
+     and directional; a single flat shadow reads as a default. */
+  --shadow-elevated: 0 1px 2px rgba(11, 28, 55, 0.06), 0 12px 28px -8px rgba(11, 28, 55, 0.16);
+  --shadow-card: 0 1px 2px rgba(11, 28, 55, 0.04), 0 4px 12px -4px rgba(11, 28, 55, 0.08);
+  --shadow-popover: 0 4px 8px rgba(11, 28, 55, 0.08), 0 24px 48px -12px rgba(11, 28, 55, 0.28);
 
   /* Motion tokens. Durations stay short: a till runs on cheap hardware and
      the cashier is faster than any animation worth watching. */

@@ -110,7 +110,7 @@ export function NotificationPanel() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="animate-scale-in absolute right-0 top-10 z-[120] flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] origin-top-right flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+          className="animate-scale-in absolute right-0 top-10 z-[120] flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] origin-top-right flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div className="flex items-center justify-between gap-2 border-b border-outline-variant px-4 py-3 dark:border-zinc-800">
             <p className="text-sm font-semibold text-on-surface dark:text-zinc-50">

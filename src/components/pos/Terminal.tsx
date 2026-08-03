@@ -256,7 +256,7 @@ export function Terminal() {
         <button
           type="button"
           onClick={() => setCartSheetOpen(true)}
-          className="animate-fade-in-up fixed inset-x-3 bottom-3 z-40 flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-secondary px-5 text-on-secondary shadow-2xl transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-[0.98] lg:hidden"
+          className="animate-fade-in-up fixed inset-x-3 bottom-3 z-40 flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-secondary px-5 text-on-secondary shadow-popover transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)] active:scale-[0.98] lg:hidden"
         >
           <span className="flex items-center gap-2 text-sm font-semibold">
             <ShoppingCart size={18} aria-hidden />

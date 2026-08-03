@@ -100,7 +100,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
           <div
             key={toast.id}
             role={toast.variant === "error" ? "alert" : "status"}
-            className={`animate-slide-in-right pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-lg border-l-4 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-lg transition-shadow duration-[var(--duration-base)] hover:shadow-xl dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-black/40 ${
+            className={`animate-slide-in-right pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-lg border-l-4 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface shadow-card transition-shadow duration-[var(--duration-base)] hover:shadow-popover dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-black/40 ${
               VARIANT_CLASSES[toast.variant]
             }`}
           >

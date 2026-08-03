@@ -291,7 +291,7 @@ export function AppHeader() {
           {langOpen && (
             <div
               role="menu"
-              className="animate-scale-in absolute right-0 top-10 z-[120] w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+              className="animate-scale-in absolute right-0 top-10 z-[120] w-44 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
             >
               {LOCALE_OPTIONS.map((option) => (
                 <button
@@ -332,7 +332,7 @@ export function AppHeader() {
             {menuOpen && (
               <div
                 role="menu"
-                className="animate-scale-in absolute right-0 top-10 z-[120] w-56 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+                className="animate-scale-in absolute right-0 top-10 z-[120] w-56 origin-top-right overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-popover dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <div className="border-b border-outline-variant px-4 py-3 dark:border-zinc-800">
                   <p className="truncate text-sm font-semibold text-on-surface dark:text-zinc-50">
