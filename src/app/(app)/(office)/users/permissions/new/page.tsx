@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { createRole } from "@/lib/db";
@@ -12,6 +12,10 @@ import { PermissionPicker } from "@/components/ui/PermissionPicker";
 import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
 
+type FormSubmitEvent = Parameters<
+  NonNullable<ComponentProps<"form">["onSubmit"]>
+>[0];
+
 export default function CreatePermissionPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -22,12 +26,11 @@ export default function CreatePermissionPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormSubmitEvent) {
     event.preventDefault();
     const found: Record<string, string> = {};
     if (!name.trim()) found.name = "Role name is required.";
-    // A role with nothing ticked would sign its holder in and then refuse every
-    // screen, which reads as a broken login rather than a permissions problem.
+
     if (permissions.length === 0) {
       found.permissions = "Pick at least one permission.";
     }
