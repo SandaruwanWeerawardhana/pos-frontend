@@ -464,6 +464,20 @@ export interface Category {
 }
 
 /**
+ * A named brand, managed from the Brand screen. Independent of the free-text
+ * `product.brand` field — products keep selling under their existing brand
+ * text even if the matching row here is renamed or removed.
+ */
+export interface Brand {
+  id: string;
+  name: string;
+  description?: string;
+  /** Data URL — logos are small and stored inline like product images. */
+  image_url?: string;
+  created_at: string;
+}
+
+/**
  * ── Purchasing ─────────────────────────────────────────────────────────────
  */
 

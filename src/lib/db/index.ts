@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import { computeCartTotal } from "@/lib/cart-math";
 import type {
   AppNotification,
+  Brand,
   CartItem,
   CartTotal,
   CashReconciliation,
@@ -53,6 +54,7 @@ export class PosDB extends Dexie {
   productUnits!: Table<ProductUnitRecord, string>;
   warehouseLocations!: Table<WarehouseLocation, string>;
   categories!: Table<Category, string>;
+  brands!: Table<Brand, string>;
 
   constructor() {
     super("posDB");
@@ -176,6 +178,13 @@ export class PosDB extends Dexie {
      */
     this.version(9).stores({
       categories: "id, code, name",
+    });
+    /**
+     * v10: named brands, managed from the Brand screen. Independent of the
+     * free-text `product.brand` field — see `Brand`'s doc.
+     */
+    this.version(10).stores({
+      brands: "id, name",
     });
   }
 }
@@ -778,6 +787,73 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string): Promise<void> {
   await db.categories.delete(id);
+}
+
+/**
+ * Newest first, matching creation order on the Brand screen.
+ */
+export async function listBrandRecords(): Promise<Brand[]> {
+  const brands = await db.brands.toArray();
+  return brands.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function addBrand(input: {
+  name: string;
+  description?: string;
+  image_url?: string;
+}): Promise<Brand> {
+  const name = input.name.trim();
+  if (!name) throw new Error("Brand name is required");
+
+  return db.transaction("rw", db.brands, async () => {
+    const clash = await db.brands
+      .filter((brand) => brand.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (clash) throw new Error("Brand name already exists");
+
+    const brand: Brand = {
+      id: crypto.randomUUID(),
+      name,
+      description: input.description?.trim() || undefined,
+      image_url: input.image_url || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.brands.add(brand);
+    return brand;
+  });
+}
+
+export async function updateBrand(
+  id: string,
+  changes: { name?: string; description?: string; image_url?: string },
+): Promise<void> {
+  const name = changes.name?.trim();
+  if (name === "") throw new Error("Brand name is required");
+
+  return db.transaction("rw", db.brands, async () => {
+    if (name) {
+      const clash = await db.brands
+        .filter(
+          (brand) => brand.id !== id && brand.name.toLowerCase() === name.toLowerCase(),
+        )
+        .first();
+      if (clash) throw new Error("Brand name already exists");
+    }
+
+    await db.brands.update(id, {
+      ...(name ? { name } : {}),
+      ...(changes.description !== undefined
+        ? { description: changes.description.trim() || undefined }
+        : {}),
+      ...(changes.image_url !== undefined
+        ? { image_url: changes.image_url || undefined }
+        : {}),
+    });
+  });
+}
+
+export async function deleteBrand(id: string): Promise<void> {
+  await db.brands.delete(id);
 }
 
 /**
