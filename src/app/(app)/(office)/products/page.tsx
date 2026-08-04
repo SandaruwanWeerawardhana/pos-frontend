@@ -1,42 +1,79 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Box, Download, Layers, Package, Plus, Search, Tags } from "lucide-react";
-import { listBrands, listCategories, searchProducts } from "@/lib/db";
-import type { Product } from "@/lib/types";
-import { Badge } from "@/components/ui/Badge";
+import {
+  Copy,
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  addProduct,
+  deleteProduct,
+  listBrands,
+  listCategories,
+  searchProducts,
+} from "@/lib/db";
+import type { Product, ProductType } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
+import { useToast } from "@/components/ui/Toast";
 import { useSettings } from "@/lib/hooks/use-settings";
-import { exportCsv, exportExcel, type ExportColumn } from "@/lib/export";
+import { exportExcel, exportPdf, type ExportColumn } from "@/lib/export";
+import { generateBarcode, generateSku } from "@/lib/products/generate";
 import { ROUTES } from "@/lib/types/routes";
 
-function MiniBarcode({ code }: Readonly<{ code: string }>) {
-  const bars = code
-    .split("")
-    .map((digit, index) => Number(digit) + index)
-    .slice(0, 12);
+// Short labels for the table; the full wording lives in PRODUCT_TYPE_OPTIONS
+// and is too long for a column this narrow.
+const TYPE_LABELS: Record<ProductType, string> = {
+  standard: "Single",
+  variable: "Variable",
+  service: "Service",
+  combo: "Combo",
+};
+
+const ACTION_BUTTON_CLASSES =
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-outline-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700";
+
+function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
+  const source = product.image_url ?? product.images?.[0];
+
+  if (!source) {
+    return (
+      <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container text-on-surface-variant dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+        <Package size={18} aria-hidden />
+      </span>
+    );
+  }
 
   return (
-    <div aria-label={`Barcode ${code}`} className="flex h-8 items-end gap-0.5">
-      {bars.map((bar, index) => (
-        <span
-          key={`${code}-${index}`}
-          className="w-1 rounded-sm bg-on-surface dark:bg-zinc-200"
-          style={{ height: `${12 + (bar % 5) * 4}px` }}
-        />
-      ))}
-    </div>
+    // Product images come from arbitrary supplier URLs and data URLs, so a
+    // plain <img> avoids next/image's remote-host allowlist.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={source}
+      alt=""
+      loading="lazy"
+      className="h-11 w-11 rounded-lg border border-outline-variant object-cover dark:border-zinc-700"
+    />
   );
 }
 
 export default function ProductsPage() {
   const { money, settings } = useSettings();
+  const { showToast } = useToast();
 
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -44,18 +81,29 @@ export default function ProductsPage() {
   const [brands, setBrands] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [brand, setBrand] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Either one product (row action) or the current selection (bulk action).
+  const [pendingDelete, setPendingDelete] = useState<Product[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
+    searchProducts(query).then(setProducts);
+  }, [query]);
+
+  const reloadFacets = useCallback(() => {
     listCategories().then(setCategories);
     listBrands().then(setBrands);
   }, []);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      searchProducts(query).then(setProducts);
-    }, 200);
+    reloadFacets();
+  }, [reloadFacets]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(reload, 200);
     return () => window.clearTimeout(timeoutId);
-  }, [query]);
+  }, [reload]);
 
   const visible = useMemo(
     () =>
@@ -69,95 +117,160 @@ export default function ProductsPage() {
     [products, category, brand],
   );
 
-  const stats = useMemo(() => {
-    const stockValue = visible.reduce(
-      (total, product) => total + product.price_cents * product.stock_quantity,
-      0,
-    );
-    const withCost = visible.filter((product) => product.cost_cents);
-    const blendedMargin =
-      withCost.length > 0
-        ? withCost.reduce(
-            (total, product) =>
-              total +
-              ((product.price_cents - (product.cost_cents ?? 0)) /
-                product.price_cents) *
-                100,
-            0,
-          ) / withCost.length
-        : 0;
-    return { stockValue, blendedMargin, weighted: visible.filter((p) => p.is_weighted).length };
-  }, [visible]);
+  const selectedProducts = useMemo(
+    () => visible.filter((product) => selectedIds.includes(product.id)),
+    [visible, selectedIds],
+  );
 
   const exportColumns: ExportColumn<Product>[] = [
-    { key: "name", header: "Product", value: (p) => p.name },
+    { key: "name", header: "Name", value: (p) => p.name },
+    {
+      key: "type",
+      header: "Type",
+      value: (p) => TYPE_LABELS[p.product_type ?? "standard"],
+    },
+    { key: "code", header: "Code", value: (p) => p.barcode },
     { key: "sku", header: "SKU", value: (p) => p.sku },
-    { key: "barcode", header: "Barcode", value: (p) => p.barcode },
-    { key: "category", header: "Category", value: (p) => p.category ?? "" },
     { key: "brand", header: "Brand", value: (p) => p.brand ?? "" },
-    { key: "unit", header: "Unit", value: (p) => p.unit ?? "unit" },
-    { key: "price", header: "Price", value: (p) => (p.price_cents / 100).toFixed(2) },
+    { key: "category", header: "Category", value: (p) => p.category ?? "" },
     { key: "cost", header: "Cost", value: (p) => ((p.cost_cents ?? 0) / 100).toFixed(2) },
-    { key: "stock", header: "Stock", value: (p) => p.stock_quantity },
-    { key: "shelf", header: "Shelf", value: (p) => p.shelf_location ?? "" },
+    { key: "price", header: "Price", value: (p) => (p.price_cents / 100).toFixed(2) },
+    { key: "unit", header: "Unit", value: (p) => p.unit ?? "pc" },
+    { key: "stock", header: "Quantity", value: (p) => p.stock_quantity },
   ];
+
+  async function duplicateProduct(product: Product) {
+    // A duplicate starts empty of stock and carries fresh identifiers: SKU and
+    // barcode are unique in Dexie, and copied batches would claim stock the
+    // new row does not have.
+    const copy: Product = {
+      ...product,
+      id: crypto.randomUUID(),
+      name: `${product.name} (copy)`,
+      sku: generateSku({
+        name: product.name,
+        category: product.category,
+        brand: product.brand,
+      }),
+      barcode: generateBarcode(),
+      barcode_source: "generated",
+      stock_quantity: 0,
+      batches: undefined,
+      opening_stock: undefined,
+      _pending_update: undefined,
+    };
+
+    try {
+      await addProduct(copy);
+      showToast(`Duplicated ${product.name}`, "success");
+      reload();
+      reloadFacets();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Could not duplicate product",
+        "error",
+      );
+    }
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      for (const product of pendingDelete) {
+        await deleteProduct(product.id);
+      }
+      showToast(
+        pendingDelete.length === 1
+          ? `Deleted ${pendingDelete[0].name}`
+          : `Deleted ${pendingDelete.length} products`,
+        "success",
+      );
+      setSelectedIds((current) =>
+        current.filter((id) => !pendingDelete.some((p) => p.id === id)),
+      );
+      setPendingDelete(null);
+      reload();
+      reloadFacets();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Could not delete product",
+        "error",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const columns: DataColumn<Product>[] = [
     {
-      key: "product",
-      header: "Product",
-      sortValue: (product) => product.name,
-      render: (product) => (
-        <Link
-          href={ROUTES.inventory.detail(product.id)}
-          className="flex items-center gap-3 hover:underline"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container text-sm font-bold text-on-surface-variant dark:bg-zinc-800 dark:text-zinc-300">
-            {product.name.charAt(0).toUpperCase()}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate font-semibold">{product.name}</span>
-            <span className="block truncate text-xs font-normal text-on-surface-variant dark:text-zinc-400">
-              {product.category ?? "Uncategorised"}
-              {product.brand ? ` · ${product.brand}` : ""}
-            </span>
-          </span>
-        </Link>
-      ),
+      key: "image",
+      header: "Image",
+      render: (product) => <ProductThumbnail product={product} />,
     },
     {
-      key: "sku",
-      header: "SKU",
+      key: "type",
+      header: "Type",
       hideOnMobile: true,
-      sortValue: (product) => product.sku,
+      sortValue: (product) => TYPE_LABELS[product.product_type ?? "standard"],
       render: (product) => (
-        <span className="font-mono text-xs">{product.sku}</span>
-      ),
-    },
-    {
-      key: "barcode",
-      header: "Barcode",
-      hideOnMobile: true,
-      render: (product) => (
-        <span className="flex items-center gap-2">
-          <MiniBarcode code={product.barcode} />
-          <span className="font-mono text-xs text-on-surface-variant dark:text-zinc-400">
-            {product.barcode}
-          </span>
+        <span className="text-on-surface-variant dark:text-zinc-400">
+          {TYPE_LABELS[product.product_type ?? "standard"]}
         </span>
       ),
     },
     {
-      key: "unit",
-      header: "Unit",
+      key: "name",
+      header: "Name",
+      sortValue: (product) => product.name,
+      render: (product) => (
+        <Link
+          href={ROUTES.inventory.detail(product.id)}
+          className="font-medium text-primary hover:underline dark:text-blue-400"
+        >
+          {product.name}
+        </Link>
+      ),
+    },
+    {
+      key: "code",
+      header: "Code",
       hideOnMobile: true,
-      sortValue: (product) => product.unit ?? "unit",
+      sortValue: (product) => product.barcode,
+      render: (product) => (
+        <span className="font-mono text-xs">{product.barcode}</span>
+      ),
+    },
+    {
+      key: "brand",
+      header: "Brand",
+      hideOnMobile: true,
+      sortValue: (product) => product.brand ?? "",
+      render: (product) => (
+        <span className="text-on-surface-variant dark:text-zinc-400">
+          {product.brand ?? "N/D"}
+        </span>
+      ),
+    },
+    {
+      key: "category",
+      header: "Category",
+      hideOnMobile: true,
+      sortValue: (product) => product.category ?? "",
+      render: (product) => (
+        <span className="text-on-surface-variant dark:text-zinc-400">
+          {product.category ?? "Uncategorised"}
+        </span>
+      ),
+    },
+    {
+      key: "cost",
+      header: "Cost",
+      align: "right",
+      hideOnMobile: true,
+      sortValue: (product) => product.cost_cents ?? 0,
       render: (product) =>
-        product.is_weighted ? (
-          <Badge variant="warning">per {product.unit ?? "kg"}</Badge>
-        ) : (
-          <span className="text-on-surface-variant">{product.unit ?? "unit"}</span>
-        ),
+        product.cost_cents ? money(product.cost_cents) : "—",
     },
     {
       key: "price",
@@ -167,96 +280,93 @@ export default function ProductsPage() {
       render: (product) => money(product.price_cents),
     },
     {
-      key: "stock",
-      header: "Stock",
+      key: "unit",
+      header: "Unit",
+      hideOnMobile: true,
+      sortValue: (product) => product.unit ?? "pc",
+      render: (product) => (
+        <span className="text-on-surface-variant dark:text-zinc-400">
+          {product.unit ?? "pc"}
+        </span>
+      ),
+    },
+    {
+      key: "quantity",
+      header: "Quantity",
       align: "right",
       sortValue: (product) => product.stock_quantity,
-      render: (product) => { 
-        const threshold =
-          product.reorder_level ?? settings.low_stock_threshold;
-        let variant: "success" | "warning" | "danger" = "success";
-        if (product.stock_quantity <= 0) variant = "danger";
-        else if (product.stock_quantity <= threshold) variant = "warning";
-        return <Badge variant={variant}>{product.stock_quantity}</Badge>;
+      render: (product) => {
+        const threshold = product.reorder_level ?? settings.low_stock_threshold;
+        let tone = "text-on-surface dark:text-zinc-50";
+        if (product.stock_quantity <= 0) tone = "text-error dark:text-red-400";
+        else if (product.stock_quantity <= threshold) {
+          tone = "text-amber-600 dark:text-amber-400";
+        }
+        return (
+          <span className={`font-medium ${tone}`}>
+            {product.stock_quantity.toFixed(2)} {product.unit ?? "pc"}
+          </span>
+        );
       },
+    },
+    {
+      key: "action",
+      header: "Action",
+      render: (product) => (
+        <span className="flex items-center gap-1.5">
+          <Link
+            href={ROUTES.inventory.detail(product.id)}
+            aria-label={`View ${product.name}`}
+            title="View"
+            className={`${ACTION_BUTTON_CLASSES} text-secondary hover:bg-surface-container dark:text-blue-400 dark:hover:bg-zinc-800`}
+          >
+            <Eye size={15} aria-hidden />
+          </Link>
+          <Link
+            href={ROUTES.inventory.detail(product.id)}
+            aria-label={`Edit ${product.name}`}
+            title="Edit"
+            className={`${ACTION_BUTTON_CLASSES} text-emerald-600 hover:bg-surface-container dark:text-emerald-400 dark:hover:bg-zinc-800`}
+          >
+            <Pencil size={15} aria-hidden />
+          </Link>
+          <button
+            type="button"
+            onClick={() => duplicateProduct(product)}
+            aria-label={`Duplicate ${product.name}`}
+            title="Duplicate"
+            className={`${ACTION_BUTTON_CLASSES} text-amber-600 hover:bg-surface-container dark:text-amber-400 dark:hover:bg-zinc-800`}
+          >
+            <Copy size={15} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete([product])}
+            aria-label={`Delete ${product.name}`}
+            title="Delete"
+            className={`${ACTION_BUTTON_CLASSES} text-error hover:bg-surface-container dark:text-red-400 dark:hover:bg-zinc-800`}
+          >
+            <X size={15} aria-hidden />
+          </button>
+        </span>
+      ),
     },
   ];
 
   return (
     <div className="flex flex-col gap-6 pb-8">
       <PageHeader
-        title="Product management"
+        title="All Products"
         breadcrumbs={[
           { label: "Dashboard", href: ROUTES.dashboard },
           { label: "Products" },
+          { label: "All Products" },
         ]}
-        actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => exportCsv("products", visible, exportColumns)}
-            >
-              <Download size={15} />
-              CSV
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                exportExcel("products", "Product catalogue", visible, exportColumns)
-              }
-            >
-              <Download size={15} />
-              Excel
-            </Button>
-            <Link
-              href={ROUTES.productsNew}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary transition-all hover:bg-secondary/90 dark:bg-white dark:text-zinc-900"
-            >
-              <Plus size={15} />
-              Add product
-            </Link>
-          </>
-        }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Products"
-          value={String(visible.length)}
-          icon={<Package size={20} />}
-          accent="primary"
-          sub="In the local catalogue"
-        />
-        <StatCard
-          label="Categories"
-          value={String(categories.length)}
-          icon={<Layers size={20} />}
-          accent="secondary"
-          sub="Derived from product data"
-        />
-        <StatCard
-          label="Brands"
-          value={String(brands.length)}
-          icon={<Box size={20} />}
-          accent="secondary"
-          sub={`${stats.weighted} weighed products`}
-        />
-        <StatCard
-          label="Stock value"
-          value={money(stats.stockValue)}
-          icon={<Tags size={20} />}
-          accent="success"
-          sub={`${stats.blendedMargin.toFixed(1)}% average margin`}
-        />
-      </section>
-
       <section className="flex flex-col gap-3">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="relative sm:col-span-1">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative lg:w-72">
             <Search
               size={16}
               aria-hidden
@@ -265,35 +375,145 @@ export default function ProductsPage() {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name, SKU, barcode…"
+              placeholder="Search this table"
               aria-label="Search products"
               className="pl-9"
             />
           </div>
-          <Select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            placeholder="All categories"
-            aria-label="Filter by category"
-            options={categories.map((name) => ({ value: name, label: name }))}
-          />
-          <Select
-            value={brand}
-            onChange={(event) => setBrand(event.target.value)}
-            placeholder="All brands"
-            aria-label="Filter by brand"
-            options={brands.map((name) => ({ value: name, label: name }))}
-          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              <Filter size={15} />
+              Filter
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => exportPdf("All Products", visible, exportColumns)}
+            >
+              <FileText size={15} />
+              PDF
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportExcel("products", "All Products", visible, exportColumns)
+              }
+            >
+              <FileSpreadsheet size={15} />
+              EXCEL
+            </Button>
+            <Link
+              href={ROUTES.catalogue.import}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface transition-all duration-[var(--duration-fast)] hover:bg-surface-container dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <Upload size={15} />
+              Import products
+            </Link>
+            <Link
+              href={ROUTES.productsNew}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary transition-all duration-[var(--duration-fast)] hover:bg-secondary/90 dark:bg-white dark:text-zinc-900"
+            >
+              <Plus size={15} />
+              Create
+            </Link>
+          </div>
         </div>
+
+        {filtersOpen && (
+          <div className="animate-fade-in grid gap-3 rounded-xl border border-outline-variant p-3 sm:grid-cols-2 lg:grid-cols-4 dark:border-zinc-800">
+            <Select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              placeholder="All categories"
+              aria-label="Filter by category"
+              options={categories.map((name) => ({ value: name, label: name }))}
+            />
+            <Select
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              placeholder="All brands"
+              aria-label="Filter by brand"
+              options={brands.map((name) => ({ value: name, label: name }))}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setCategory("");
+                setBrand("");
+              }}
+              className="justify-self-start"
+            >
+              Clear filters
+            </Button>
+          </div>
+        )}
+
+        {selectedProducts.length > 0 && (
+          <div className="animate-fade-in flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-on-surface-variant dark:text-zinc-400">
+              {selectedProducts.length} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+              >
+                Clear
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => setPendingDelete(selectedProducts)}
+              >
+                Delete selected
+              </Button>
+            </div>
+          </div>
+        )}
 
         <DataTable
           columns={columns}
           rows={visible}
           rowKey={(product) => product.id}
           emptyMessage="No products match these filters."
-          caption="Product catalogue"
+          caption="All products"
+          selection={{ selectedIds, onChange: setSelectedIds }}
         />
       </section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={
+          pendingDelete && pendingDelete.length > 1
+            ? "Delete products"
+            : "Delete product"
+        }
+        message={
+          pendingDelete && pendingDelete.length > 1
+            ? `Delete ${pendingDelete.length} products? They leave the till and every report immediately.`
+            : `Delete ${pendingDelete?.[0]?.name ?? "this product"}? It leaves the till and every report immediately.`
+        }
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

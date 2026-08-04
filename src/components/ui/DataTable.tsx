@@ -25,9 +25,21 @@ interface DataTableProps<T> {
   pageSizeOptions?: number[];
   onRowClick?: (row: T) => void;
   caption?: string;
+  /**
+   * Supplying this renders a leading checkbox column. The header checkbox
+   * covers the rows on the current page only — ticking it must not silently
+   * select rows the user cannot see before acting on them in bulk.
+   */
+  selection?: {
+    selectedIds: string[];
+    onChange: (ids: string[]) => void;
+  };
 }
 
 type SortState = { key: string; direction: "asc" | "desc" } | null;
+
+const CHECKBOX_CLASSES =
+  "h-4 w-4 cursor-pointer rounded border-outline-variant accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700";
 
 function compareValues(a: string | number, b: string | number): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
@@ -46,6 +58,7 @@ export function DataTable<T>({
   pageSizeOptions,
   onRowClick,
   caption,
+  selection,
 }: Readonly<DataTableProps<T>>) {
   const [sort, setSort] = useState<SortState>(null);
   const [page, setPage] = useState(0);
@@ -75,6 +88,32 @@ export function DataTable<T>({
     currentPage * rowsPerPage,
     currentPage * rowsPerPage + rowsPerPage,
   );
+
+  const selectedIds = new Set(selection?.selectedIds ?? []);
+  const visibleIds = visible.map(rowKey);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected =
+    !allVisibleSelected && visibleIds.some((id) => selectedIds.has(id));
+
+  function toggleRow(id: string) {
+    if (!selection) return;
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selection.onChange([...next]);
+  }
+
+  function toggleVisibleRows() {
+    if (!selection) return;
+    const next = new Set(selectedIds);
+    if (allVisibleSelected) {
+      visibleIds.forEach((id) => next.delete(id));
+    } else {
+      visibleIds.forEach((id) => next.add(id));
+    }
+    selection.onChange([...next]);
+  }
 
   function toggleSort(column: DataColumn<T>) {
     if (!column.sortValue) return;
@@ -108,6 +147,21 @@ export function DataTable<T>({
           )}
           <thead className="bg-surface-container-low text-on-surface-variant dark:bg-zinc-900 dark:text-zinc-400">
             <tr>
+              {selection && (
+                <th scope="col" className="w-10 px-4 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    // Mixed state is only reachable through the DOM property.
+                    ref={(node) => {
+                      if (node) node.indeterminate = someVisibleSelected;
+                    }}
+                    onChange={toggleVisibleRows}
+                    aria-label="Select all rows on this page"
+                    className={CHECKBOX_CLASSES}
+                  />
+                </th>
+              )}
               {columns.map((column) => {
                 const active = sort?.key === column.key;
                 let ariaSort: "ascending" | "descending" | "none" = "none";
@@ -188,6 +242,18 @@ export function DataTable<T>({
                     : ""
                 }`}
               >
+                {selection && (
+                  <td className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(rowKey(row))}
+                      onChange={() => toggleRow(rowKey(row))}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label="Select row"
+                      className={CHECKBOX_CLASSES}
+                    />
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td
                     key={column.key}
