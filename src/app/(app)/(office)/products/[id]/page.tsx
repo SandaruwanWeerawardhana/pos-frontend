@@ -35,6 +35,7 @@ import type {
   Warehouse,
 } from "@/lib/types";
 import { BarcodeImage } from "@/components/products/BarcodeImage";
+import { barRuns, encodeBarcode } from "@/lib/products/barcode-encode";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, PageHeader } from "@/components/ui/PageHeader";
@@ -108,6 +109,36 @@ function warehouseStock(
       "Main warehouse",
     quantity,
   }));
+}
+
+function escapeHtml(value: string | number): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/*
+ * Print windows can't read the app's SVG React tree, so the barcode is
+ * re-rendered from the same module string BarcodeImage uses, straight to a
+ * markup fragment.
+ */
+function buildBarcodeSvg(value: string, symbology: Product["barcode_symbology"]): string {
+  const modules = encodeBarcode(value, symbology ?? "CODE128");
+  if (!modules) {
+    return `<p style="font-family:ui-monospace,monospace">${escapeHtml(value)}</p>`;
+  }
+  const quietZone = 10;
+  const height = 60;
+  const width = modules.length + quietZone * 2;
+  const rects = barRuns(modules)
+    .map(
+      (run) =>
+        `<rect x="${quietZone + run.start}" y="0" width="${run.width}" height="${height}" fill="#000"/>`,
+    )
+    .join("");
+  return `<svg viewBox="0 0 ${width} ${height}" style="height:64px;width:100%;max-width:320px" shape-rendering="crispEdges"><rect width="${width}" height="${height}" fill="#fff"/>${rects}</svg>`;
 }
 
 function DetailRow({
@@ -264,16 +295,117 @@ export default function ProductDetailsPage({
   const productName = product.name;
 
   function printDetails() {
-    const rows = detailRows
+    if (!product) return;
+    const currentProduct: Product = product;
+    const barcodeSvg = buildBarcodeSvg(currentProduct.barcode, currentProduct.barcode_symbology);
+    const now = new Date().toLocaleString(settings.locale, {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+
+    const summaryTiles = [
+      { label: "Cost", value: money(currentProduct.cost_cents ?? 0), color: "#6366f1" },
+      { label: "Price", value: money(currentProduct.price_cents), color: "#10b981" },
+      {
+        label: "Wholesale price",
+        value: money(currentProduct.wholesale_price_cents ?? 0),
+        color: "#f59e0b",
+      },
+      { label: "Minprice", value: money(currentProduct.min_price_cents ?? 0), color: "#ef4444" },
+      { label: "Stock alert", value: stockAlert.toFixed(2), color: "#0ea5e9" },
+    ]
       .map(
-        (row) =>
-          `<tr><th>${row.label}</th><td>${row.value}</td></tr>`,
+        (tile) => `
+      <div style="display:flex;align-items:center;border:1px solid #e4e4e7;border-left:4px solid ${tile.color};border-radius:12px;padding:10px 14px;background:#fff">
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#71717a">${escapeHtml(tile.label)}</div>
+          <div style="font-size:15px;font-weight:700;color:#18181b">${escapeHtml(tile.value)}</div>
+        </div>
+      </div>`,
       )
       .join("");
+
+    const detailRowsHtml = detailRows
+      .map(
+        (row) => `
+      <tr>
+        <td style="padding:8px 0;color:#71717a;font-size:12px">${escapeHtml(row.label)}</td>
+        <td style="padding:8px 0;text-align:right;font-weight:600;font-size:12px">${escapeHtml(row.value)}</td>
+      </tr>`,
+      )
+      .join("");
+
+    const galleryHtml = gallery.length
+      ? `
+      <div style="border:1px solid #e4e4e7;border-radius:16px;padding:14px;margin-top:14px">
+        <h3 style="margin:0 0 10px;font-size:13px;font-weight:600">Gallery</h3>
+        <div style="display:grid;gap:10px">
+          ${gallery
+            .map(
+              (image) => `
+            <div style="border:1px solid #e4e4e7;border-radius:12px;padding:10px;display:flex;justify-content:center">
+              <img src="${image}" style="max-height:160px;max-width:100%;object-fit:contain"/>
+            </div>`,
+            )
+            .join("")}
+        </div>
+      </div>`
+      : "";
+
+    const html = `
+      <div style="font-family:ui-sans-serif,system-ui,sans-serif;color:#18181b;max-width:640px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#71717a;margin-bottom:8px">
+          <span>${escapeHtml(now)}</span>
+          <span>${escapeHtml(currentProduct.name)} — ${escapeHtml(currentProduct.barcode)}</span>
+        </div>
+
+        <div style="display:flex;gap:16px;align-items:center;justify-content:space-between;border-radius:16px;padding:18px;background:linear-gradient(90deg,#00236f,#0058be);color:#fff">
+          <div style="display:flex;gap:14px;align-items:center">
+            <div style="height:80px;width:80px;flex-shrink:0;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
+              ${gallery[0] ? `<img src="${gallery[0]}" style="height:100%;width:100%;object-fit:contain"/>` : ""}
+            </div>
+            <div>
+              <div style="display:flex;gap:6px;margin-bottom:6px">
+                <span style="background:rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600">${escapeHtml(typeLabel)}</span>
+                <span style="background:#10b981;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600">${escapeHtml(currentProduct.barcode)}</span>
+              </div>
+              <div style="font-size:20px;font-weight:700">${escapeHtml(currentProduct.name)}</div>
+              <div style="display:flex;gap:12px;font-size:12px;margin-top:6px;color:rgba(255,255,255,.9)">
+                <span>${escapeHtml(currentProduct.category ?? "Uncategorised")}</span>
+                <span>${escapeHtml(unit)}</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;text-align:center">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.8)">Price</div>
+            <div style="font-size:22px;font-weight:700">${escapeHtml(money(currentProduct.price_cents))}</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">
+          ${summaryTiles}
+        </div>
+
+        <div style="border:1px solid #e4e4e7;border-radius:16px;padding:14px;margin-top:14px">
+          <h3 style="margin:0 0 10px;font-size:13px;font-weight:600">Barcode</h3>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border-radius:12px;padding:14px">
+            ${barcodeSvg}
+            <div style="font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.2em">${escapeHtml(currentProduct.barcode)}</div>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e4e4e7;border-radius:16px;padding:14px;margin-top:14px">
+          <h3 style="margin:0 0 6px;font-size:13px;font-weight:600">Product Details</h3>
+          <table style="width:100%;border-collapse:collapse">${detailRowsHtml}</table>
+        </div>
+
+        ${galleryHtml}
+      </div>`;
+
     printHtml(
       productName,
-      `<h1>${productName}</h1><table>${rows}</table>`,
-      "body{font-family:ui-sans-serif,system-ui,sans-serif;padding:16px}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse}th{text-align:left;font-weight:500;color:#555;padding:6px 0}td{text-align:right;font-weight:600;padding:6px 0}tr{border-bottom:1px dashed #ddd}",
+      html,
+      "*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}body{font-family:ui-sans-serif,system-ui,sans-serif;margin:0;padding:16px}table td{border-bottom:1px dashed #e4e4e7}@media print{@page{margin:10mm}}",
     );
   }
 
