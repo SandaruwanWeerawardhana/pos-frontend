@@ -5,6 +5,7 @@ import type {
   CartItem,
   CartTotal,
   CashReconciliation,
+  Category,
   DeletedProductRecord,
   Discount,
   HeldCart,
@@ -51,6 +52,7 @@ export class PosDB extends Dexie {
   deletedProducts!: Table<DeletedProductRecord, string>;
   productUnits!: Table<ProductUnitRecord, string>;
   warehouseLocations!: Table<WarehouseLocation, string>;
+  categories!: Table<Category, string>;
 
   constructor() {
     super("posDB");
@@ -168,6 +170,13 @@ export class PosDB extends Dexie {
             delete location.name;
           });
       });
+    /**
+     * v9: named categories, managed from the Categories screen. Independent
+     * of the free-text `product.category` field — see `Category`'s doc.
+     */
+    this.version(9).stores({
+      categories: "id, code, name",
+    });
   }
 }
 
@@ -687,6 +696,88 @@ export async function addProductUnit(input: {
     await db.productUnits.add(unit);
     return unit;
   });
+}
+
+/**
+ * Newest first, matching creation order on the Categories screen.
+ */
+export async function listCategoryRecords(): Promise<Category[]> {
+  const categories = await db.categories.toArray();
+  return categories.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function addCategory(input: {
+  code: string;
+  name: string;
+  icon?: string;
+}): Promise<Category> {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code) throw new Error("Category code is required");
+  if (!name) throw new Error("Category name is required");
+
+  return db.transaction("rw", db.categories, async () => {
+    const codeClash = await db.categories
+      .filter((category) => category.code.toLowerCase() === code.toLowerCase())
+      .first();
+    if (codeClash) throw new Error("Category code already exists");
+
+    const nameClash = await db.categories
+      .filter((category) => category.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (nameClash) throw new Error("Category name already exists");
+
+    const category: Category = {
+      id: crypto.randomUUID(),
+      code,
+      name,
+      icon: input.icon?.trim() || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.categories.add(category);
+    return category;
+  });
+}
+
+export async function updateCategory(
+  id: string,
+  changes: { code?: string; name?: string; icon?: string },
+): Promise<void> {
+  const code = changes.code?.trim();
+  const name = changes.name?.trim();
+  if (code === "") throw new Error("Category code is required");
+  if (name === "") throw new Error("Category name is required");
+
+  return db.transaction("rw", db.categories, async () => {
+    if (code) {
+      const codeClash = await db.categories
+        .filter(
+          (category) =>
+            category.id !== id && category.code.toLowerCase() === code.toLowerCase(),
+        )
+        .first();
+      if (codeClash) throw new Error("Category code already exists");
+    }
+    if (name) {
+      const nameClash = await db.categories
+        .filter(
+          (category) =>
+            category.id !== id && category.name.toLowerCase() === name.toLowerCase(),
+        )
+        .first();
+      if (nameClash) throw new Error("Category name already exists");
+    }
+
+    await db.categories.update(id, {
+      ...(code ? { code } : {}),
+      ...(name ? { name } : {}),
+      ...(changes.icon !== undefined ? { icon: changes.icon.trim() || undefined } : {}),
+    });
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await db.categories.delete(id);
 }
 
 /**

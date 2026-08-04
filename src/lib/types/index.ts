@@ -450,6 +450,20 @@ export interface WarehouseLocation {
 }
 
 /**
+ * A named product category, managed from the Categories screen. `code` is
+ * entered by hand at creation and unique across categories. Independent of
+ * the free-text `product.category` field — products keep selling under their
+ * existing category text even if the matching row here is renamed or removed.
+ */
+export interface Category {
+  id: string;
+  code: string;
+  name: string;
+  icon?: string;
+  created_at: string;
+}
+
+/**
  * ── Purchasing ─────────────────────────────────────────────────────────────
  */
 

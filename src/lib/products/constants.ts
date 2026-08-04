@@ -1,3 +1,19 @@
+import {
+  Book,
+  Car,
+  Coffee,
+  Footprints,
+  Gift,
+  Heart,
+  Home,
+  Package,
+  Shirt,
+  ShoppingBag,
+  Smartphone,
+  Tag,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   BarcodeSymbology,
   ProductDiscountType,
@@ -71,6 +87,42 @@ export const WARRANTY_UNIT_OPTIONS: Option<WarrantyUnit>[] = [
   { value: "months", label: "Months" },
   { value: "years", label: "Years" },
 ];
+
+/**
+ * Fixed icon choices for the Categories screen. `value` is what's stored on
+ * `Category.icon`; `CATEGORY_ICONS` maps it back to the component to render.
+ */
+export const CATEGORY_ICON_OPTIONS: Option<string>[] = [
+  { value: "package", label: "Package" },
+  { value: "shopping-bag", label: "Shopping Bag" },
+  { value: "shirt", label: "Apparel" },
+  { value: "footprints", label: "Shoes" },
+  { value: "coffee", label: "Food & Drink" },
+  { value: "smartphone", label: "Electronics" },
+  { value: "home", label: "Home" },
+  { value: "book", label: "Books" },
+  { value: "gift", label: "Gift" },
+  { value: "wrench", label: "Tools" },
+  { value: "car", label: "Automotive" },
+  { value: "heart", label: "Health & Beauty" },
+  { value: "tag", label: "Other" },
+];
+
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  package: Package,
+  "shopping-bag": ShoppingBag,
+  shirt: Shirt,
+  footprints: Footprints,
+  coffee: Coffee,
+  smartphone: Smartphone,
+  home: Home,
+  book: Book,
+  gift: Gift,
+  wrench: Wrench,
+  car: Car,
+  heart: Heart,
+  tag: Tag,
+};
 
 /**
  * Per-image upload ceiling, 2 MB.
