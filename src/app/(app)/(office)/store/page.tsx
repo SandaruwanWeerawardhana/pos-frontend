@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { useToast } from "@/components/ui/Toast";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { exportCsv, exportExcel, type ExportColumn } from "@/lib/export";
@@ -44,6 +43,47 @@ const ADJUSTMENT_TYPES: { value: StockMovementType; label: string }[] = [
   { value: "damage", label: "Damaged goods" },
   { value: "return", label: "Customer return" },
 ];
+
+const INVENTORY_STAT_TINTS = {
+  primary: "bg-primary text-on-primary",
+  secondary: "bg-secondary text-on-secondary",
+  success: "bg-[#004b1e] text-[#22c55e]",
+} as const;
+
+function InventoryStatTile({
+  label,
+  value,
+  icon,
+  sub,
+  tint,
+}: Readonly<{
+  label: string;
+  value: string;
+  icon: ReactNode;
+  sub: string;
+  tint: keyof typeof INVENTORY_STAT_TINTS;
+}>) {
+  return (
+    <div className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-fast)] hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+      <span
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-fast)] ${INVENTORY_STAT_TINTS[tint]}`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm text-on-surface-variant dark:text-zinc-400">
+          {label}
+        </span>
+        <span className="block truncate text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">
+          {value}
+        </span>
+        <span className="block truncate text-xs text-on-surface-variant/60 dark:text-zinc-500">
+          {sub}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 export default function InventoryPage() {
   const { settings, money } = useSettings();
@@ -312,33 +352,33 @@ export default function InventoryPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InventoryStatTile
           label="Retail stock value"
           value={valuation ? money(valuation.retailValueCents) : "—"}
           icon={<Coins size={20} />}
-          accent="primary"
+          tint="primary"
           sub="At current shelf prices"
         />
-        <StatCard
+        <InventoryStatTile
           label="Stock at cost"
           value={valuation ? money(valuation.costValueCents) : "—"}
           icon={<Boxes size={20} />}
-          accent="secondary"
+          tint="secondary"
           sub="Capital tied up in stock"
         />
-        <StatCard
+        <InventoryStatTile
           label="Potential profit"
           value={valuation ? money(valuation.potentialProfitCents) : "—"}
           icon={<TrendingUp size={20} />}
-          accent="success"
+          tint="success"
           sub="If all stock sells at list"
         />
-        <StatCard
+        <InventoryStatTile
           label="Units on hand"
           value={valuation ? valuation.unitCount.toLocaleString() : "—"}
           icon={<Boxes size={20} />}
-          accent="secondary"
+          tint="secondary"
           sub={`${valuation?.productCount ?? 0} distinct products`}
         />
       </div>
