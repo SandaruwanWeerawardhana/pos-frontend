@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import Link from "next/link";
-import { CloudOff, Download, RefreshCw } from "lucide-react";
+import { CloudOff, Download, ReceiptText, RefreshCw, Wallet } from "lucide-react";
 import type { PaymentMethod, SyncStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useSalesFeed, type SaleRow } from "@/lib/hooks/use-sales-feed";
 import { exportCsv, type ExportColumn } from "@/lib/export";
@@ -33,6 +32,42 @@ const STATUS_VARIANT: Record<
  * table page the same thing, so the table's own pager never splits a fetch.
  */
 const PER_PAGE = 25;
+
+const SALES_STAT_TINTS = {
+  primary: "bg-primary text-on-primary",
+  secondary: "bg-secondary text-on-secondary",
+  warning: "bg-amber-500 text-white",
+} as const;
+
+function SalesStatTile({
+  label,
+  value,
+  icon,
+  tint,
+}: Readonly<{
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tint: keyof typeof SALES_STAT_TINTS;
+}>) {
+  return (
+    <div className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-fast)] hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+      <span
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-fast)] ${SALES_STAT_TINTS[tint]}`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm text-on-surface-variant dark:text-zinc-400">
+          {label}
+        </span>
+        <span className="block truncate text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">
+          {value}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 export default function SalesPage() {
   const { money } = useSettings();
@@ -201,24 +236,24 @@ export default function SalesPage() {
         </output>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <SalesStatTile
           label="Revenue shown"
           value={money(totals.revenueCents)}
-          accent="primary"
-          sub="Excludes refunded sales"
+          icon={<Wallet size={20} />}
+          tint="primary"
         />
-        <StatCard
+        <SalesStatTile
           label="Sales shown"
           value={String(totals.count)}
-          accent="secondary"
-          sub={meta ? `${meta.total} synced in total` : "This device only"}
+          icon={<ReceiptText size={20} />}
+          tint="secondary"
         />
-        <StatCard
+        <SalesStatTile
           label="Awaiting sync"
           value={String(unsynced)}
-          accent={unsynced > 0 ? "warning" : "secondary"}
-          sub="Not yet stored on the server"
+          icon={<RefreshCw size={20} />}
+          tint={unsynced > 0 ? "warning" : "secondary"}
         />
       </div>
 
