@@ -25,6 +25,16 @@ const TYPE_LABELS: Record<StockMovementType, string> = {
   return: "Return",
 };
 
+function getMovementBadgeVariant(
+  movement: StockMovement,
+): "success" | "danger" | "neutral" {
+  if (movement.quantity_delta >= 0) return "success";
+  if (movement.type === "waste" || movement.type === "damage") {
+    return "danger";
+  }
+  return "neutral";
+}
+
 export default function StockMovementsPage() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [query, setQuery] = useState("");
@@ -84,15 +94,7 @@ export default function StockMovementsPage() {
       hideOnMobile: true,
       sortValue: (movement) => movement.type,
       render: (movement) => (
-        <Badge
-          variant={
-            movement.quantity_delta >= 0
-              ? "success"
-              : movement.type === "waste" || movement.type === "damage"
-                ? "danger"
-                : "neutral"
-          }
-        >
+        <Badge variant={getMovementBadgeVariant(movement)}>
           {TYPE_LABELS[movement.type]}
         </Badge>
       ),
