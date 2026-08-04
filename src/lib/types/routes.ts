@@ -22,11 +22,7 @@ export const ROUTES = {
   productDetail: (id: string) => `/products/${id}`,
   productEdit: (id: string) => `/products/${id}/edit`,
   catalogue: {
-    import: "/products/import",
-    importUpdate: "/products/import-update",
-    openingStock: "/products/opening-stock",
     printLabels: "/products/print-labels",
-    countStock: "/products/count-stock",
     categories: "/products/categories",
     brands: "/products/brands",
     units: "/products/units",

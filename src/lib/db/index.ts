@@ -22,6 +22,7 @@ import type {
   StockMovement,
   Supplier,
   SyncMetaRecord,
+  UnitOperator,
   Warehouse,
   WarehouseLocation,
 } from "@/lib/types";
@@ -685,6 +686,8 @@ export async function addProductUnit(input: {
   name: string;
   short_name: string;
   base_unit?: string;
+  operator?: UnitOperator;
+  operation_value?: number;
 }): Promise<ProductUnitRecord> {
   const name = input.name.trim();
   const shortName = input.short_name.trim();
@@ -700,11 +703,55 @@ export async function addProductUnit(input: {
       name,
       short_name: shortName,
       base_unit: input.base_unit?.trim() || undefined,
+      operator: input.operator ?? "*",
+      operation_value: input.operation_value ?? 1,
       created_at: new Date().toISOString(),
     };
     await db.productUnits.add(unit);
     return unit;
   });
+}
+
+export async function updateProductUnit(
+  id: string,
+  changes: {
+    name?: string;
+    short_name?: string;
+    base_unit?: string;
+    operator?: UnitOperator;
+    operation_value?: number;
+  },
+): Promise<void> {
+  const name = changes.name?.trim();
+  const shortName = changes.short_name?.trim();
+  if (name === "") throw new Error("Unit name is required");
+  if (shortName === "") throw new Error("Short name is required");
+
+  return db.transaction("rw", db.productUnits, async () => {
+    if (shortName) {
+      const clash = await db.productUnits
+        .where("short_name")
+        .equals(shortName)
+        .first();
+      if (clash && clash.id !== id) throw new Error("Short name already exists");
+    }
+
+    await db.productUnits.update(id, {
+      ...(name ? { name } : {}),
+      ...(shortName ? { short_name: shortName } : {}),
+      ...(changes.base_unit !== undefined
+        ? { base_unit: changes.base_unit.trim() || undefined }
+        : {}),
+      ...(changes.operator ? { operator: changes.operator } : {}),
+      ...(changes.operation_value !== undefined
+        ? { operation_value: changes.operation_value }
+        : {}),
+    });
+  });
+}
+
+export async function deleteProductUnit(id: string): Promise<void> {
+  await db.productUnits.delete(id);
 }
 
 /**

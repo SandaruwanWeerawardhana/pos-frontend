@@ -12,7 +12,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Upload,
   X,
 } from "lucide-react";
 import {
@@ -509,13 +508,6 @@ export default function ProductsPage() {
               <FileSpreadsheet size={15} />
               EXCEL
             </Button>
-            <Link
-              href={ROUTES.catalogue.import}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface transition-all duration-[var(--duration-fast)] hover:bg-surface-container dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <Upload size={15} />
-              Import products
-            </Link>
             <Link
               href={ROUTES.productsNew}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary transition-all duration-[var(--duration-fast)] hover:bg-secondary/90 dark:bg-white dark:text-zinc-900"
