@@ -54,13 +54,11 @@ function InventoryStatTile({
   label,
   value,
   icon,
-  sub,
   tint,
 }: Readonly<{
   label: string;
   value: string;
   icon: ReactNode;
-  sub: string;
   tint: keyof typeof INVENTORY_STAT_TINTS;
 }>) {
   return (
@@ -76,9 +74,6 @@ function InventoryStatTile({
         </span>
         <span className="block truncate text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">
           {value}
-        </span>
-        <span className="block truncate text-xs text-on-surface-variant/60 dark:text-zinc-500">
-          {sub}
         </span>
       </span>
     </div>
@@ -358,28 +353,24 @@ export default function InventoryPage() {
           value={valuation ? money(valuation.retailValueCents) : "—"}
           icon={<Coins size={20} />}
           tint="primary"
-          sub="At current shelf prices"
         />
         <InventoryStatTile
           label="Stock at cost"
           value={valuation ? money(valuation.costValueCents) : "—"}
           icon={<Boxes size={20} />}
           tint="secondary"
-          sub="Capital tied up in stock"
         />
         <InventoryStatTile
           label="Potential profit"
           value={valuation ? money(valuation.potentialProfitCents) : "—"}
           icon={<TrendingUp size={20} />}
           tint="success"
-          sub="If all stock sells at list"
         />
         <InventoryStatTile
           label="Units on hand"
           value={valuation ? valuation.unitCount.toLocaleString() : "—"}
           icon={<Boxes size={20} />}
           tint="secondary"
-          sub={`${valuation?.productCount ?? 0} distinct products`}
         />
       </div>
 
