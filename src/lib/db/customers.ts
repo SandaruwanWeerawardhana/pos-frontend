@@ -21,12 +21,20 @@ async function nextCustomerCode(): Promise<string> {
 }
 
 export interface CreateCustomerInput {
-  name: string;
-  first_name?: string;
-  last_name?: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
   phone?: string;
-  email?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  tax_number?: string;
+  address?: string;
+  opening_balance_cents?: number;
   credit_limit_cents?: number;
+  royalty_eligible?: boolean;
 }
 
 export async function createCustomer(input: CreateCustomerInput): Promise<Customer> {
@@ -34,10 +42,12 @@ export async function createCustomer(input: CreateCustomerInput): Promise<Custom
     ...input,
     id: crypto.randomUUID(),
     code: await nextCustomerCode(),
+    name: `${input.first_name} ${input.last_name}`.trim(),
     points: 0,
-    opening_balance_cents: 0,
+    opening_balance_cents: input.opening_balance_cents ?? 0,
     total_sale_due_cents: 0,
     total_sell_return_due_cents: 0,
+    royalty_eligible: input.royalty_eligible ?? false,
     created_at: Date.now(),
   };
   await db.customers.add(customer);

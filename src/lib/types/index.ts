@@ -386,16 +386,25 @@ export interface Customer {
   id: string;
   code: string;
   name: string;
-  first_name?: string;
-  last_name?: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
   phone?: string;
-  email?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  tax_number?: string;
+  address?: string;
   points: number;
   /* undefined = no credit limit set. */
   credit_limit_cents?: number;
+  /* Customer's outstanding balance from before this system was adopted. */
   opening_balance_cents: number;
   total_sale_due_cents: number;
   total_sell_return_due_cents: number;
+  royalty_eligible: boolean;
   created_at: number;
 }
 
