@@ -51,6 +51,7 @@ export const ROUTES = {
   },
   suppliers: "/people/suppliers",
   suppliersNew: "/people/suppliers/new",
+  suppliersEdit: (id: string) => `/people/suppliers/${id}/edit`,
   suppliersImport: "/people/suppliers/import",
   people: {
     root: "/people/customer",

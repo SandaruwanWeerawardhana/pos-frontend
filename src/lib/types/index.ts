@@ -372,14 +372,18 @@ export interface CartTotal {
 
 export interface Supplier {
   id: string;
+  code: string;
   name: string;
   contact_name?: string;
   phone?: string;
   email?: string;
+  city?: string;
   created_at: number;
   address?: string;
-  tax_id?: string;
+  tax_number?: string;
   payment_terms?: string; /* e.g. "Net 30" */
+  total_purchase_due_cents: number;
+  total_purchase_return_due_cents: number;
 }
 
 export interface Customer {
