@@ -148,7 +148,7 @@ function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
       src={source}
       alt=""
       loading="lazy"
-      className="h-12 w-12 rounded-lg border border-outline-variant bg-white object-contain p-1 dark:border-zinc-700"
+      className="h-12 w-12 rounded-lg border border-outline-variant bg-white object-cover dark:border-zinc-700"
     />
   );
 }
