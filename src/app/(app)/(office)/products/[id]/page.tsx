@@ -282,7 +282,7 @@ export default function ProductDetailsPage({
         </Button>
       </div>
 
-      <section className="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 p-5 text-white sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-secondary p-5 text-on-primary sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-5">
           <span className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
             {gallery[0] ? (
@@ -300,7 +300,7 @@ export default function ProductDetailsPage({
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+              <span className="rounded-full bg-on-primary/20 px-3 py-1 text-xs font-semibold">
                 {typeLabel}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold">
@@ -311,7 +311,7 @@ export default function ProductDetailsPage({
             <h2 className="mt-2 font-display text-2xl font-bold">
               {product.name}
             </h2>
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-white/90">
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-on-primary/90">
               <span className="inline-flex items-center gap-1">
                 <Folder size={14} aria-hidden />
                 {product.category ?? "Uncategorised"}
@@ -323,8 +323,8 @@ export default function ProductDetailsPage({
             </div>
           </div>
         </div>
-        <div className="rounded-xl bg-white/15 px-8 py-5 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
+        <div className="rounded-xl bg-on-primary/15 px-8 py-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-on-primary/80">
             Price
           </p>
           <p className="mt-1 text-3xl font-bold">{money(product.price_cents)}</p>
