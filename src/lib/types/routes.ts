@@ -49,9 +49,9 @@ export const ROUTES = {
   store: {
     root: "/store",
   },
-  suppliers: "/suppliers",
-  suppliersNew: "/suppliers/new",
-  suppliersImport: "/suppliers/import",
+  suppliers: "/people/suppliers",
+  suppliersNew: "/people/suppliers/new",
+  suppliersImport: "/people/suppliers/import",
   people: {
     root: "/people/customer",
     new: "/people/customer/new",
