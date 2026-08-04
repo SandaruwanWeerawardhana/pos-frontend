@@ -30,7 +30,6 @@ export const ROUTES = {
   },
   inventory: {
     root: "/store/inventory",
-    new: "/store/inventory/new",
     detail: (id: string) => `/store/inventory/${id}`,
     alerts: "/store/inventory/alerts",
     movements: "/store/inventory/movements",
