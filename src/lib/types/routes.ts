@@ -55,6 +55,7 @@ export const ROUTES = {
   people: {
     root: "/people/customer",
     new: "/people/customer/new",
+    edit: (id: string) => `/people/customer/${id}/edit`,
     import: "/people/customer/import",
     withoutLogin: "/people/customer/without-login",
     withLogin: "/people/customer/with-login",

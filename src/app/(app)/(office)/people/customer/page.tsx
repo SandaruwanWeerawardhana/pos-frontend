@@ -3,23 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Check,
   Filter,
   FileSpreadsheet,
   FileText,
   Pencil,
   Plus,
   Search,
-  Upload,
   X,
 } from "lucide-react";
-import { deleteCustomer, listCustomers, updateCustomer } from "@/lib/db";
+import { deleteCustomer, listCustomers } from "@/lib/db";
 import type { Customer } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
 import { Card, PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
@@ -45,98 +42,12 @@ function filterCustomers(
     return (
       customer.code.toLowerCase().includes(needle) ||
       customer.name.toLowerCase().includes(needle) ||
-      (customer.first_name?.toLowerCase().includes(needle) ?? false) ||
-      (customer.last_name?.toLowerCase().includes(needle) ?? false) ||
+      customer.first_name.toLowerCase().includes(needle) ||
+      customer.last_name.toLowerCase().includes(needle) ||
       (customer.phone?.toLowerCase().includes(needle) ?? false) ||
-      (customer.email?.toLowerCase().includes(needle) ?? false)
+      customer.email.toLowerCase().includes(needle)
     );
   });
-}
-
-interface EditCustomerFormProps {
-  customer: Customer;
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-function EditCustomerForm({ customer, onClose, onSaved }: Readonly<EditCustomerFormProps>) {
-  const { showToast } = useToast();
-  const [name, setName] = useState(customer.name);
-  const [firstName, setFirstName] = useState(customer.first_name ?? "");
-  const [lastName, setLastName] = useState(customer.last_name ?? "");
-  const [phone, setPhone] = useState(customer.phone ?? "");
-  const [email, setEmail] = useState(customer.email ?? "");
-  const [creditLimit, setCreditLimit] = useState(
-    customer.credit_limit_cents !== undefined
-      ? (customer.credit_limit_cents / 100).toString()
-      : "",
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  async function handleSubmit() {
-    if (!name.trim()) {
-      setError("Name is required");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await updateCustomer(customer.id, {
-        name: name.trim(),
-        first_name: firstName.trim() || undefined,
-        last_name: lastName.trim() || undefined,
-        phone: phone.trim() || undefined,
-        email: email.trim() || undefined,
-        credit_limit_cents: creditLimit.trim()
-          ? Math.round(Number(creditLimit) * 100)
-          : undefined,
-      });
-      showToast(`${name.trim()} updated`, "success");
-      onSaved();
-      onClose();
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error ? submitError.message : "Could not save customer",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void handleSubmit();
-      }}
-    >
-      <Input label="Name" autoFocus value={name} onChange={(e) => setName(e.target.value)} required />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-        <Input label="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <Input
-        label="Credit limit"
-        type="number"
-        step="0.01"
-        min="0"
-        placeholder="Leave blank for no limit"
-        value={creditLimit}
-        onChange={(e) => setCreditLimit(e.target.value)}
-      />
-      {error && <p className="text-xs text-error">{error}</p>}
-      <Button type="submit" loading={saving} className="self-start">
-        <Check size={16} />
-        Save changes
-      </Button>
-    </form>
-  );
 }
 
 export default function CustomerManagementPage() {
@@ -148,7 +59,6 @@ export default function CustomerManagementPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [creditFilter, setCreditFilter] = useState<CreditFilter>("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [editing, setEditing] = useState<Customer | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -166,10 +76,10 @@ export default function CustomerManagementPage() {
   const exportColumns: ExportColumn<Customer>[] = [
     { key: "code", header: "Code", value: (c) => c.code },
     { key: "name", header: "Name", value: (c) => c.name },
-    { key: "first_name", header: "First Name", value: (c) => c.first_name ?? "" },
-    { key: "last_name", header: "Last Name", value: (c) => c.last_name ?? "" },
+    { key: "first_name", header: "First Name", value: (c) => c.first_name },
+    { key: "last_name", header: "Last Name", value: (c) => c.last_name },
     { key: "phone", header: "Phone", value: (c) => c.phone ?? "" },
-    { key: "email", header: "Email", value: (c) => c.email ?? "" },
+    { key: "email", header: "Email", value: (c) => c.email },
     { key: "points", header: "Points", value: (c) => c.points },
     {
       key: "credit_limit",
@@ -210,15 +120,14 @@ export default function CustomerManagementPage() {
       header: "Action",
       render: (customer) => (
         <span className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setEditing(customer)}
+          <Link
+            href={ROUTES.people.edit(customer.id)}
             aria-label={`Edit ${customer.name}`}
             title="Edit"
             className={`${ACTION_BUTTON_CLASSES} text-emerald-600 hover:bg-surface-container dark:text-emerald-400 dark:hover:bg-zinc-800`}
           >
             <Pencil size={15} aria-hidden />
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => setPendingDelete(customer)}
@@ -249,13 +158,13 @@ export default function CustomerManagementPage() {
       key: "first_name",
       header: "First Name",
       hideOnMobile: true,
-      render: (customer) => customer.first_name ?? "—",
+      render: (customer) => customer.first_name,
     },
     {
       key: "last_name",
       header: "Last Name",
       hideOnMobile: true,
-      render: (customer) => customer.last_name ?? "—",
+      render: (customer) => customer.last_name,
     },
     { key: "phone", header: "Phone", render: (customer) => customer.phone ?? "—" },
     {
@@ -263,7 +172,7 @@ export default function CustomerManagementPage() {
       header: "Email",
       hideOnMobile: true,
       render: (customer) => (
-        <span className="text-secondary dark:text-blue-400">{customer.email ?? "—"}</span>
+        <span className="text-secondary dark:text-blue-400">{customer.email}</span>
       ),
     },
     {
@@ -366,13 +275,6 @@ export default function CustomerManagementPage() {
               EXCEL
             </Button>
             <Link
-              href={ROUTES.people.import}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary transition-colors hover:bg-secondary/90 dark:bg-white dark:text-zinc-900"
-            >
-              <Upload size={15} />
-              Import Customers
-            </Link>
-            <Link
               href={ROUTES.people.new}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-medium text-on-primary transition-colors hover:bg-primary/90"
             >
@@ -410,22 +312,6 @@ export default function CustomerManagementPage() {
           />
         </div>
       </Card>
-
-      <Modal
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        title="Edit customer"
-        size="sm"
-      >
-        {editing && (
-          <EditCustomerForm
-            key={editing.id}
-            customer={editing}
-            onClose={() => setEditing(null)}
-            onSaved={reload}
-          />
-        )}
-      </Modal>
 
       <ConfirmDialog
         open={pendingDelete !== null}
