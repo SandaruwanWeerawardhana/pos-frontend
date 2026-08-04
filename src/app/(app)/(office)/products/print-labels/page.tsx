@@ -108,8 +108,8 @@ export default function PrintLabelsPage() {
 
   function addProduct(product: Product) {
     setSelected((current) => {
-      const existing = current.find((line) => line.product.id === product.id);
-      if (existing) {
+      const exists = current.some((line) => line.product.id === product.id);
+      if (exists) {
         return current.map((line) =>
           line.product.id === product.id
             ? { ...line, quantity: line.quantity + 1 }
