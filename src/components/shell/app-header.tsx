@@ -72,6 +72,18 @@ function openCommandPalette() {
   );
 }
 
+function handleToggleSidebar() {
+  window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
+}
+
+function handleToggleFullscreen() {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen();
+  } else {
+    void document.documentElement.requestFullscreen();
+  }
+}
+
 function subscribeAuthHydration(onStoreChange: () => void) {
   return useAuthStore.persist?.onFinishHydration(onStoreChange) ?? (() => {});
 }
@@ -152,18 +164,6 @@ export function AppHeader() {
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-
-  function handleToggleSidebar() {
-    window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
-  }
-
-  function handleToggleFullscreen() {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen();
-    }
-  }
 
   function handleLogout() {
     logout();
