@@ -240,8 +240,7 @@ export default function CreateCustomerPage() {
               checked={royaltyEligible}
               onChange={(event) => setRoyaltyEligible(event.target.checked)}
               className="h-4 w-4 cursor-pointer accent-primary"
-            />
-            Is royalty eligible
+            /> Is royalty eligible
           </label>
 
           {error && <p className="text-xs text-error">{error}</p>}
