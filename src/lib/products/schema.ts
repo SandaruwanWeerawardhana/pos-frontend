@@ -594,6 +594,12 @@ export function toProduct(values: ProductFormValues, id: string): Product {
             ? { manufactured_date: values.manufacturing_date }
             : {}),
           ...(costCents !== undefined ? { cost_cents: costCents } : {}),
+          // Same source as `shelf_location` below: the first warehouse with
+          // an opening-stock entry, since a single batch has no other way to
+          // know which warehouse its stock landed in.
+          ...(openingStock[0]?.warehouse_id
+            ? { warehouse_id: openingStock[0].warehouse_id }
+            : {}),
         },
       ]
     : undefined;

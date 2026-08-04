@@ -170,6 +170,66 @@ export async function getInventoryAlerts(): Promise<InventoryAlerts> {
   return { lowStock, outOfStock, nearExpiry, expired };
 }
 
+export type BatchStatus = "active" | "expiring_soon" | "expired" | "depleted";
+
+export interface ProductBatchRow {
+  product_id: string;
+  product_name: string;
+  batch_no: string;
+  warehouse_id?: string;
+  expiry_date: string | null;
+  quantity: number;
+  cost_cents?: number;
+  status: BatchStatus;
+  days_remaining: number | null;
+}
+
+/**
+ * Every batch across every product, flattened for the Batches screen. Status
+ * mirrors `getInventoryAlerts`' near-expiry/expired split, plus "depleted"
+ * for a batch whose quantity has been sold or adjusted down to zero.
+ */
+export async function listProductBatches(): Promise<ProductBatchRow[]> {
+  const [products, settings] = await Promise.all([
+    db.products.toArray(),
+    getStoreSettings(),
+  ]);
+
+  const rows: ProductBatchRow[] = [];
+  for (const product of products) {
+    for (const batch of product.batches ?? []) {
+      const daysRemaining = batch.expiry_date ? daysUntil(batch.expiry_date) : null;
+
+      let status: BatchStatus;
+      if (batch.quantity <= 0) {
+        status = "depleted";
+      } else if (daysRemaining === null) {
+        status = "active";
+      } else if (daysRemaining < 0) {
+        status = "expired";
+      } else if (daysRemaining <= settings.expiry_warning_days) {
+        status = "expiring_soon";
+      } else {
+        status = "active";
+      }
+
+      rows.push({
+        product_id: product.id,
+        product_name: product.name,
+        batch_no: batch.batch_no,
+        warehouse_id: batch.warehouse_id,
+        expiry_date: batch.expiry_date,
+        quantity: batch.quantity,
+        cost_cents: batch.cost_cents,
+        status,
+        days_remaining: daysRemaining,
+      });
+    }
+  }
+
+  return rows;
+}
+
 /* ── Valuation ────────────────────────────────────────────────────────────── */
 
 export interface InventoryValuation {

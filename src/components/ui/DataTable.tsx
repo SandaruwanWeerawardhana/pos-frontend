@@ -130,13 +130,7 @@ export function DataTable<T>({
     });
   }
 
-  if (rows.length === 0) {
-    return (
-      <p className="animate-fade-in rounded-xl border border-dashed border-outline-variant py-10 text-center text-sm text-on-surface-variant dark:border-zinc-800 dark:text-zinc-400">
-        {emptyMessage}
-      </p>
-    );
-  }
+  const columnCount = columns.length + (selection ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-3">
@@ -224,6 +218,16 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/50 dark:divide-zinc-800">
+            {visible.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columnCount}
+                  className="animate-fade-in px-4 py-10 text-center text-sm text-on-surface-variant dark:text-zinc-400"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
             {visible.map((row, index) => (
               <tr
                 key={rowKey(row)}

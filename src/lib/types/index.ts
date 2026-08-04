@@ -115,6 +115,8 @@ export interface ProductBatch {
   cost_cents?: number;
   /** ISO yyyy-mm-dd. */
   manufactured_date?: string | null;
+  /** Warehouse this batch's stock sits in, when known. */
+  warehouse_id?: string;
 }
 
 /**
