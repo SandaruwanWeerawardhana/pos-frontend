@@ -25,17 +25,24 @@ export type ProductUnit =
   | "box"
   | (string & {});
 
+/** `quantity_in_short_name (operator) operation_value = quantity_in_base_unit`. */
+export type UnitOperator = "*" | "/";
+
 /**
- * A user-defined unit of measure (e.g. "Meter"/"m"), created from the product
- * form rather than shipped as a fixed option. `base_unit` is an optional
- * reference to another unit's `short_name`, for grouping only — no
- * conversion factor is stored or applied.
+ * A user-defined unit of measure (e.g. "Meter"/"m"), created either from the
+ * product form's quick "+" or from the Units management screen. `base_unit`
+ * is an optional reference to another unit's `short_name`; when set,
+ * `operator`/`operation_value` convert this unit into that base unit (e.g.
+ * "g", base "kg", operator "/", value 1000 — 1000 g makes 1 kg). A unit with
+ * no base is its own base, kept at the identity `"*" 1`.
  */
 export interface ProductUnitRecord {
   id: string;
   name: string;
   short_name: string;
   base_unit?: string;
+  operator?: UnitOperator;
+  operation_value?: number;
   created_at: string;
 }
 
@@ -108,6 +115,8 @@ export interface ProductBatch {
   cost_cents?: number;
   /** ISO yyyy-mm-dd. */
   manufactured_date?: string | null;
+  /** Warehouse this batch's stock sits in, when known. */
+  warehouse_id?: string;
 }
 
 /**

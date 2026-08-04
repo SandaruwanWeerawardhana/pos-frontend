@@ -51,7 +51,7 @@ export function exportCsv<T>(
   );
 }
 
-function escapeHtml(value: string | number): string {
+export function escapeHtml(value: string | number): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
