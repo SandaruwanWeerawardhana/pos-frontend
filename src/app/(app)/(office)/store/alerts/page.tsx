@@ -1,16 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CalendarClock, CheckCircle2, PackageX } from "lucide-react";
 import { getInventoryAlerts, type InventoryAlerts } from "@/lib/db";
 import { Badge } from "@/components/ui/Badge";
 import { Card, PageHeader, SectionHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { ROUTES } from "@/lib/types/routes";
+
+const ALERT_STAT_TINTS = {
+  error: "bg-error text-on-error",
+  secondary: "bg-secondary text-on-secondary",
+  warning: "bg-amber-500 text-white",
+} as const;
+
+function AlertStatTile({
+  label,
+  value,
+  icon,
+  tint,
+}: Readonly<{
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tint: keyof typeof ALERT_STAT_TINTS;
+}>) {
+  return (
+    <div className="flex animate-fade-in-up items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm transition-all duration-[var(--duration-fast)] hover:-translate-y-0.5 hover:shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+      <span
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-[var(--duration-fast)] ${ALERT_STAT_TINTS[tint]}`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm text-on-surface-variant dark:text-zinc-400">
+          {label}
+        </span>
+        <span className="block truncate text-lg font-semibold text-on-surface transition-all duration-[var(--duration-base)] dark:text-zinc-50">
+          {value}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 export default function InventoryAlertsPage() {
   const { settings } = useSettings();
@@ -24,9 +59,9 @@ export default function InventoryAlertsPage() {
     return (
       <output aria-label="Loading alerts" className="flex flex-col gap-4">
         <Skeleton className="h-8 w-56" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="h-32 rounded-2xl" />
+            <Skeleton key={index} className="h-[90px] rounded-2xl" />
           ))}
         </div>
       </output>
@@ -51,34 +86,30 @@ export default function InventoryAlertsPage() {
         ]}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <AlertStatTile
           label="Out of stock"
           value={String(alerts.outOfStock.length)}
           icon={<PackageX size={20} />}
-          accent={alerts.outOfStock.length > 0 ? "error" : "secondary"}
-          sub="Not sellable at the till"
+          tint={alerts.outOfStock.length > 0 ? "error" : "secondary"}
         />
-        <StatCard
+        <AlertStatTile
           label="Low stock"
           value={String(alerts.lowStock.length)}
           icon={<AlertTriangle size={20} />}
-          accent={alerts.lowStock.length > 0 ? "warning" : "secondary"}
-          sub="At or below reorder level"
+          tint={alerts.lowStock.length > 0 ? "warning" : "secondary"}
         />
-        <StatCard
+        <AlertStatTile
           label="Near expiry"
           value={String(alerts.nearExpiry.length)}
           icon={<CalendarClock size={20} />}
-          accent={alerts.nearExpiry.length > 0 ? "warning" : "secondary"}
-          sub="Consider a markdown"
+          tint={alerts.nearExpiry.length > 0 ? "warning" : "secondary"}
         />
-        <StatCard
+        <AlertStatTile
           label="Expired"
           value={String(alerts.expired.length)}
           icon={<CalendarClock size={20} />}
-          accent={alerts.expired.length > 0 ? "error" : "secondary"}
-          sub="Remove from shelf"
+          tint={alerts.expired.length > 0 ? "error" : "secondary"}
         />
       </div>
 
