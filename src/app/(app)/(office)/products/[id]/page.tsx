@@ -57,11 +57,11 @@ interface WarehouseStockLine {
 }
 
 /*
- * Stock is tracked per warehouse only where the data says so: the opening
- * split seeds each warehouse and movements that name one adjust it. Movements
- * with no warehouse (a till sale, a plain adjustment) are not attributed, so
- * the card's total comes from `stock_quantity` — the figure every other screen
- * shows — rather than from the sum of these lines.
+ * Stock is attributed per warehouse where the data says so: the opening split
+ * seeds each warehouse and movements that name one adjust it. Till sales and
+ * plain adjustments carry no warehouse, so whatever `stock_quantity` holds
+ * beyond the attributed lines lands on the default warehouse — the tiles then
+ * always add up to the total shown on the card and everywhere else.
  */
 function warehouseStock(
   product: Product,
@@ -85,11 +85,27 @@ function warehouseStock(
     );
   }
 
-  if (quantities.size === 0) return [];
+  const fallback =
+    warehouses.find((warehouse) => warehouse.is_default) ?? warehouses[0];
+  const fallbackId = fallback?.id ?? "default";
+  const attributed = [...quantities.values()].reduce(
+    (total, quantity) => total + quantity,
+    0,
+  );
+  const unattributed = product.stock_quantity - attributed;
+
+  if (unattributed !== 0 || quantities.size === 0) {
+    quantities.set(
+      fallbackId,
+      (quantities.get(fallbackId) ?? 0) + unattributed,
+    );
+  }
 
   return [...quantities.entries()].map(([id, quantity]) => ({
     id,
-    name: warehouses.find((warehouse) => warehouse.id === id)?.name ?? "Warehouse",
+    name:
+      warehouses.find((warehouse) => warehouse.id === id)?.name ??
+      "Main warehouse",
     quantity,
   }));
 }
@@ -274,7 +290,7 @@ export default function ProductDetailsPage({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft size={15} />
-          back
+          Back
         </Button>
         <Button type="button" size="sm" onClick={printDetails}>
           <Printer size={15} />
@@ -392,28 +408,33 @@ export default function ProductDetailsPage({
             ))}
           </Card>
 
-          {product.warranty && (
-            <Card>
-              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface dark:text-zinc-100">
-                <ShieldCheck size={16} aria-hidden />
-                Warranty
-              </h3>
-              <DetailRow
-                label="Warranty Period"
-                value={`${product.warranty.period} ${product.warranty.unit}`}
-              />
-              {product.warranty.terms && (
-                <DetailRow
-                  label="Warranty Terms"
-                  value={product.warranty.terms}
-                />
-              )}
-              <DetailRow
-                label="Manufacturer Guarantee"
-                value={product.warranty.has_guarantee ? "Yes" : "No"}
-              />
-            </Card>
-          )}
+          <Card>
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface dark:text-zinc-100">
+              <ShieldCheck size={16} aria-hidden />
+              Warranty
+            </h3>
+            <DetailRow
+              label="Warranty Period"
+              value={
+                product.warranty
+                  ? `${product.warranty.period} ${product.warranty.unit}`
+                  : "No warranty"
+              }
+              valueClassName={
+                product.warranty
+                  ? "rounded-full bg-sky-100 px-3 py-1 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+                  : "text-on-surface-variant dark:text-zinc-400"
+              }
+            />
+            <DetailRow
+              label="Warranty Terms"
+              value={product.warranty?.terms ?? "—"}
+            />
+            <DetailRow
+              label="Manufacturer Guarantee"
+              value={product.warranty?.has_guarantee ? "Yes" : "No"}
+            />
+          </Card>
 
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -425,36 +446,29 @@ export default function ProductDetailsPage({
                 Total: {product.stock_quantity.toFixed(2)} {unit}
               </span>
             </div>
-            {stockLines.length === 0 ? (
-              <p className="text-sm text-on-surface-variant dark:text-zinc-400">
-                No per-warehouse split recorded — all {product.stock_quantity.toFixed(2)}{" "}
-                {unit} sit in the default warehouse.
-              </p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {stockLines.map((line) => (
-                  <div
-                    key={line.id}
-                    className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white">
-                      <WarehouseIcon size={18} aria-hidden />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {stockLines.map((line) => (
+                <div
+                  key={line.id}
+                  className="flex items-center gap-3 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 dark:border-sky-900/50 dark:bg-sky-950/30"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white">
+                    <WarehouseIcon size={18} aria-hidden />
+                  </span>
+                  <span>
+                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant dark:text-zinc-400">
+                      {line.name}
                     </span>
-                    <span>
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant dark:text-zinc-400">
-                        {line.name}
-                      </span>
-                      <span className="block text-lg font-bold text-on-surface dark:text-zinc-50">
-                        {line.quantity.toFixed(2)}{" "}
-                        <span className="text-xs font-medium text-on-surface-variant dark:text-zinc-400">
-                          {unit}
-                        </span>
+                    <span className="block text-lg font-bold text-on-surface dark:text-zinc-50">
+                      {line.quantity.toFixed(2)}{" "}
+                      <span className="text-xs font-medium text-on-surface-variant dark:text-zinc-400">
+                        {unit}
                       </span>
                     </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  </span>
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
 
