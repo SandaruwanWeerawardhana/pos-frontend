@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Copy,
@@ -35,8 +35,10 @@ import { exportExcel, exportPdf, type ExportColumn } from "@/lib/export";
 import { generateBarcode, generateSku } from "@/lib/products/generate";
 import { ROUTES } from "@/lib/types/routes";
 
-// Short labels for the table; the full wording lives in PRODUCT_TYPE_OPTIONS
-// and is too long for a column this narrow.
+/*
+ * Short labels for the table; the full wording lives in PRODUCT_TYPE_OPTIONS
+ * and is too long for a column this narrow.
+ */
 const TYPE_LABELS: Record<ProductType, string> = {
   standard: "Single",
   variable: "Variable",
@@ -46,6 +48,86 @@ const TYPE_LABELS: Record<ProductType, string> = {
 
 const ACTION_BUTTON_CLASSES =
   "inline-flex h-8 w-8 items-center justify-center rounded-md border border-outline-variant transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-zinc-700";
+
+type ProductColumnsParams = Readonly<{
+  lowStockThreshold: number;
+  money: (amount: number) => string;
+  onDelete: (product: Product) => void;
+  onDuplicate: (product: Product) => void;
+}>;
+
+const PRODUCT_EXPORT_COLUMNS: ExportColumn<Product>[] = [
+  { key: "name", header: "Name", value: (product) => product.name },
+  {
+    key: "type",
+    header: "Type",
+    value: (product) => TYPE_LABELS[product.product_type ?? "standard"],
+  },
+  { key: "code", header: "Code", value: (product) => product.barcode },
+  { key: "sku", header: "SKU", value: (product) => product.sku },
+  { key: "brand", header: "Brand", value: (product) => product.brand ?? "" },
+  {
+    key: "category",
+    header: "Category",
+    value: (product) => product.category ?? "",
+  },
+  {
+    key: "cost",
+    header: "Cost",
+    value: (product) => ((product.cost_cents ?? 0) / 100).toFixed(2),
+  },
+  {
+    key: "price",
+    header: "Price",
+    value: (product) => (product.price_cents / 100).toFixed(2),
+  },
+  { key: "unit", header: "Unit", value: (product) => product.unit ?? "pc" },
+  {
+    key: "stock",
+    header: "Quantity",
+    value: (product) => product.stock_quantity,
+  },
+];
+
+function createSelectOptions(names: string[]) {
+  return names.map((name) => ({ value: name, label: name }));
+}
+
+function filterProductsByFacets(
+  products: Product[],
+  category: string,
+  brand: string,
+) {
+  return products.filter((product) => {
+    if (category && (product.category ?? "Uncategorised") !== category) {
+      return false;
+    }
+    if (brand && product.brand !== brand) return false;
+    return true;
+  });
+}
+
+function selectProductsByIds(products: Product[], selectedIds: string[]) {
+  return products.filter((product) => selectedIds.includes(product.id));
+}
+
+function removeProductsFromSelection(
+  selectedIds: string[],
+  productsToRemove: Product[],
+) {
+  const removedIds = new Set(productsToRemove.map((product) => product.id));
+  return selectedIds.filter((id) => !removedIds.has(id));
+}
+
+function getProductStockTone(product: Product, lowStockThreshold: number) {
+  const threshold = product.reorder_level ?? lowStockThreshold;
+
+  if (product.stock_quantity <= 0) return "text-error dark:text-red-400";
+  if (product.stock_quantity <= threshold) {
+    return "text-amber-600 dark:text-amber-400";
+  }
+  return "text-on-surface dark:text-zinc-50";
+}
 
 function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
   const source = product.image_url ?? product.images?.[0];
@@ -59,9 +141,9 @@ function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
   }
 
   return (
-    // Product images come from arbitrary supplier URLs and data URLs, so a
-    // plain <img> avoids next/image's remote-host allowlist.
-    // eslint-disable-next-line @next/next/no-img-element
+    /* Supplier URLs and data URLs both land here, so a plain <img> skips
+       next/image's remote-host allowlist. */
+    /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src={source}
       alt=""
@@ -71,138 +153,13 @@ function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
   );
 }
 
-export default function ProductsPage() {
-  const { money, settings } = useSettings();
-  const { showToast } = useToast();
-
-  const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
-  const [category, setCategory] = useState("");
-  const [brand, setBrand] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  // Either one product (row action) or the current selection (bulk action).
-  const [pendingDelete, setPendingDelete] = useState<Product[] | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const reload = useCallback(() => {
-    searchProducts(query).then(setProducts);
-  }, [query]);
-
-  const reloadFacets = useCallback(() => {
-    listCategories().then(setCategories);
-    listBrands().then(setBrands);
-  }, []);
-
-  useEffect(() => {
-    reloadFacets();
-  }, [reloadFacets]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(reload, 200);
-    return () => window.clearTimeout(timeoutId);
-  }, [reload]);
-
-  const visible = useMemo(
-    () =>
-      products.filter((product) => {
-        if (category && (product.category ?? "Uncategorised") !== category) {
-          return false;
-        }
-        if (brand && product.brand !== brand) return false;
-        return true;
-      }),
-    [products, category, brand],
-  );
-
-  const selectedProducts = useMemo(
-    () => visible.filter((product) => selectedIds.includes(product.id)),
-    [visible, selectedIds],
-  );
-
-  const exportColumns: ExportColumn<Product>[] = [
-    { key: "name", header: "Name", value: (p) => p.name },
-    {
-      key: "type",
-      header: "Type",
-      value: (p) => TYPE_LABELS[p.product_type ?? "standard"],
-    },
-    { key: "code", header: "Code", value: (p) => p.barcode },
-    { key: "sku", header: "SKU", value: (p) => p.sku },
-    { key: "brand", header: "Brand", value: (p) => p.brand ?? "" },
-    { key: "category", header: "Category", value: (p) => p.category ?? "" },
-    { key: "cost", header: "Cost", value: (p) => ((p.cost_cents ?? 0) / 100).toFixed(2) },
-    { key: "price", header: "Price", value: (p) => (p.price_cents / 100).toFixed(2) },
-    { key: "unit", header: "Unit", value: (p) => p.unit ?? "pc" },
-    { key: "stock", header: "Quantity", value: (p) => p.stock_quantity },
-  ];
-
-  async function duplicateProduct(product: Product) {
-    // A duplicate starts empty of stock and carries fresh identifiers: SKU and
-    // barcode are unique in Dexie, and copied batches would claim stock the
-    // new row does not have.
-    const copy: Product = {
-      ...product,
-      id: crypto.randomUUID(),
-      name: `${product.name} (copy)`,
-      sku: generateSku({
-        name: product.name,
-        category: product.category,
-        brand: product.brand,
-      }),
-      barcode: generateBarcode(),
-      barcode_source: "generated",
-      stock_quantity: 0,
-      batches: undefined,
-      opening_stock: undefined,
-      _pending_update: undefined,
-    };
-
-    try {
-      await addProduct(copy);
-      showToast(`Duplicated ${product.name}`, "success");
-      reload();
-      reloadFacets();
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Could not duplicate product",
-        "error",
-      );
-    }
-  }
-
-  async function confirmDelete() {
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      for (const product of pendingDelete) {
-        await deleteProduct(product.id);
-      }
-      showToast(
-        pendingDelete.length === 1
-          ? `Deleted ${pendingDelete[0].name}`
-          : `Deleted ${pendingDelete.length} products`,
-        "success",
-      );
-      setSelectedIds((current) =>
-        current.filter((id) => !pendingDelete.some((p) => p.id === id)),
-      );
-      setPendingDelete(null);
-      reload();
-      reloadFacets();
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Could not delete product",
-        "error",
-      );
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const columns: DataColumn<Product>[] = [
+function createProductColumns({
+  lowStockThreshold,
+  money,
+  onDelete,
+  onDuplicate,
+}: ProductColumnsParams): DataColumn<Product>[] {
+  return [
     {
       key: "image",
       header: "Image",
@@ -225,7 +182,7 @@ export default function ProductsPage() {
       sortValue: (product) => product.name,
       render: (product) => (
         <Link
-          href={ROUTES.inventory.detail(product.id)}
+          href={ROUTES.productDetail(product.id)}
           className="font-medium text-primary hover:underline dark:text-blue-400"
         >
           {product.name}
@@ -295,19 +252,16 @@ export default function ProductsPage() {
       header: "Quantity",
       align: "right",
       sortValue: (product) => product.stock_quantity,
-      render: (product) => {
-        const threshold = product.reorder_level ?? settings.low_stock_threshold;
-        let tone = "text-on-surface dark:text-zinc-50";
-        if (product.stock_quantity <= 0) tone = "text-error dark:text-red-400";
-        else if (product.stock_quantity <= threshold) {
-          tone = "text-amber-600 dark:text-amber-400";
-        }
-        return (
-          <span className={`font-medium ${tone}`}>
-            {product.stock_quantity.toFixed(2)} {product.unit ?? "pc"}
-          </span>
-        );
-      },
+      render: (product) => (
+        <span
+          className={`font-medium ${getProductStockTone(
+            product,
+            lowStockThreshold,
+          )}`}
+        >
+          {product.stock_quantity.toFixed(2)} {product.unit ?? "pc"}
+        </span>
+      ),
     },
     {
       key: "action",
@@ -315,7 +269,7 @@ export default function ProductsPage() {
       render: (product) => (
         <span className="flex items-center gap-1.5">
           <Link
-            href={ROUTES.inventory.detail(product.id)}
+            href={ROUTES.productDetail(product.id)}
             aria-label={`View ${product.name}`}
             title="View"
             className={`${ACTION_BUTTON_CLASSES} text-secondary hover:bg-surface-container dark:text-blue-400 dark:hover:bg-zinc-800`}
@@ -332,7 +286,7 @@ export default function ProductsPage() {
           </Link>
           <button
             type="button"
-            onClick={() => duplicateProduct(product)}
+            onClick={() => onDuplicate(product)}
             aria-label={`Duplicate ${product.name}`}
             title="Duplicate"
             className={`${ACTION_BUTTON_CLASSES} text-amber-600 hover:bg-surface-container dark:text-amber-400 dark:hover:bg-zinc-800`}
@@ -341,7 +295,7 @@ export default function ProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setPendingDelete([product])}
+            onClick={() => onDelete(product)}
             aria-label={`Delete ${product.name}`}
             title="Delete"
             className={`${ACTION_BUTTON_CLASSES} text-error hover:bg-surface-container dark:text-red-400 dark:hover:bg-zinc-800`}
@@ -352,6 +306,121 @@ export default function ProductsPage() {
       ),
     },
   ];
+}
+
+export default function ProductsPage() {
+  const { money, settings } = useSettings();
+  const { showToast } = useToast();
+
+  const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  /* Either one product (row action) or the current selection (bulk action). */
+  const [pendingDelete, setPendingDelete] = useState<Product[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function reload() {
+    searchProducts(query).then(setProducts);
+  }
+
+  function reloadFacets() {
+    listCategories().then(setCategories);
+    listBrands().then(setBrands);
+  }
+
+  useEffect(() => {
+    listCategories().then(setCategories);
+    listBrands().then(setBrands);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      searchProducts(query).then(setProducts);
+    }, 200);
+    return () => window.clearTimeout(timeoutId);
+  }, [query]);
+
+  const visible = filterProductsByFacets(products, category, brand);
+  const selectedProducts = selectProductsByIds(visible, selectedIds);
+  const categoryOptions = createSelectOptions(categories);
+  const brandOptions = createSelectOptions(brands);
+
+  async function duplicateProduct(product: Product) {
+    /*
+     * A duplicate starts empty of stock and carries fresh identifiers: SKU and
+     * barcode are unique in Dexie, and copied batches would claim stock the new
+     * row does not have.
+     */
+    const copy: Product = {
+      ...product,
+      id: crypto.randomUUID(),
+      name: `${product.name} (copy)`,
+      sku: generateSku({
+        name: product.name,
+        category: product.category,
+        brand: product.brand,
+      }),
+      barcode: generateBarcode(),
+      barcode_source: "generated",
+      stock_quantity: 0,
+      batches: undefined,
+      opening_stock: undefined,
+      _pending_update: undefined,
+    };
+
+    try {
+      await addProduct(copy);
+      showToast(`Duplicated ${product.name}`, "success");
+      reload();
+      reloadFacets();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Could not duplicate product",
+        "error",
+      );
+    }
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      for (const product of pendingDelete) {
+        await deleteProduct(product.id);
+      }
+      showToast(
+        pendingDelete.length === 1
+          ? `Deleted ${pendingDelete[0].name}`
+          : `Deleted ${pendingDelete.length} products`,
+        "success",
+      );
+      setSelectedIds((current) =>
+        removeProductsFromSelection(current, pendingDelete),
+      );
+      setPendingDelete(null);
+      reload();
+      reloadFacets();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Could not delete product",
+        "error",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const columns = createProductColumns({
+    lowStockThreshold: settings.low_stock_threshold,
+    money,
+    onDelete: (product) => setPendingDelete([product]),
+    onDuplicate: duplicateProduct,
+  });
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -396,7 +465,9 @@ export default function ProductsPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => exportPdf("All Products", visible, exportColumns)}
+              onClick={() =>
+                exportPdf("All Products", visible, PRODUCT_EXPORT_COLUMNS)
+              }
             >
               <FileText size={15} />
               PDF
@@ -406,7 +477,12 @@ export default function ProductsPage() {
               variant="outline"
               size="sm"
               onClick={() =>
-                exportExcel("products", "All Products", visible, exportColumns)
+                exportExcel(
+                  "products",
+                  "All Products",
+                  visible,
+                  PRODUCT_EXPORT_COLUMNS,
+                )
               }
             >
               <FileSpreadsheet size={15} />
@@ -436,14 +512,14 @@ export default function ProductsPage() {
               onChange={(event) => setCategory(event.target.value)}
               placeholder="All categories"
               aria-label="Filter by category"
-              options={categories.map((name) => ({ value: name, label: name }))}
+              options={categoryOptions}
             />
             <Select
               value={brand}
               onChange={(event) => setBrand(event.target.value)}
               placeholder="All brands"
               aria-label="Filter by brand"
-              options={brands.map((name) => ({ value: name, label: name }))}
+              options={brandOptions}
             />
             <Button
               type="button"
