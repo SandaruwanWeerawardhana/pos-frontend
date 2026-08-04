@@ -29,12 +29,12 @@ export const ROUTES = {
     batches: "/products/batches",
   },
   inventory: {
-    root: "/inventory",
-    new: "/inventory/new",
-    detail: (id: string) => `/inventory/${id}`,
-    alerts: "/inventory/alerts",
-    movements: "/inventory/movements",
-    transfers: "/inventory/transfers",
+    root: "/store/inventory",
+    new: "/store/inventory/new",
+    detail: (id: string) => `/store/inventory/${id}`,
+    alerts: "/store/inventory/alerts",
+    movements: "/store/inventory/movements",
+    transfers: "/store/inventory/transfers",
   },
   purchases: {
     root: "/purchases",
