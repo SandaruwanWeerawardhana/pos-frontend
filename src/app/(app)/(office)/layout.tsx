@@ -19,9 +19,7 @@ import {
   Boxes,
   ChevronDown,
   Copy,
-  CreditCard,
   DollarSign,
-  Download,
   FilePlus,
   Files,
   KeyRound,
@@ -109,13 +107,8 @@ const NAV_GROUPS: NavGroup[] = [
         children: [
           { href: ROUTES.people.root, label: "Customers", icon: ShieldCheck },
           { href: ROUTES.people.new, label: "Create Customer", icon: FilePlus },
-          { href: ROUTES.people.import, label: "Import Customers", icon: Download },
-          { href: ROUTES.people.withoutLogin, label: "Customers without Login", icon: Shield },
-          { href: ROUTES.people.withLogin, label: "Customers with Login", icon: ShieldCheck },
-          { href: ROUTES.people.clientPortal, label: "Client Portal", icon: CreditCard },
           { href: ROUTES.suppliers, label: "Suppliers", icon: Shield },
           { href: ROUTES.suppliersNew, label: "Create Supplier", icon: FilePlus },
-          { href: ROUTES.suppliersImport, label: "Import Suppliers", icon: Download },
         ],
       },
       {
