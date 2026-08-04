@@ -32,7 +32,6 @@ import {
   ShieldCheck,
   Store,
   Tag,
-  Upload,
   UserCog,
   Users,
 } from "lucide-react";
@@ -64,7 +63,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: DollarSign,
         children: [
           { href: ROUTES.pos.root, label: "Create Sale", icon: FilePlus },
-          { href: ROUTES.sales.import, label: "Import Sales", icon: Upload },
           { href: ROUTES.sales.root, label: "All Sales", icon: Files },
         ],
       },

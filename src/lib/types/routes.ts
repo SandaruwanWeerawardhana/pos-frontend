@@ -44,7 +44,6 @@ export const ROUTES = {
   sales: {
     root: "/sales",
     detail: (id: string) => `/sales/${id}`,
-    import: "/sales/import",
   },
   store: {
     root: "/store",
