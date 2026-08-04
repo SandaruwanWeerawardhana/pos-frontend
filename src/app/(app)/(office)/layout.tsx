@@ -412,7 +412,11 @@ export default function OfficeLayout({
         <main className="min-w-0 flex-1 overflow-y-auto scroll-smooth bg-surface dark:bg-zinc-950">
           <div
             key={pathname}
-            className="animate-fade-in-up mx-auto max-w-6xl p-4 sm:p-6"
+            className={`animate-fade-in-up mx-auto ${
+              pathname === ROUTES.products
+                ? "max-w-full py-4 sm:py-6"
+                : "max-w-6xl p-4 sm:p-6"
+            }`}
           >
             {children}
           </div>

@@ -13,6 +13,8 @@ export interface DataColumn<T> {
   align?: "left" | "right";
   /** Hidden below `sm` so narrow screens keep only the essential columns. */
   hideOnMobile?: boolean;
+  /** CSS min-width (e.g. "140px") to keep the column from squeezing narrow content. */
+  minWidth?: string;
 }
 
 interface DataTableProps<T> {
@@ -20,6 +22,8 @@ interface DataTableProps<T> {
   rows: T[];
   rowKey: (row: T) => string;
   emptyMessage?: string;
+  /** Overrides the table's default `text-sm` cell size, e.g. "text-xs". */
+  textSizeClassName?: string;
   pageSize?: number;
   /** Supplying this adds a "Rows per page" select; the first value is the initial page size. */
   pageSizeOptions?: number[];
@@ -54,6 +58,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   emptyMessage = "No data",
+  textSizeClassName = "text-sm",
   pageSize = 25,
   pageSizeOptions,
   onRowClick,
@@ -137,7 +142,7 @@ export function DataTable<T>({
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-xl border border-outline-variant dark:border-zinc-800">
         <table
-          className="w-full text-left text-sm"
+          className={`w-full text-left ${textSizeClassName}`}
           aria-describedby={caption ? captionId : undefined}
         >
           {caption && (
@@ -145,7 +150,7 @@ export function DataTable<T>({
               {caption}
             </caption>
           )}
-          <thead className="bg-surface-container-low text-on-surface-variant dark:bg-zinc-900 dark:text-zinc-400">
+          <thead className="bg-surface-container-low text-on-surface dark:bg-zinc-900 dark:text-zinc-100">
             <tr>
               {selection && (
                 <th scope="col" className="w-10 px-4 py-2.5">
@@ -174,7 +179,8 @@ export function DataTable<T>({
                     key={column.key}
                     scope="col"
                     aria-sort={column.sortValue ? ariaSort : undefined}
-                    className={`px-4 py-2.5 font-medium ${
+                    style={column.minWidth ? { minWidth: column.minWidth } : undefined}
+                    className={`px-4 py-3 font-semibold ${
                       column.align === "right" ? "text-right" : ""
                     } ${column.hideOnMobile ? "hidden sm:table-cell" : ""}`}
                   >
@@ -257,7 +263,8 @@ export function DataTable<T>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={`px-4 py-3 ${
+                    style={column.minWidth ? { minWidth: column.minWidth } : undefined}
+                    className={`px-4 py-3.5 ${
                       column.align === "right" ? "text-right tabular-nums" : ""
                     } ${column.hideOnMobile ? "hidden sm:table-cell" : ""}`}
                   >

@@ -134,7 +134,7 @@ function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
 
   if (!source) {
     return (
-      <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container text-on-surface-variant dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+      <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
         <Package size={18} aria-hidden />
       </span>
     );
@@ -148,7 +148,7 @@ function ProductThumbnail({ product }: Readonly<{ product: Product }>) {
       src={source}
       alt=""
       loading="lazy"
-      className="h-11 w-11 rounded-lg border border-outline-variant object-cover dark:border-zinc-700"
+      className="h-12 w-12 rounded-lg border border-outline-variant bg-white object-contain p-1 dark:border-zinc-700"
     />
   );
 }
@@ -171,7 +171,7 @@ function createProductColumns({
       hideOnMobile: true,
       sortValue: (product) => TYPE_LABELS[product.product_type ?? "standard"],
       render: (product) => (
-        <span className="text-on-surface-variant dark:text-zinc-400">
+        <span className="text-on-surface dark:text-zinc-50">
           {TYPE_LABELS[product.product_type ?? "standard"]}
         </span>
       ),
@@ -183,7 +183,7 @@ function createProductColumns({
       render: (product) => (
         <Link
           href={ROUTES.productDetail(product.id)}
-          className="font-medium text-primary hover:underline dark:text-blue-400"
+          className="font-medium text-amber-700 hover:underline dark:text-amber-400"
         >
           {product.name}
         </Link>
@@ -193,9 +193,12 @@ function createProductColumns({
       key: "code",
       header: "Code",
       hideOnMobile: true,
+      minWidth: "56px",
       sortValue: (product) => product.barcode,
       render: (product) => (
-        <span className="font-mono text-xs">{product.barcode}</span>
+        <span className="text-on-surface dark:text-zinc-50">
+          {product.barcode}
+        </span>
       ),
     },
     {
@@ -204,7 +207,7 @@ function createProductColumns({
       hideOnMobile: true,
       sortValue: (product) => product.brand ?? "",
       render: (product) => (
-        <span className="text-on-surface-variant dark:text-zinc-400">
+        <span className="text-amber-700 dark:text-amber-400">
           {product.brand ?? "N/D"}
         </span>
       ),
@@ -215,7 +218,7 @@ function createProductColumns({
       hideOnMobile: true,
       sortValue: (product) => product.category ?? "",
       render: (product) => (
-        <span className="text-on-surface-variant dark:text-zinc-400">
+        <span className="text-amber-700 dark:text-amber-400">
           {product.category ?? "Uncategorised"}
         </span>
       ),
@@ -223,18 +226,25 @@ function createProductColumns({
     {
       key: "cost",
       header: "Cost",
-      align: "right",
       hideOnMobile: true,
+      minWidth: "90px",
       sortValue: (product) => product.cost_cents ?? 0,
-      render: (product) =>
-        product.cost_cents ? money(product.cost_cents) : "—",
+      render: (product) => (
+        <span className="text-on-surface dark:text-zinc-50">
+          {product.cost_cents ? money(product.cost_cents) : "—"}
+        </span>
+      ),
     },
     {
       key: "price",
       header: "Price",
-      align: "right",
+      minWidth: "90px",
       sortValue: (product) => product.price_cents,
-      render: (product) => money(product.price_cents),
+      render: (product) => (
+        <span className="font-medium text-on-surface dark:text-zinc-50">
+          {money(product.price_cents)}
+        </span>
+      ),
     },
     {
       key: "unit",
@@ -242,7 +252,7 @@ function createProductColumns({
       hideOnMobile: true,
       sortValue: (product) => product.unit ?? "pc",
       render: (product) => (
-        <span className="text-on-surface-variant dark:text-zinc-400">
+        <span className="text-on-surface dark:text-zinc-50">
           {product.unit ?? "pc"}
         </span>
       ),
@@ -250,7 +260,7 @@ function createProductColumns({
     {
       key: "quantity",
       header: "Quantity",
-      align: "right",
+      minWidth: "110px",
       sortValue: (product) => product.stock_quantity,
       render: (product) => (
         <span
@@ -568,6 +578,7 @@ export default function ProductsPage() {
           rowKey={(product) => product.id}
           emptyMessage="No products match these filters."
           caption="All products"
+          pageSizeOptions={[10, 25, 50]}
           selection={{ selectedIds, onChange: setSelectedIds }}
         />
       </section>
