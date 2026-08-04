@@ -20,6 +20,7 @@ export const ROUTES = {
   products: "/products",
   productsNew: "/products/new",
   productDetail: (id: string) => `/products/${id}`,
+  productEdit: (id: string) => `/products/${id}/edit`,
   catalogue: {
     import: "/products/import",
     importUpdate: "/products/import-update",

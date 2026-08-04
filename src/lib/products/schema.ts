@@ -364,6 +364,96 @@ export const DEFAULT_PRODUCT_FORM_VALUES: ProductFormValues = {
   manufacturing_date: "",
 };
 
+// ── Mapping from the stored entity ─────────────────────────────────────────
+
+function centsToInput(cents: number | undefined): string {
+  return cents === undefined ? "" : (cents / 100).toFixed(2);
+}
+
+function numberToInput(value: number | undefined): string {
+  return value === undefined ? "" : String(value);
+}
+
+/**
+ * Reverse of `toProduct`, for pre-filling the edit form. Every field the form
+ * renders gets a value here so editing never silently reverts an unrendered
+ * field to its create-time default (see the note atop this file).
+ */
+export function fromProduct(product: Product): ProductFormValues {
+  const openingStock: Record<string, string> = {};
+  const rackLocations: Record<string, string> = {};
+  for (const entry of product.opening_stock ?? []) {
+    openingStock[entry.warehouse_id] = String(entry.quantity);
+    if (entry.location) rackLocations[entry.warehouse_id] = entry.location;
+  }
+
+  const batch = product.batches?.[0];
+  const discountValue =
+    product.discount_type === "fixed"
+      ? centsToInput(product.discount_cents)
+      : numberToInput(product.discount_percent);
+
+  return {
+    name: product.name,
+    barcode_symbology: product.barcode_symbology ?? "CODE128",
+    barcode: product.barcode,
+    barcode_source: product.barcode_source ?? "package",
+    sku: product.sku,
+    category: product.category ?? "",
+    subcategory: product.subcategory ?? "",
+    brand: product.brand ?? "",
+    description: product.description ?? "",
+
+    images: product.images ?? (product.image_url ? [product.image_url] : []),
+
+    product_type: product.product_type ?? "standard",
+    unit: product.unit ?? "unit",
+    sale_unit: product.sale_unit ?? product.unit ?? "unit",
+    purchase_unit: product.purchase_unit ?? product.unit ?? "unit",
+    stock_alert: numberToInput(product.reorder_level ?? product.min_stock_level) || "0",
+    weight: numberToInput(product.weight),
+    length: numberToInput(product.dimensions?.length),
+    width: numberToInput(product.dimensions?.width),
+    height: numberToInput(product.dimensions?.height),
+
+    cost_price: centsToInput(product.cost_cents),
+    selling_price: centsToInput(product.price_cents),
+    wholesale_price: centsToInput(product.wholesale_price_cents),
+    min_selling_price: centsToInput(product.min_price_cents),
+    tax_rate: numberToInput(product.tax_rate ? product.tax_rate * 100 : 0) || "0",
+    tax_type: product.tax_type ?? "exclusive",
+    discount_type: product.discount_type ?? "percent",
+    discount_value: discountValue,
+    points: numberToInput(product.loyalty_points),
+
+    warranty_period: numberToInput(product.warranty?.period),
+    warranty_unit: product.warranty?.unit ?? "months",
+    has_guarantee: product.warranty?.has_guarantee ?? false,
+    warranty_terms: product.warranty?.terms ?? "",
+
+    opening_stock: openingStock,
+    rack_locations: rackLocations,
+
+    has_serial: product.has_serial ?? false,
+    not_for_selling: product.not_for_selling ?? false,
+    is_active: product.is_active ?? true,
+    is_featured: product.is_featured ?? false,
+    hide_from_online: product.hide_from_online ?? false,
+    enable_preorder: product.enable_preorder ?? false,
+
+    track_batches: product.pharmacy?.track_batches ?? false,
+    prescription_required: product.pharmacy?.prescription_required ?? false,
+    generic_name: product.pharmacy?.generic_name ?? "",
+    strength: product.pharmacy?.strength ?? "",
+    dosage_form: product.pharmacy?.dosage_form ?? "",
+    pack_size: product.pharmacy?.pack_size ?? "",
+    manufacturer: product.pharmacy?.manufacturer ?? "",
+    drug_schedule: product.pharmacy?.drug_schedule ?? "",
+    expiry_date: batch?.expiry_date ?? "",
+    manufacturing_date: batch?.manufactured_date ?? "",
+  };
+}
+
 // ── Derived figures ────────────────────────────────────────────────────────
 
 /**

@@ -298,7 +298,7 @@ function createProductColumns({
             <Eye size={15} aria-hidden />
           </Link>
           <Link
-            href={ROUTES.inventory.detail(product.id)}
+            href={ROUTES.productEdit(product.id)}
             aria-label={`Edit ${product.name}`}
             title="Edit"
             className={`${ACTION_BUTTON_CLASSES} text-emerald-600 hover:bg-surface-container dark:text-emerald-400 dark:hover:bg-zinc-800`}
