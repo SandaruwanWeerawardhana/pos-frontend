@@ -29,7 +29,6 @@ import {
   Quote,
   Settings,
   ShieldCheck,
-  ShoppingCart,
   Store,
   Tag,
   Truck,
@@ -82,7 +81,15 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { href: ROUTES.discounts, label: "Promotions", icon: Tag },
-      { href: ROUTES.purchases.root, label: "Purchases", icon: ShoppingCart },
+      {
+        href: ROUTES.purchases.root,
+        label: "Purchases",
+        icon: DollarSign,
+        children: [
+          { href: ROUTES.purchases.new, label: "Create Purchase", icon: FilePlus },
+          { href: ROUTES.purchases.root, label: "All Purchases", icon: Files },
+        ],
+      },
       { href: ROUTES.suppliers, label: "Suppliers", icon: Truck },
       {
         href: ROUTES.store.root,
