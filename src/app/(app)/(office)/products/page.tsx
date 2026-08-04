@@ -119,6 +119,14 @@ function removeProductsFromSelection(
   return selectedIds.filter((id) => !removedIds.has(id));
 }
 
+/*
+ * Barcodes run 8-14 digits and only crowd the table; the cell shows the first
+ * six with the full code on hover, and the Product Details page prints it whole.
+ */
+function shortCode(code: string) {
+  return code.length > 6 ? `${code.slice(0, 6)}…` : code;
+}
+
 function getProductStockTone(product: Product, lowStockThreshold: number) {
   const threshold = product.reorder_level ?? lowStockThreshold;
 
@@ -196,8 +204,11 @@ function createProductColumns({
       minWidth: "56px",
       sortValue: (product) => product.barcode,
       render: (product) => (
-        <span className="text-on-surface dark:text-zinc-50">
-          {product.barcode}
+        <span
+          title={product.barcode}
+          className="whitespace-nowrap text-on-surface dark:text-zinc-50"
+        >
+          {shortCode(product.barcode)}
         </span>
       ),
     },
