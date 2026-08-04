@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { createSupplier } from "@/lib/db";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { Card, PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { ROUTES } from "@/lib/types/routes";
@@ -22,33 +24,39 @@ export default function CreateSupplierPage() {
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
   const [taxNumber, setTaxNumber] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("");
+  const [openingBalance, setOpeningBalance] = useState("");
+  const [creditLimit, setCreditLimit] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
     if (!name.trim()) {
-      setError("Name is required");
+      setError("Supplier name is required");
       return;
     }
     setSaving(true);
     setError(null);
     try {
+      const openingBalanceCents = openingBalance.trim()
+        ? Math.round(Number(openingBalance) * 100)
+        : undefined;
+      const creditLimitCents = creditLimit.trim() ? Math.round(Number(creditLimit) * 100) : 0;
       await createSupplier({
         name: name.trim(),
-        contact_name: contactName.trim() || undefined,
-        phone: phone.trim() || undefined,
         email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        country: country.trim() || undefined,
         city: city.trim() || undefined,
-        address: address.trim() || undefined,
         tax_number: taxNumber.trim() || undefined,
-        payment_terms: paymentTerms.trim() || undefined,
+        opening_balance_cents: openingBalanceCents,
+        credit_limit_cents: creditLimitCents > 0 ? creditLimitCents : undefined,
+        address: address.trim() || undefined,
       });
       showToast(`${name.trim()} added`, "success");
       router.push(ROUTES.suppliers);
@@ -83,20 +91,21 @@ export default function CreateSupplierPage() {
             <Input
               label={
                 <>
-                  Name
+                  Supplier Name
                   <RequiredMark />
                 </>
               }
-              placeholder="Name"
+              placeholder="Supplier Name"
               autoFocus
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
             <Input
-              label="Contact Name"
-              placeholder="Contact Name"
-              value={contactName}
-              onChange={(event) => setContactName(event.target.value)}
+              label="Email"
+              placeholder="Email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
           </div>
 
@@ -108,11 +117,10 @@ export default function CreateSupplierPage() {
               onChange={(event) => setPhone(event.target.value)}
             />
             <Input
-              label="Email"
-              placeholder="Email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              label="Country"
+              placeholder="Country"
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
             />
           </div>
 
@@ -133,23 +141,39 @@ export default function CreateSupplierPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Payment Terms"
-              placeholder="e.g. Net 30"
-              value={paymentTerms}
-              onChange={(event) => setPaymentTerms(event.target.value)}
+              label="Opening Balance (Previous Dues)"
+              hint="Enter the supplier's previous outstanding balance from before system start"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0"
+              value={openingBalance}
+              onChange={(event) => setOpeningBalance(event.target.value)}
             />
             <Input
-              label="Address"
-              placeholder="Address"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
+              label="Credit Limit"
+              hint="Maximum credit amount allowed for this supplier. (0 means No limit)"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0"
+              value={creditLimit}
+              onChange={(event) => setCreditLimit(event.target.value)}
             />
           </div>
+
+          <Textarea
+            label="Address"
+            placeholder="Address"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+          />
 
           {error && <p className="text-xs text-error">{error}</p>}
 
           <div className="flex items-center gap-2">
             <Button type="submit" loading={saving}>
+              <Check size={16} />
               Submit
             </Button>
             <Button type="button" variant="outline" onClick={() => router.push(ROUTES.suppliers)}>

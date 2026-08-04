@@ -378,10 +378,14 @@ export interface Supplier {
   phone?: string;
   email?: string;
   city?: string;
+  country?: string;
   created_at: number;
   address?: string;
   tax_number?: string;
   payment_terms?: string; /* e.g. "Net 30" */
+  opening_balance_cents: number;
+  /* undefined = no credit limit set. */
+  credit_limit_cents?: number;
   total_purchase_due_cents: number;
   total_purchase_return_due_cents: number;
 }

@@ -26,9 +26,12 @@ export interface CreateSupplierInput {
   phone?: string;
   email?: string;
   city?: string;
+  country?: string;
   address?: string;
   tax_number?: string;
   payment_terms?: string;
+  opening_balance_cents?: number;
+  credit_limit_cents?: number;
 }
 
 export async function createSupplier(input: CreateSupplierInput): Promise<Supplier> {
@@ -36,6 +39,7 @@ export async function createSupplier(input: CreateSupplierInput): Promise<Suppli
     ...input,
     id: crypto.randomUUID(),
     code: await nextSupplierCode(),
+    opening_balance_cents: input.opening_balance_cents ?? 0,
     total_purchase_due_cents: 0,
     total_purchase_return_due_cents: 0,
     created_at: Date.now(),
