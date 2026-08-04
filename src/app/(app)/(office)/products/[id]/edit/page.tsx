@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { PluginFieldValues } from "@/components/plugin-slots/PluginProductForm";
 import { BasicInformationSection } from "@/components/products/BasicInformationSection";
 import { InventorySection } from "@/components/products/InventorySection";
@@ -9,10 +10,12 @@ import { ProductFormSkeleton } from "@/components/products/ProductFormSkeleton";
 import { ProductSummaryPanel } from "@/components/products/ProductSummaryPanel";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { addProduct } from "@/lib/db";
+import { getProduct, updateProduct } from "@/lib/db";
+import type { Product } from "@/lib/types";
 import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useProductCatalogueOptions } from "@/lib/hooks/use-product-catalogue-options";
@@ -20,6 +23,7 @@ import { useProductDuplicates } from "@/lib/hooks/use-product-duplicates";
 import { useUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import {
   DEFAULT_PRODUCT_FORM_VALUES,
+  fromProduct,
   productFormSchema,
   toProduct,
   type ProductFormValues,
@@ -44,7 +48,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Suspense, lazy, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, use, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 /**
@@ -82,8 +86,6 @@ const PharmacySection = lazy(() =>
     default: module.PharmacySection,
   })),
 );
-
-const DRAFT_KEY = "pos:draft:product-new";
 
 /**
  * Drives both the jump list and the per-section issue counts, so a section
@@ -196,10 +198,16 @@ function SectionFallback() {
   return <Skeleton className="h-20 w-full rounded-2xl" />;
 }
 
-export default function ProductAddPage() {
+export default function ProductEditPage({
+  params,
+}: Readonly<{ params: Promise<{ id: string }> }>) {
+  const { id } = use(params);
   const router = useRouter();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const draftKey = `pos:draft:product-edit:${id}`;
+
+  const [product, setProduct] = useState<Product | null | undefined>(undefined);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -211,14 +219,24 @@ export default function ProductAddPage() {
 
   const [saving, setSaving] = useState(false);
   const [pluginValues, setPluginValues] = useState<PluginFieldValues>({});
+
+  useEffect(() => {
+    getProduct(id).then((found) => {
+      setProduct(found ?? null);
+      if (found) {
+        reset(fromProduct(found));
+        setPluginValues(found.plugin_data ?? {});
+      }
+    });
+  }, [id, reset]);
   const [draftPromptOpen, setDraftPromptOpen] = useState(true);
-  
+
   const values = useWatch({ control }) as ProductFormValues;
   const options = useProductCatalogueOptions();
-  const duplicates = useProductDuplicates(values.sku ?? "", values.barcode ?? "");
+  const duplicates = useProductDuplicates(values.sku ?? "", values.barcode ?? "", id);
 
   const dirty = formState.isDirty && !saving;
-  const draft = useFormDraft<ProductFormValues>(DRAFT_KEY, values, {
+  const draft = useFormDraft<ProductFormValues>(draftKey, values, {
     enabled: dirty,
   });
   const guard = useUnsavedChanges(dirty);
@@ -246,8 +264,8 @@ export default function ProductAddPage() {
     (total, section) => total + section.errorCount,
     0,
   );
-  const errorsFor = (id: string) =>
-    navSections.find((section) => section.id === id)?.errorCount ?? 0;
+  const errorsFor = (sectionId: string) =>
+    navSections.find((section) => section.id === sectionId)?.errorCount ?? 0;
 
   const onSubmit = handleSubmit(
     async (submitted) => {
@@ -267,20 +285,20 @@ export default function ProductAddPage() {
 
       setSaving(true);
       try {
-        const product = toProduct(submitted, crypto.randomUUID());
-        await addProduct(
+        const updated = toProduct(submitted, id);
+        await updateProduct(
+          id,
           Object.keys(pluginValues).length > 0
-            ? { ...product, plugin_data: pluginValues }
-            : product,
+            ? { ...updated, plugin_data: pluginValues }
+            : updated,
         );
         draft.discard();
-        reset(DEFAULT_PRODUCT_FORM_VALUES);
         await queryClient.invalidateQueries({ queryKey: ["product-options"] });
-        showToast(`${product.name} added to the catalogue`, "success");
+        showToast(`${updated.name} saved`, "success");
         router.push(ROUTES.products);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to add product";
+          error instanceof Error ? error.message : "Failed to save product";
         if (message.includes("SKU")) setError("sku", { type: "manual", message });
         if (message.includes("Barcode")) {
           setError("barcode", { type: "manual", message });
@@ -299,15 +317,42 @@ export default function ProductAddPage() {
   const showDraftBanner =
     draftPromptOpen && draft.restored !== null && !formState.isDirty;
 
+  if (product === null) {
+    return (
+      <div className="flex flex-col gap-6 pb-8">
+        <PageHeader
+          title="Edit product"
+          breadcrumbs={[
+            { label: "Products", href: ROUTES.products },
+            { label: "Edit product" },
+          ]}
+        />
+        <EmptyState
+          icon={<Package size={22} />}
+          title="Product not found"
+          description="It may have been deleted on this device or on another till."
+          action={
+            <Link
+              href={ROUTES.products}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-medium text-on-secondary dark:bg-white dark:text-zinc-900"
+            >
+              Back to products
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5 pb-28 lg:pb-8">
       <PageHeader
         eyebrow="Product management"
-        title="Add product"
+        title="Edit product"
         breadcrumbs={[
           { label: "Dashboard", href: ROUTES.dashboard },
           { label: "Products", href: ROUTES.products },
-          { label: "Add product" },
+          { label: "Edit product" },
         ]}
       />
 
@@ -347,7 +392,7 @@ export default function ProductAddPage() {
         </div>
       )}
 
-      {options.loading ? (
+      {product === undefined || options.loading ? (
         <ProductFormSkeleton />
       ) : (
         <form
@@ -424,7 +469,7 @@ export default function ProductAddPage() {
                     <CloudUpload size={14} aria-hidden />
                     {draft.savedAt
                       ? `Draft saved ${new Date(draft.savedAt).toLocaleTimeString()}`
-                      : "Review the form, then save your product."}
+                      : "Review the form, then save your changes."}
                   </>
                 )}
               </p>
@@ -447,7 +492,7 @@ export default function ProductAddPage() {
                   className="flex-[2] sm:flex-none"
                 >
                   <Save size={17} />
-                  {saving ? "Saving…" : "Save Product"}
+                  {saving ? "Saving…" : "Save changes"}
                 </Button>
               </span>
             </div>
@@ -463,7 +508,7 @@ export default function ProductAddPage() {
       <ConfirmDialog
         open={guard.pendingHref !== null}
         title="Leave without saving?"
-        message="This product has unsaved changes. A draft is kept on this device, but nothing has been added to the catalogue yet."
+        message="This product has unsaved changes. A draft is kept on this device, but nothing has been saved yet."
         confirmLabel="Leave page"
         cancelLabel="Keep editing"
         destructive

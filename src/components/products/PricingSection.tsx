@@ -1,11 +1,16 @@
 "use client";
 
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { parseMoneyToCents } from "@/lib/format";
 import { useSettings } from "@/lib/hooks/use-settings";
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  TAX_TYPE_OPTIONS,
+} from "@/lib/products/constants";
 import { summarisePricing } from "@/lib/products/schema";
 import { Tags } from "lucide-react";
-import { useWatch } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { FormSection, RequiredMark } from "./FormSection";
 import type { ProductSectionProps } from "./types";
 
@@ -48,11 +53,12 @@ function Metric({
 }
 
 /**
- * Price, cost, tax and standing discount, with the derived margin.
+ * Cost, the three prices, tax and the standing discount, with the derived
+ * margin.
  *
  * Margin is measured against the net price — what the till actually charges
- * after the standing discount — not the list price, so a product discounted
- * below cost reads as the loss it is.
+ * after the standing discount and with any inclusive tax taken back out — not
+ * the list price, so a product discounted below cost reads as the loss it is.
  */
 export function PricingSection({
   form,
@@ -62,15 +68,31 @@ export function PricingSection({
   const errors = formState.errors;
   const { money } = useSettings();
 
-  const [sellingPrice, costPrice, taxRate, discountPercent] = useWatch({
+  const [
+    sellingPrice,
+    costPrice,
+    taxRate,
+    taxType,
+    discountType,
+    discountValue,
+  ] = useWatch({
     control,
-    name: ["selling_price", "cost_price", "tax_rate", "discount_percent"],
+    name: [
+      "selling_price",
+      "cost_price",
+      "tax_rate",
+      "tax_type",
+      "discount_type",
+      "discount_value",
+    ],
   });
 
   const summary = summarisePricing({
     selling_price: sellingPrice,
     tax_rate: taxRate,
-    discount_percent: discountPercent,
+    tax_type: taxType,
+    discount_type: discountType,
+    discount_value: discountValue,
   });
 
   const costCents = parseMoneyToCents(costPrice);
@@ -83,32 +105,23 @@ export function PricingSection({
       ? null
       : (marginCents / summary.netPriceCents) * 100;
 
+  const fixedDiscount = discountType === "fixed";
+
   return (
     <FormSection
       id="pricing"
-      title="Pricing"
+      title="Pricing And Tax"
       icon={<Tags size={18} />}
       errorCount={errorCount}
-      plain
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label={
             <>
-              Price
+              Product Cost
               <RequiredMark />
             </>
           }
-          placeholder="0.00"
-          inputMode="decimal"
-          autoComplete="off"
-          className="text-right tabular-nums"
-          error={errors.selling_price?.message}
-          {...register("selling_price")}
-        />
-
-        <Input
-          label="Cost price"
           placeholder="0.00"
           hint="What the shop pays. Drives the margin and profit reports."
           inputMode="decimal"
@@ -119,8 +132,45 @@ export function PricingSection({
         />
 
         <Input
-          label="Tax"
+          label={
+            <>
+              Retail Price
+              <RequiredMark />
+            </>
+          }
+          placeholder="Enter Product Price"
+          inputMode="decimal"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.selling_price?.message}
+          {...register("selling_price")}
+        />
+
+        <Input
+          label="Wholesale Price"
+          placeholder="Enter Wholesale Price"
+          inputMode="decimal"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.wholesale_price?.message}
+          {...register("wholesale_price")}
+        />
+
+        <Input
+          label="Minimum Selling Price"
+          placeholder="Enter Minimum Selling Price"
+          hint="Floor the till may not discount below."
+          inputMode="decimal"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.min_selling_price?.message}
+          {...register("min_selling_price")}
+        />
+
+        <Input
+          label="Order Tax"
           placeholder="0"
+          hint="Percent, e.g. 8 for 8%."
           inputMode="decimal"
           autoComplete="off"
           className="text-right tabular-nums"
@@ -128,14 +178,66 @@ export function PricingSection({
           {...register("tax_rate")}
         />
 
+        <Controller
+          control={control}
+          name="tax_type"
+          render={({ field }) => (
+            <Select
+              label={
+                <>
+                  Tax Type
+                  <RequiredMark />
+                </>
+              }
+              options={TAX_TYPE_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.tax_type?.message}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="discount_type"
+          render={({ field }) => (
+            <Select
+              label={
+                <>
+                  Discount Type
+                  <RequiredMark />
+                </>
+              }
+              options={DISCOUNT_TYPE_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.discount_type?.message}
+            />
+          )}
+        />
+
         <Input
-          label="Discount percentage"
+          label="Discount"
           placeholder="0"
+          hint={fixedDiscount ? "Amount off every sale." : "Percent off, 0–100."}
           inputMode="decimal"
           autoComplete="off"
           className="text-right tabular-nums"
-          error={errors.discount_percent?.message}
-          {...register("discount_percent")}
+          error={errors.discount_value?.message}
+          {...register("discount_value")}
+        />
+
+        <Input
+          label="Points"
+          placeholder="0"
+          hint="Loyalty points awarded per sale."
+          inputMode="numeric"
+          autoComplete="off"
+          className="text-right tabular-nums"
+          error={errors.points?.message}
+          {...register("points")}
         />
       </div>
 
@@ -152,6 +254,7 @@ export function PricingSection({
         <Metric
           label="Tax"
           value={summary.taxCents === null ? "—" : money(summary.taxCents)}
+          hint={taxType === "inclusive" ? "Included in the price" : "Added on top"}
         />
         <Metric
           label="Margin"

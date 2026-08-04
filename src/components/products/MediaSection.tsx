@@ -1,7 +1,7 @@
 "use client";
 
 import { Controller } from "react-hook-form";
-import { ImageIcon } from "lucide-react";
+import { Upload } from "lucide-react";
 import { ImageDropzone } from "@/components/ui/ImageDropzone";
 import { useToast } from "@/components/ui/Toast";
 import { FormSection } from "./FormSection";
@@ -17,13 +17,16 @@ export function MediaSection({ form, errorCount }: Readonly<MediaSectionProps>) 
 
   return (
     <FormSection
-      id="media"
-      title="Media"
-      description="Shelf and till imagery — the first image is the primary one"
-      icon={<ImageIcon size={18} />}
+      id="images"
+      title="Product images gallery"
+      description="The first image is the main one"
+      icon={<Upload size={18} />}
       errorCount={errorCount}
-      plain
     >
+      <p className="mb-3 text-xs text-on-surface-variant dark:text-zinc-400">
+        Upload one or more images. The first image is stored in the product
+        image field for compatibility with the till and the shelf label.
+      </p>
       <Controller
         control={control}
         name="images"

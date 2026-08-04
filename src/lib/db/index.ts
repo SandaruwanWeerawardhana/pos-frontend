@@ -2,9 +2,11 @@ import Dexie, { type Table } from "dexie";
 import { computeCartTotal } from "@/lib/cart-math";
 import type {
   AppNotification,
+  Brand,
   CartItem,
   CartTotal,
   CashReconciliation,
+  Category,
   DeletedProductRecord,
   Discount,
   HeldCart,
@@ -12,6 +14,7 @@ import type {
   PaymentSplit,
   PendingOrder,
   Product,
+  ProductUnitRecord,
   PurchaseOrder,
   PurchaseReturn,
   Role,
@@ -20,6 +23,7 @@ import type {
   Supplier,
   SyncMetaRecord,
   Warehouse,
+  WarehouseLocation,
 } from "@/lib/types";
 
 /**
@@ -47,6 +51,10 @@ export class PosDB extends Dexie {
   staffUsers!: Table<StaffUser, string>;
   notifications!: Table<AppNotification, string>;
   deletedProducts!: Table<DeletedProductRecord, string>;
+  productUnits!: Table<ProductUnitRecord, string>;
+  warehouseLocations!: Table<WarehouseLocation, string>;
+  categories!: Table<Category, string>;
+  brands!: Table<Brand, string>;
 
   constructor() {
     super("posDB");
@@ -130,6 +138,54 @@ export class PosDB extends Dexie {
             delete product.status;
           });
       });
+    /**
+     * v6: custom units of measure, created from the product form's "+" next
+     * to Product Unit rather than shipped as a fixed list.
+     */
+    this.version(6).stores({
+      productUnits: "id, short_name",
+    });
+    /**
+     * v7: named rack/shelf locations, created from the product form's "+" next
+     * to Internal Location. Reference data only — stock is tracked against the
+     * warehouse, so a location can be renamed or removed without moving any
+     * quantity.
+     */
+    this.version(7).stores({
+      warehouseLocations: "id, warehouse_id, name",
+    });
+    /**
+     * v8: locations gain a short code ("A3-04") separate from an optional
+     * longer name. The code is the identifier written onto the product, so
+     * rows created under v7 have their name promoted to it.
+     */
+    this.version(8)
+      .stores({
+        warehouseLocations: "id, warehouse_id, code",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Record<string, unknown>>("warehouseLocations")
+          .toCollection()
+          .modify((location) => {
+            location.code ??= location.name ?? "";
+            delete location.name;
+          });
+      });
+    /**
+     * v9: named categories, managed from the Categories screen. Independent
+     * of the free-text `product.category` field — see `Category`'s doc.
+     */
+    this.version(9).stores({
+      categories: "id, code, name",
+    });
+    /**
+     * v10: named brands, managed from the Brand screen. Independent of the
+     * free-text `product.brand` field — see `Brand`'s doc.
+     */
+    this.version(10).stores({
+      brands: "id, name",
+    });
   }
 }
 
@@ -524,6 +580,280 @@ export async function listBrands(): Promise<string[]> {
     if (product.brand?.trim()) names.add(product.brand.trim());
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Subcategories in use, optionally narrowed to one parent category. The
+ * taxonomy is free-form — a subcategory exists because a product was filed
+ * under it — so there is no separate table to read.
+ */
+export async function listSubcategories(category?: string): Promise<string[]> {
+  const products = await db.products.toArray();
+  const needle = category?.trim().toLowerCase();
+  const names = new Set<string>();
+  for (const product of products) {
+    if (!product.subcategory?.trim()) continue;
+    if (needle && product.category?.trim().toLowerCase() !== needle) continue;
+    names.add(product.subcategory.trim());
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Rack/shelf locations, sorted by code for the picker. Locations created
+ * before this table existed still appear: any code already written onto a
+ * product is folded in, so the list never loses a shelf the catalogue is
+ * using.
+ */
+export async function listWarehouseLocations(): Promise<WarehouseLocation[]> {
+  const [saved, products] = await Promise.all([
+    db.warehouseLocations.toArray(),
+    db.products.toArray(),
+  ]);
+
+  const seen = new Set(
+    saved.map((entry) => `${entry.warehouse_id}::${entry.code.toLowerCase()}`),
+  );
+  const derived: WarehouseLocation[] = [];
+
+  for (const product of products) {
+    for (const entry of product.opening_stock ?? []) {
+      const code = entry.location?.trim();
+      if (!code) continue;
+      const key = `${entry.warehouse_id}::${code.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      derived.push({
+        id: key,
+        warehouse_id: entry.warehouse_id,
+        code,
+        created_at: "",
+      });
+    }
+  }
+
+  return [...saved, ...derived].sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/**
+ * Adds a location to one warehouse. Codes are unique per warehouse, not
+ * globally — "A1" in the back store and "A1" on the shop floor are different
+ * shelves and both are legitimate.
+ */
+export async function addWarehouseLocation(input: {
+  warehouse_id: string;
+  code: string;
+  name?: string;
+}): Promise<WarehouseLocation> {
+  const code = input.code.trim();
+  const name = input.name?.trim();
+  if (!input.warehouse_id) throw new Error("Warehouse is required");
+  if (!code) throw new Error("Rack/location code is required");
+
+  return db.transaction("rw", db.warehouseLocations, async () => {
+    const clash = await db.warehouseLocations
+      .where("warehouse_id")
+      .equals(input.warehouse_id)
+      .filter((entry) => entry.code.toLowerCase() === code.toLowerCase())
+      .first();
+    if (clash) throw new Error("That code already exists in this warehouse");
+
+    const location: WarehouseLocation = {
+      id: crypto.randomUUID(),
+      warehouse_id: input.warehouse_id,
+      code,
+      ...(name ? { name } : {}),
+      created_at: new Date().toISOString(),
+    };
+    await db.warehouseLocations.add(location);
+    return location;
+  });
+}
+
+export async function listProductUnits(): Promise<ProductUnitRecord[]> {
+  const units = await db.productUnits.toArray();
+  return units.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Custom unit created from the product form. `short_name` is what actually
+ * gets stored on `product.unit` / `sale_unit` / `purchase_unit`, so it must
+ * be unique against both existing custom units and the built-in options
+ * (checked by the caller, which knows the fixed list).
+ */
+export async function addProductUnit(input: {
+  name: string;
+  short_name: string;
+  base_unit?: string;
+}): Promise<ProductUnitRecord> {
+  const name = input.name.trim();
+  const shortName = input.short_name.trim();
+  if (!name) throw new Error("Unit name is required");
+  if (!shortName) throw new Error("Short name is required");
+
+  return db.transaction("rw", db.productUnits, async () => {
+    const existing = await db.productUnits.where("short_name").equals(shortName).first();
+    if (existing) throw new Error("Short name already exists");
+
+    const unit: ProductUnitRecord = {
+      id: crypto.randomUUID(),
+      name,
+      short_name: shortName,
+      base_unit: input.base_unit?.trim() || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.productUnits.add(unit);
+    return unit;
+  });
+}
+
+/**
+ * Newest first, matching creation order on the Categories screen.
+ */
+export async function listCategoryRecords(): Promise<Category[]> {
+  const categories = await db.categories.toArray();
+  return categories.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function addCategory(input: {
+  code: string;
+  name: string;
+  icon?: string;
+}): Promise<Category> {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code) throw new Error("Category code is required");
+  if (!name) throw new Error("Category name is required");
+
+  return db.transaction("rw", db.categories, async () => {
+    const codeClash = await db.categories
+      .filter((category) => category.code.toLowerCase() === code.toLowerCase())
+      .first();
+    if (codeClash) throw new Error("Category code already exists");
+
+    const nameClash = await db.categories
+      .filter((category) => category.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (nameClash) throw new Error("Category name already exists");
+
+    const category: Category = {
+      id: crypto.randomUUID(),
+      code,
+      name,
+      icon: input.icon?.trim() || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.categories.add(category);
+    return category;
+  });
+}
+
+export async function updateCategory(
+  id: string,
+  changes: { code?: string; name?: string; icon?: string },
+): Promise<void> {
+  const code = changes.code?.trim();
+  const name = changes.name?.trim();
+  if (code === "") throw new Error("Category code is required");
+  if (name === "") throw new Error("Category name is required");
+
+  return db.transaction("rw", db.categories, async () => {
+    if (code) {
+      const codeClash = await db.categories
+        .filter(
+          (category) =>
+            category.id !== id && category.code.toLowerCase() === code.toLowerCase(),
+        )
+        .first();
+      if (codeClash) throw new Error("Category code already exists");
+    }
+    if (name) {
+      const nameClash = await db.categories
+        .filter(
+          (category) =>
+            category.id !== id && category.name.toLowerCase() === name.toLowerCase(),
+        )
+        .first();
+      if (nameClash) throw new Error("Category name already exists");
+    }
+
+    await db.categories.update(id, {
+      ...(code ? { code } : {}),
+      ...(name ? { name } : {}),
+      ...(changes.icon !== undefined ? { icon: changes.icon.trim() || undefined } : {}),
+    });
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await db.categories.delete(id);
+}
+
+/**
+ * Newest first, matching creation order on the Brand screen.
+ */
+export async function listBrandRecords(): Promise<Brand[]> {
+  const brands = await db.brands.toArray();
+  return brands.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function addBrand(input: {
+  name: string;
+  description?: string;
+  image_url?: string;
+}): Promise<Brand> {
+  const name = input.name.trim();
+  if (!name) throw new Error("Brand name is required");
+
+  return db.transaction("rw", db.brands, async () => {
+    const clash = await db.brands
+      .filter((brand) => brand.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (clash) throw new Error("Brand name already exists");
+
+    const brand: Brand = {
+      id: crypto.randomUUID(),
+      name,
+      description: input.description?.trim() || undefined,
+      image_url: input.image_url || undefined,
+      created_at: new Date().toISOString(),
+    };
+    await db.brands.add(brand);
+    return brand;
+  });
+}
+
+export async function updateBrand(
+  id: string,
+  changes: { name?: string; description?: string; image_url?: string },
+): Promise<void> {
+  const name = changes.name?.trim();
+  if (name === "") throw new Error("Brand name is required");
+
+  return db.transaction("rw", db.brands, async () => {
+    if (name) {
+      const clash = await db.brands
+        .filter(
+          (brand) => brand.id !== id && brand.name.toLowerCase() === name.toLowerCase(),
+        )
+        .first();
+      if (clash) throw new Error("Brand name already exists");
+    }
+
+    await db.brands.update(id, {
+      ...(name ? { name } : {}),
+      ...(changes.description !== undefined
+        ? { description: changes.description.trim() || undefined }
+        : {}),
+      ...(changes.image_url !== undefined
+        ? { image_url: changes.image_url || undefined }
+        : {}),
+    });
+  });
+}
+
+export async function deleteBrand(id: string): Promise<void> {
+  await db.brands.delete(id);
 }
 
 /**

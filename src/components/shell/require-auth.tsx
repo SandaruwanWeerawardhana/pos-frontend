@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { isSessionExpired, useAuthStore } from "@/lib/store/auth";
 import { ROUTES } from "@/lib/types/routes";
 import { Skeleton } from "@/components/ui/Skeleton";
+import {
+  SIDEBAR_CONTENT_OFFSET_CLASS,
+  SIDEBAR_WIDTH_CLASS,
+} from "@/lib/layout";
 
 function subscribeAuthHydration(onStoreChange: () => void) {
   return useAuthStore.persist?.onFinishHydration(onStoreChange) ?? (() => {});
@@ -58,10 +62,10 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <output
         aria-label="Checking your session"
-        className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-64"
+        className={`flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden ${SIDEBAR_CONTENT_OFFSET_CLASS}`}
       >
         {/* Sidebar skeleton — hidden on mobile, mirrors the real sidebar width */}
-        <aside className="fixed bottom-0 left-0 top-0 z-[80] hidden h-dvh w-64 flex-col border-r border-outline-variant bg-surface-container-lowest p-3 pt-14 md:flex dark:border-zinc-800 dark:bg-zinc-950">
+        <aside className={`fixed bottom-0 left-0 top-0 z-[80] hidden h-dvh ${SIDEBAR_WIDTH_CLASS} flex-col border-r border-outline-variant bg-surface-container-lowest p-3 pt-14 md:flex dark:border-zinc-800 dark:bg-zinc-950`}>
           <div className="flex flex-col gap-3">
             {Array.from({ length: 5 }, (_, i) => (
               <Skeleton key={i} className="h-10 w-full rounded-lg" />

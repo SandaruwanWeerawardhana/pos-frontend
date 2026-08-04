@@ -8,19 +8,32 @@ import { ROUTES } from "@/lib/types/routes";
 import { RequireAuth } from "@/components/shell/require-auth";
 import { RequireOffice } from "@/components/shell/require-office";
 import {
+  SIDEBAR_CONTENT_OFFSET_CLASS,
+  SIDEBAR_WIDTH_CLASS,
+} from "@/lib/layout";
+import {
   BarChart2,
+  Barcode,
   Bell,
+  Bookmark,
   Boxes,
+  CheckCheck,
   ChevronDown,
   Check,
   Clock,
+  Copy,
   DollarSign,
+  Download,
+  FilePlus,
+  Files,
   Image as ImageIcon,
   KeyRound,
   LayoutDashboard,
   MessageSquare,
   Monitor,
   PackagePlus,
+  Pencil,
+  Quote,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -54,7 +67,48 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
       { href: ROUTES.sales.root, label: "Sales", icon: DollarSign },
-      { href: ROUTES.products, label: "Products", icon: PackagePlus },
+      {
+        href: ROUTES.products,
+        label: "Products",
+        icon: PackagePlus,
+        children: [
+          { href: ROUTES.productsNew, label: "Create product", icon: FilePlus },
+          { href: ROUTES.products, label: "All Products", icon: Files },
+          {
+            href: ROUTES.catalogue.import,
+            label: "Import products",
+            icon: Download,
+          },
+          {
+            href: ROUTES.catalogue.importUpdate,
+            label: "Import (Update Only)",
+            icon: Pencil,
+          },
+          {
+            href: ROUTES.catalogue.openingStock,
+            label: "Opening Stock",
+            icon: FilePlus,
+          },
+          {
+            href: ROUTES.catalogue.printLabels,
+            label: "Print Labels",
+            icon: Barcode,
+          },
+          {
+            href: ROUTES.catalogue.countStock,
+            label: "Count Stock",
+            icon: CheckCheck,
+          },
+          {
+            href: ROUTES.catalogue.categories,
+            label: "Categories",
+            icon: Copy,
+          },
+          { href: ROUTES.catalogue.brands, label: "Brand", icon: Bookmark },
+          { href: ROUTES.catalogue.units, label: "Units", icon: Quote },
+          { href: ROUTES.catalogue.batches, label: "Batches", icon: Boxes },
+        ],
+      },
       { href: ROUTES.discounts, label: "Promotions", icon: Tag },
       { href: ROUTES.purchases.root, label: "Purchases", icon: ShoppingCart },
       { href: ROUTES.suppliers, label: "Suppliers", icon: Truck },
@@ -316,7 +370,7 @@ export default function OfficeLayout({
   return (
     <RequireAuth>
       <RequireOffice>
-      <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden md:pl-64">
+      <div className={`flex h-[calc(100dvh-3.5rem)] min-h-0 flex-1 overflow-hidden ${SIDEBAR_CONTENT_OFFSET_CLASS}`}>
         {sidebarOpen && (
           <button
             type="button"
@@ -328,7 +382,7 @@ export default function OfficeLayout({
 
         <aside
           aria-label="Main navigation"
-          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh w-64 shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
+          className={`fixed bottom-0 left-0 top-0 z-[80] flex h-dvh ${SIDEBAR_WIDTH_CLASS} shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest transition-transform duration-[var(--duration-slow)] ease-[var(--ease-decelerate)] md:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -358,7 +412,11 @@ export default function OfficeLayout({
         <main className="min-w-0 flex-1 overflow-y-auto scroll-smooth bg-surface dark:bg-zinc-950">
           <div
             key={pathname}
-            className="animate-fade-in-up mx-auto max-w-6xl p-4 sm:p-6"
+            className={`animate-fade-in-up mx-auto ${
+              pathname === ROUTES.products
+                ? "max-w-full py-4 sm:py-6"
+                : "max-w-6xl p-4 sm:p-6"
+            }`}
           >
             {children}
           </div>
