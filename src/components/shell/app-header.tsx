@@ -39,6 +39,7 @@ const OFFICE_SIDEBAR_PATHS = [
   ROUTES.purchases.root,
   ROUTES.sales.root,
   ROUTES.suppliers,
+  ROUTES.people.root,
   ROUTES.reports,
   ROUTES.discounts,
   ROUTES.users.root,
@@ -69,6 +70,18 @@ function openCommandPalette() {
   window.dispatchEvent(
     new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }),
   );
+}
+
+function handleToggleSidebar() {
+  window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
+}
+
+function handleToggleFullscreen() {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen();
+  } else {
+    void document.documentElement.requestFullscreen();
+  }
 }
 
 function subscribeAuthHydration(onStoreChange: () => void) {
@@ -151,18 +164,6 @@ export function AppHeader() {
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-
-  function handleToggleSidebar() {
-    window.dispatchEvent(new Event("swiftpos:toggle-sidebar"));
-  }
-
-  function handleToggleFullscreen() {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen();
-    }
-  }
 
   function handleLogout() {
     logout();

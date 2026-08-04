@@ -7,6 +7,7 @@ import type {
   CartTotal,
   CashReconciliation,
   Category,
+  Customer,
   DeletedProductRecord,
   Discount,
   HeldCart,
@@ -56,6 +57,7 @@ export class PosDB extends Dexie {
   warehouseLocations!: Table<WarehouseLocation, string>;
   categories!: Table<Category, string>;
   brands!: Table<Brand, string>;
+  customers!: Table<Customer, string>;
 
   constructor() {
     super("posDB");
@@ -540,6 +542,108 @@ export async function createLocalOrder(
   );
 }
 
+/** One CSV line of a historical sale, resolved but not yet grouped into an order. */
+export interface ImportSaleLine {
+  orderId: string;
+  createdAt: number;
+  sku: string;
+  quantity: number;
+  unitPriceCents?: number;
+  taxRate?: number;
+  paymentMethod?: PaymentMethod;
+  discountCents?: number;
+  cashierId?: string;
+}
+
+export interface ImportSalesError {
+  orderId: string;
+  message: string;
+}
+
+export interface ImportSalesResult {
+  orders: PendingOrder[];
+  errors: ImportSalesError[];
+}
+
+/**
+ * Bulk-inserts historical sales (e.g. backfilled from another till or a
+ * paper log) straight into `pendingOrders` so they sync like any local sale.
+ * Unlike `createLocalOrder`, this never touches `products.stock_quantity` or
+ * `stockMovements` — the stock movement for an already-completed sale
+ * happened in the real world before the import, so replaying it here would
+ * double-deduct stock that already reflects it.
+ */
+export async function importSalesOrders(
+  lines: ImportSaleLine[],
+): Promise<ImportSalesResult> {
+  const groups = new Map<string, ImportSaleLine[]>();
+  for (const line of lines) {
+    const group = groups.get(line.orderId) ?? [];
+    group.push(line);
+    groups.set(line.orderId, group);
+  }
+
+  return db.transaction("rw", db.pendingOrders, db.products, async () => {
+    const orders: PendingOrder[] = [];
+    const errors: ImportSalesError[] = [];
+
+    for (const [orderId, group] of groups) {
+      const items: CartItem[] = [];
+      let lineError: string | null = null;
+
+      for (const line of group) {
+        const product = await db.products
+          .where("sku")
+          .equalsIgnoreCase(line.sku)
+          .first();
+        if (!product) {
+          lineError = `Unknown SKU "${line.sku}"`;
+          break;
+        }
+        items.push({
+          product_id: product.id,
+          name: product.name,
+          quantity: line.quantity,
+          unit_price_cents: line.unitPriceCents ?? product.price_cents,
+          tax_rate: line.taxRate ?? product.tax_rate,
+          unit: product.unit,
+          is_weighted: product.is_weighted,
+        });
+      }
+
+      if (lineError) {
+        errors.push({ orderId, message: lineError });
+        continue;
+      }
+
+      const first = group[0];
+      const { tax_total_cents, total_cents } = computeCartTotal(
+        items,
+        first.discountCents ?? 0,
+      );
+
+      const order: PendingOrder = {
+        client_generated_id: crypto.randomUUID(),
+        items,
+        total_cents,
+        tax_total_cents,
+        payment_method: first.paymentMethod ?? "cash",
+        created_at: first.createdAt,
+        sync_status: "pending",
+        server_id: null,
+        receipt_no: orderId,
+        ...(first.discountCents ? { discount_cents: first.discountCents } : {}),
+        ...(first.cashierId ? { cashier_id: first.cashierId } : {}),
+      };
+
+      await db.pendingOrders.add(order);
+      orders.push(order);
+    }
+
+    return { orders, errors };
+  });
+}
+
 /**
  * Distinct category names present in the local catalogue, for filter chips.
  */
@@ -925,6 +1029,7 @@ export async function setLastSyncedAt(timestamp: number): Promise<void> {
 }
 
 export * from "./suppliers";
+export * from "./customers";
 export * from "./discounts";
 export * from "./held-carts";
 export * from "./cash-reconciliation";

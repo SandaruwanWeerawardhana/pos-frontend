@@ -28,11 +28,11 @@ import {
   PackagePlus,
   Quote,
   Settings,
+  Shield,
   ShieldCheck,
-  ShoppingCart,
   Store,
   Tag,
-  Truck,
+  Upload,
   UserCog,
   Users,
 } from "lucide-react";
@@ -58,7 +58,16 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Menu",
     items: [
       { href: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
-      { href: ROUTES.sales.root, label: "Sales", icon: DollarSign },
+      {
+        href: ROUTES.sales.root,
+        label: "Sales",
+        icon: DollarSign,
+        children: [
+          { href: ROUTES.pos.root, label: "Create Sale", icon: FilePlus },
+          { href: ROUTES.sales.import, label: "Import Sales", icon: Upload },
+          { href: ROUTES.sales.root, label: "All Sales", icon: Files },
+        ],
+      },
       {
         href: ROUTES.products,
         label: "Products",
@@ -82,8 +91,26 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { href: ROUTES.discounts, label: "Promotions", icon: Tag },
-      { href: ROUTES.purchases.root, label: "Purchases", icon: ShoppingCart },
-      { href: ROUTES.suppliers, label: "Suppliers", icon: Truck },
+      {
+        href: ROUTES.purchases.root,
+        label: "Purchases",
+        icon: DollarSign,
+        children: [
+          { href: ROUTES.purchases.new, label: "Create Purchase", icon: FilePlus },
+          { href: ROUTES.purchases.root, label: "All Purchases", icon: Files },
+        ],
+      },
+      {
+        href: ROUTES.people.root,
+        label: "People",
+        icon: Users,
+        children: [
+          { href: ROUTES.people.root, label: "Customers", icon: ShieldCheck },
+          { href: ROUTES.people.new, label: "Create Customer", icon: FilePlus },
+          { href: ROUTES.suppliers, label: "Suppliers", icon: Shield },
+          { href: ROUTES.suppliersNew, label: "Create Supplier", icon: FilePlus },
+        ],
+      },
       {
         href: ROUTES.store.root,
         label: "Store",
@@ -353,7 +380,9 @@ export default function OfficeLayout({
           <div
             key={pathname}
             className={`animate-fade-in-up mx-auto ${
-              pathname === ROUTES.products
+              pathname === ROUTES.products ||
+              pathname === ROUTES.people.root ||
+              pathname === ROUTES.suppliers
                 ? "max-w-full py-4 sm:py-6"
                 : "max-w-6xl p-4 sm:p-6"
             }`}

@@ -372,14 +372,48 @@ export interface CartTotal {
 
 export interface Supplier {
   id: string;
+  code: string;
   name: string;
   contact_name?: string;
   phone?: string;
   email?: string;
+  city?: string;
+  country?: string;
   created_at: number;
   address?: string;
-  tax_id?: string;
+  tax_number?: string;
   payment_terms?: string; /* e.g. "Net 30" */
+  opening_balance_cents: number;
+  /* undefined = no credit limit set. */
+  credit_limit_cents?: number;
+  total_purchase_due_cents: number;
+  total_purchase_return_due_cents: number;
+}
+
+export interface Customer {
+  id: string;
+  code: string;
+  name: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
+  phone?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  tax_number?: string;
+  address?: string;
+  points: number;
+  /* undefined = no credit limit set. */
+  credit_limit_cents?: number;
+  /* Customer's outstanding balance from before this system was adopted. */
+  opening_balance_cents: number;
+  total_sale_due_cents: number;
+  total_sell_return_due_cents: number;
+  royalty_eligible: boolean;
+  created_at: number;
 }
 
 export type DiscountType =
