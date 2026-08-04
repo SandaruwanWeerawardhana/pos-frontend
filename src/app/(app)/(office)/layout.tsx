@@ -380,7 +380,7 @@ export default function OfficeLayout({
           <div
             key={pathname}
             className={`animate-fade-in-up mx-auto ${
-              pathname === ROUTES.products
+              pathname === ROUTES.products || pathname === ROUTES.people.root
                 ? "max-w-full py-4 sm:py-6"
                 : "max-w-6xl p-4 sm:p-6"
             }`}

@@ -397,13 +397,14 @@ export default function CustomerManagementPage() {
           </div>
         )}
 
-        <div className="mt-4">
+        <div className="-mx-5 mt-4">
           <DataTable
             columns={columns}
             rows={visible}
             rowKey={(customer) => customer.id}
             emptyMessage="No customers yet."
             caption="Customers"
+            textSizeClassName="text-xs"
             pageSizeOptions={[10, 25, 50]}
             selection={{ selectedIds, onChange: setSelectedIds }}
           />
