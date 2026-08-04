@@ -152,7 +152,7 @@ export function DataTable<T>({
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
-                    // Mixed state is only reachable through the DOM property.
+                    /* Mixed state is only reachable through the DOM property. */
                     ref={(node) => {
                       if (node) node.indeterminate = someVisibleSelected;
                     }}

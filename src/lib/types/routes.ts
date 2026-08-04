@@ -19,6 +19,7 @@ export const ROUTES = {
   dashboard: "/dashboard",
   products: "/products",
   productsNew: "/products/new",
+  productDetail: (id: string) => `/products/${id}`,
   catalogue: {
     import: "/products/import",
     importUpdate: "/products/import-update",
