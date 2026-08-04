@@ -39,6 +39,7 @@ const OFFICE_SIDEBAR_PATHS = [
   ROUTES.purchases.root,
   ROUTES.sales.root,
   ROUTES.suppliers,
+  ROUTES.people.root,
   ROUTES.reports,
   ROUTES.discounts,
   ROUTES.users.root,
