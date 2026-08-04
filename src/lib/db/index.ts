@@ -7,6 +7,7 @@ import type {
   CartTotal,
   CashReconciliation,
   Category,
+  Customer,
   DeletedProductRecord,
   Discount,
   HeldCart,
@@ -56,6 +57,7 @@ export class PosDB extends Dexie {
   warehouseLocations!: Table<WarehouseLocation, string>;
   categories!: Table<Category, string>;
   brands!: Table<Brand, string>;
+  customers!: Table<Customer, string>;
 
   constructor() {
     super("posDB");
@@ -1027,6 +1029,7 @@ export async function setLastSyncedAt(timestamp: number): Promise<void> {
 }
 
 export * from "./suppliers";
+export * from "./customers";
 export * from "./discounts";
 export * from "./held-carts";
 export * from "./cash-reconciliation";

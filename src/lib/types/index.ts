@@ -382,6 +382,23 @@ export interface Supplier {
   payment_terms?: string; /* e.g. "Net 30" */
 }
 
+export interface Customer {
+  id: string;
+  code: string;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  email?: string;
+  points: number;
+  /* undefined = no credit limit set. */
+  credit_limit_cents?: number;
+  opening_balance_cents: number;
+  total_sale_due_cents: number;
+  total_sell_return_due_cents: number;
+  created_at: number;
+}
+
 export type DiscountType =
   | "percentage"
   | "fixed_cents"
