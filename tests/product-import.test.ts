@@ -1,5 +1,7 @@
 import {
   IMPORT_EXAMPLE_ROWS,
+  VARIANT_IMPORT_EXAMPLE_ROWS,
+  SERVICE_IMPORT_EXAMPLE_ROWS,
   normalizeHeader,
   prepareImport,
 } from "@/lib/products/import";
@@ -12,12 +14,16 @@ import {
 
 const OPTIONS = {
   productType: "standard" as const,
-  allowedUnits: ["pc", "kg", "unit"],
+  allowedUnits: ["pc", "kg", "unit", "hr"],
   existingCodes: new Set<string>(),
 };
 
 function gridFromExample(): string[][] {
   return IMPORT_EXAMPLE_ROWS.map((row) => [...row]);
+}
+
+function gridFrom(rows: string[][]): string[][] {
+  return rows.map((row) => [...row]);
 }
 
 describe("workbook parsing", () => {
@@ -82,14 +88,69 @@ describe("import mapping", () => {
     expect(shirt.product_type).toBe("standard");
   });
 
-  it("carries the chosen product type onto every row", () => {
-    const { products } = prepareImport(gridFromExample(), {
+  it("builds variant rows from the example sheet, grouped by product_code", () => {
+    const { products, errors } = prepareImport(
+      gridFrom(VARIANT_IMPORT_EXAMPLE_ROWS),
+      { ...OPTIONS, productType: "variable" },
+    );
+
+    expect(errors).toEqual([]);
+    expect(products).toHaveLength(3);
+    expect(products.every((product) => product.product_type === "variable")).toBe(
+      true,
+    );
+    expect(products.every((product) => product.variant_of === "TSHIRT-100")).toBe(
+      true,
+    );
+
+    const [small] = products;
+    expect(small.name).toBe("T-Shirt - Small");
+    expect(small.sku).toBe("TSHIRT-100-S");
+    expect(small.variant_name).toBe("Small");
+    expect(small.price_cents).toBe(1490);
+    expect(small.cost_cents).toBe(750);
+  });
+
+  it("rejects a variant code that repeats within the file", () => {
+    const grid = gridFrom(VARIANT_IMPORT_EXAMPLE_ROWS);
+    grid[2][7] = "TSHIRT-100-S";
+
+    const { products, errors } = prepareImport(grid, {
+      ...OPTIONS,
+      productType: "variable",
+    });
+    expect(products).toHaveLength(2);
+    expect(errors[0].message).toContain("appears twice");
+  });
+
+  it("builds service rows from the example sheet without a cost column", () => {
+    const { products, errors } = prepareImport(
+      gridFrom(SERVICE_IMPORT_EXAMPLE_ROWS),
+      { ...OPTIONS, productType: "service" },
+    );
+
+    expect(errors).toEqual([]);
+    expect(products).toHaveLength(2);
+    expect(products.every((product) => product.product_type === "service")).toBe(
+      true,
+    );
+
+    const [consulting] = products;
+    expect(consulting.name).toBe("Consulting Hour");
+    expect(consulting.sku).toBe("SRV-CONS-01");
+    expect(consulting.price_cents).toBe(12000);
+    expect(consulting.cost_cents).toBeUndefined();
+  });
+
+  it("ignores single-product-only columns when importing as a service", () => {
+    const { products, unknownColumns } = prepareImport(gridFromExample(), {
       ...OPTIONS,
       productType: "service",
     });
     expect(products.every((product) => product.product_type === "service")).toBe(
       true,
     );
+    expect(unknownColumns).toEqual(expect.arrayContaining(["cost", "Stock alert"]));
   });
 
   it("rejects the whole file when a required column is absent", () => {

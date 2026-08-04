@@ -22,8 +22,8 @@ import { useToast } from "@/components/ui/Toast";
 import { exportExcel, type ExportColumn } from "@/lib/export";
 import { PRODUCT_UNIT_OPTIONS } from "@/lib/products/constants";
 import {
-  IMPORT_COLUMNS,
-  IMPORT_EXAMPLE_ROWS,
+  getImportColumns,
+  getImportExampleRows,
   prepareImport,
   type ImportRowError,
 } from "@/lib/products/import";
@@ -46,6 +46,53 @@ interface ImportResult {
   added: number;
   errors: ImportRowError[];
   unknownColumns: string[];
+}
+
+const FORMAT_NOTES: Record<ProductType, { intro: string; rules: string[] }> = {
+  standard: {
+    intro: "Create one row per product.",
+    rules: [
+      "code must be unique across products and variants.",
+      "unit must already exist (use its short name if available).",
+      "category will be created automatically if missing.",
+      "sub_category is optional. Will be created under its category if missing.",
+    ],
+  },
+  variable: {
+    intro:
+      "Create one row per variant. Repeat the product columns for each variant of the same product_code.",
+    rules: [
+      "product_code Parent product code used to group variants.",
+      "variant_code must be unique globally (cannot match any product or variant code).",
+      "unit must already exist (use its short name if available).",
+      "category will be created automatically if missing.",
+      "sub_category is optional. Will be created under its category if missing.",
+    ],
+  },
+  service: {
+    intro: "Create one row per service.",
+    rules: [
+      "code must be unique across products and variants.",
+      "unit must already exist (use its short name if available).",
+      "category will be created automatically if missing.",
+      "sub_category is optional. Will be created under its category if missing.",
+    ],
+  },
+  combo: {
+    intro: "Create one row per product.",
+    rules: [
+      "code must be unique across products and variants.",
+      "unit must already exist (use its short name if available).",
+      "category will be created automatically if missing.",
+      "sub_category is optional. Will be created under its category if missing.",
+    ],
+  },
+};
+
+/** First word of each rule string is the bold term; the rest is the sentence. */
+function splitRule(rule: string): [string, string] {
+  const spaceIndex = rule.indexOf(" ");
+  return [rule.slice(0, spaceIndex), rule.slice(spaceIndex + 1)];
 }
 
 function ColumnChip({
@@ -77,8 +124,11 @@ export default function ImportProductsPage() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
+  const importColumns = getImportColumns(productType);
+  const importExampleRows = getImportExampleRows(productType);
+  const formatNotes = FORMAT_NOTES[productType];
   const requiredLabels = new Set(
-    IMPORT_COLUMNS.filter((column) => column.required).map(
+    importColumns.filter((column) => column.required).map(
       (column) => column.label,
     ),
   );
@@ -187,13 +237,18 @@ export default function ImportProductsPage() {
   }
 
   function downloadExample() {
-    const [header, ...rows] = IMPORT_EXAMPLE_ROWS;
+    const [header, ...rows] = importExampleRows;
     const columns: ExportColumn<string[]>[] = header.map((label, index) => ({
       key: label,
       header: label,
       value: (row) => row[index] ?? "",
     }));
-    exportExcel("product-import-example", "Product import example", rows, columns);
+    exportExcel(
+      `product-import-example-${productType}`,
+      "Product import example",
+      rows,
+      columns,
+    );
   }
 
   function reset() {
@@ -249,7 +304,10 @@ export default function ImportProductsPage() {
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setProductType(tab.value)}
+                onClick={() => {
+                  setProductType(tab.value);
+                  reset();
+                }}
                 className={`inline-flex min-h-11 items-center gap-2 px-4 text-sm font-medium transition-colors ${
                   active
                     ? "bg-secondary text-on-secondary dark:bg-white dark:text-zinc-900"
@@ -307,7 +365,7 @@ export default function ImportProductsPage() {
           Example format
         </h2>
         <p className="mt-1 text-sm text-on-surface-variant dark:text-zinc-400">
-          Create one row per product. Columns in{" "}
+          {formatNotes.intro} Columns in{" "}
           <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
             green
           </span>{" "}
@@ -318,7 +376,7 @@ export default function ImportProductsPage() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr>
-                {IMPORT_EXAMPLE_ROWS[0].map((header) => (
+                {importExampleRows[0].map((header) => (
                   <th
                     key={header}
                     scope="col"
@@ -334,11 +392,11 @@ export default function ImportProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/50 dark:divide-zinc-800">
-              {IMPORT_EXAMPLE_ROWS.slice(1).map((row) => (
-                <tr key={row[1]}>
+              {importExampleRows.slice(1).map((row, rowIndex) => (
+                <tr key={`${productType}-${rowIndex}`}>
                   {row.map((value, index) => (
                     <td
-                      key={IMPORT_EXAMPLE_ROWS[0][index]}
+                      key={importExampleRows[0][index]}
                       className="px-3 py-2.5 text-on-surface dark:text-zinc-100"
                     >
                       {value}
@@ -351,22 +409,14 @@ export default function ImportProductsPage() {
         </div>
 
         <ul className="mt-4 flex list-disc flex-col gap-1.5 pl-5 text-sm text-on-surface-variant dark:text-zinc-400">
-          <li>
-            <b className={STRONG_TEXT_CLASSES}>code</b> must be
-            unique across products and variants.
-          </li>
-          <li>
-            <b className={STRONG_TEXT_CLASSES}>unit</b> must
-            already exist (use its short name if available).
-          </li>
-          <li>
-            <b className={STRONG_TEXT_CLASSES}>category</b> will
-            be created automatically if missing.
-          </li>
-          <li>
-            <b className={STRONG_TEXT_CLASSES}>sub_category</b>{" "}
-            is optional. Will be created under its category if missing.
-          </li>
+          {formatNotes.rules.map((rule) => {
+            const [term, rest] = splitRule(rule);
+            return (
+              <li key={rule}>
+                <b className={STRONG_TEXT_CLASSES}>{term}</b> {rest}
+              </li>
+            );
+          })}
         </ul>
       </Card>
 
@@ -418,7 +468,7 @@ export default function ImportProductsPage() {
           Required &amp; optional columns
         </h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {IMPORT_COLUMNS.map((column) => (
+          {importColumns.map((column) => (
             <ColumnChip
               key={column.key}
               label={column.label}
@@ -427,21 +477,17 @@ export default function ImportProductsPage() {
           ))}
         </div>
         <ul className="mt-4 flex list-disc flex-col gap-1.5 pl-5 text-sm text-on-surface-variant dark:text-zinc-400">
-          {IMPORT_COLUMNS.filter((column) => column.hint).map((column) => (
-            <li key={column.key}>
-              <b className={STRONG_TEXT_CLASSES}>
-                {column.label}
-              </b>{" "}
-              — {column.hint}
-            </li>
-          ))}
+          {importColumns
+            .filter((column) => column.hint)
+            .map((column) => (
+              <li key={column.key}>
+                <b className={STRONG_TEXT_CLASSES}>{column.label}</b> —{" "}
+                {column.hint}
+              </li>
+            ))}
           <li>
-            <b className={STRONG_TEXT_CLASSES}>
-              wholesale price
-            </b>{" "}
-            and{" "}
-            <b className={STRONG_TEXT_CLASSES}>min price</b> are
-            optional.
+            <b className={STRONG_TEXT_CLASSES}>wholesale price</b> and{" "}
+            <b className={STRONG_TEXT_CLASSES}>min price</b> are optional.
           </li>
         </ul>
       </Card>

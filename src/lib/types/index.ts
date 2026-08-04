@@ -198,6 +198,14 @@ export interface Product {
   hide_from_online?: boolean;
   enable_preorder?: boolean;
   pharmacy?: ProductPharmacy;
+  /**
+   * Groups variant rows created from one Excel import under the sheet's
+   * `product_code`. There is no separate parent row — each variant is a
+   * normal sellable `Product` with its own unique `sku`/`barcode`.
+   */
+  variant_of?: string;
+  /** e.g. "Small", "Red" — the specific variant this row represents. */
+  variant_name?: string;
 
   /**
    * Created on this device and not yet accepted by the server. Cleared by the
