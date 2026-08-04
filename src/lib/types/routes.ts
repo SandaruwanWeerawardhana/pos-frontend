@@ -44,11 +44,22 @@ export const ROUTES = {
   sales: {
     root: "/sales",
     detail: (id: string) => `/sales/${id}`,
+    import: "/sales/import",
   },
   store: {
     root: "/store",
   },
   suppliers: "/suppliers",
+  suppliersNew: "/suppliers/new",
+  suppliersImport: "/suppliers/import",
+  people: {
+    root: "/people",
+    new: "/people/new",
+    import: "/people/import",
+    withoutLogin: "/people/without-login",
+    withLogin: "/people/with-login",
+    clientPortal: "/people/client-portal",
+  },
   reports: "/reports",
   discounts: "/discounts",
   users: {
