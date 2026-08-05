@@ -12,28 +12,58 @@ import {
   SIDEBAR_WIDTH_CLASS,
 } from "@/lib/layout";
 import {
+  ArrowLeft,
   BarChart2,
   Barcode,
   Bell,
   Bookmark,
+  Box,
   Boxes,
+  Briefcase,
+  Calendar,
+  Check,
   ChevronDown,
+  ClipboardList,
+  Clock,
+  Contact,
   Copy,
+  CreditCard,
   DollarSign,
   FilePlus,
   Files,
+  FileText,
+  Folder,
+  Heart,
   KeyRound,
+  Landmark,
   LayoutDashboard,
   Monitor,
+  Package,
+  PackageCheck,
   PackagePlus,
+  Pencil,
+  Percent,
   Quote,
+  Receipt,
+  RotateCcw,
+  RotateCw,
   Settings,
   Shield,
   ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Star,
   Store,
   Tag,
+  TrendingDown,
+  TrendingUp,
+  Truck,
+  User,
   UserCog,
   Users,
+  UserX,
+  Wrench,
+  XCircle,
 } from "lucide-react";
 
 interface NavItem {
@@ -132,7 +162,35 @@ const NAV_GROUPS: NavGroup[] = [
         ],
       },
       { href: ROUTES.profile, label: "My profile", icon: UserCog },
-      { href: ROUTES.reports, label: "Reports", icon: BarChart2 },
+      {
+        href: ROUTES.reports,
+        label: "Reports",
+        icon: BarChart2,
+        children: [
+          { href: ROUTES.dashboard, label: "3D Sales Dashboard", icon: Box },
+          {
+            href: `${ROUTES.reports}?report=sales`,
+            label: "Payments",
+            icon: CreditCard,
+            children: [
+              { href: `${ROUTES.reports}?report=purchases`, label: "Purchases", icon: ShoppingCart },
+              { href: `${ROUTES.reports}?report=sales`, label: "Sales", icon: ShoppingBag },   
+            ],
+          },
+          { href: `${ROUTES.reports}?report=users`, label: "Seller Report", icon: User },
+          { href: `${ROUTES.reports}?report=sales`, label: "Attendance summary", icon: Clock },
+          { href: `${ROUTES.reports}?report=profit`, label: "Profit and Loss", icon: Briefcase },
+          { href: `${ROUTES.reports}?report=purchases`, label: "Purchases Report", icon: ClipboardList },
+          { href: `${ROUTES.reports}?report=sales`, label: "Sales Report", icon: Receipt },
+          { href: `${ROUTES.reports}?report=suppliers`, label: "Suppliers Report", icon: Truck },  
+          { href: `${ROUTES.reports}?report=customers`, label: "Customers Report", icon: Contact },
+          { href: `${ROUTES.reports}?report=users`, label: "Users Report", icon: Users },    
+          { href: `${ROUTES.reports}?report=sales`, label: "Sales by Category", icon: Folder },
+          { href: `${ROUTES.reports}?report=sales`, label: "Sales by Brand", icon: Bookmark },
+          { href: `${ROUTES.reports}?report=sales`, label: "Error Logs", icon: XCircle },
+    
+        ],
+      },
       { href: ROUTES.settings.root, label: "Settings", icon: Settings },
     ],
   },
@@ -141,7 +199,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 function flattenItems(items: NavItem[]): NavItem[] {
   return items.flatMap((item) =>
-    item.children ? [item, ...item.children] : [item],
+    item.children ? [item, ...flattenItems(item.children)] : [item],
   );
 }
 
@@ -158,19 +216,26 @@ function findActiveHref(pathname: string | null): string | null {
   );
 }
 
+/* Indentation grows with nesting depth (0 = top-level, 2 = grandchild — e.g. Reports > Payments > Sales). */
+const CHILD_PADDING_BY_DEPTH: Record<number, string> = {
+  1: "pl-8",
+  2: "pl-12",
+};
+
 function NavItemLink({
   item,
   active,
   onNavigate,
-  child = false,
+  depth = 0,
 }: Readonly<{
   item: NavItem;
   active: boolean;
   onNavigate: () => void;
-  child?: boolean;
+  depth?: number;
 }>) {
   const Icon = item.icon;
-  const activeClasses = child
+  const isChild = depth > 0;
+  const activeClasses = isChild
     ? "bg-surface-container font-medium text-primary dark:bg-zinc-800 dark:text-blue-400"
     : "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm";
   const inactiveClasses =
@@ -182,14 +247,14 @@ function NavItemLink({
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={`group flex items-center gap-2.5 rounded-lg text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-        child ? "min-h-9 py-1 pl-8 pr-3" : "min-h-10 px-3 font-medium"
+        isChild ? `min-h-9 py-1 ${CHILD_PADDING_BY_DEPTH[depth]} pr-3` : "min-h-10 px-3 font-medium"
       } ${active ? activeClasses : inactiveClasses}`}
     >
       <Icon
-        size={child ? 15 : 16}
+        size={isChild ? 15 : 16}
         aria-hidden
         className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
-          active && !child ? "opacity-90" : "opacity-70"
+          active && !isChild ? "opacity-90" : "opacity-70"
         }`}
       />
       {item.label}
@@ -203,17 +268,20 @@ function ParentNavItem({
   openSections,
   setOpenSections,
   onNavigate,
+  depth = 1,
 }: Readonly<{
   item: NavItem;
   activeHref: string | null;
   openSections: Record<string, boolean>;
   setOpenSections: OpenSectionsSetter;
   onNavigate: () => void;
+  depth?: number;
 }>) {
   const children = item.children ?? [];
   const Icon = item.icon;
   const sectionActive = children.some((child) => activeHref === child.href);
   const open = openSections[item.label] ?? sectionActive;
+  const isNested = depth > 1;
 
   function handleToggle() {
     setOpenSections((sections) => ({
@@ -228,14 +296,16 @@ function ParentNavItem({
         type="button"
         aria-expanded={open}
         onClick={handleToggle}
-        className={`group flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        className={`group flex w-full items-center gap-2.5 rounded-lg text-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+          isNested ? `min-h-9 py-1 ${CHILD_PADDING_BY_DEPTH[depth - 1]} pr-3` : "min-h-10 px-3 font-medium"
+        } ${
           sectionActive
             ? "bg-gradient-to-r from-primary to-secondary text-on-primary shadow-sm"
             : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
         }`}
       >
         <Icon
-          size={16}
+          size={isNested ? 15 : 16}
           aria-hidden
           className={`transition-[opacity,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] group-hover:scale-110 ${
             sectionActive ? "opacity-90" : "opacity-60"
@@ -253,15 +323,27 @@ function ParentNavItem({
 
       {open && (
         <div className="animate-fade-in flex flex-col gap-0.5 rounded-lg bg-surface-container-low py-1 dark:bg-zinc-900">
-          {children.map((child) => (
-            <NavItemLink
-              key={child.href}
-              item={child}
-              active={activeHref === child.href}
-              onNavigate={onNavigate}
-              child
-            />
-          ))}
+          {children.map((child) =>
+            child.children ? (
+              <ParentNavItem
+                key={child.label}
+                item={child}
+                activeHref={activeHref}
+                openSections={openSections}
+                setOpenSections={setOpenSections}
+                onNavigate={onNavigate}
+                depth={depth + 1}
+              />
+            ) : (
+              <NavItemLink
+                key={child.label}
+                item={child}
+                active={activeHref === child.href}
+                onNavigate={onNavigate}
+                depth={depth}
+              />
+            ),
+          )}
         </div>
       )}
     </div>
