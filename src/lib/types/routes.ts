@@ -62,6 +62,8 @@ export const ROUTES = {
     clientPortal: "/people/customer/client-portal",
   },
   reports: "/reports",
+  reports3d: "/reports/3Dreport",
+  reportsPaymentPurchases: "/reports/payment/purchase",
   discounts: "/discounts",
   users: {
     root: "/users",

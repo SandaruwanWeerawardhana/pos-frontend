@@ -150,13 +150,13 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Reports",
         icon: BarChart2,
         children: [
-          { href: ROUTES.dashboard, label: "3D Sales Dashboard", icon: Box },
+          { href: ROUTES.reports3d, label: "3D Sales Dashboard", icon: Box },
           {
             href: `${ROUTES.reports}?report=sales`,
             label: "Payments",
             icon: CreditCard,
             children: [
-              { href: `${ROUTES.reports}?report=purchases`, label: "Purchases", icon: ShoppingCart },
+              { href: ROUTES.reportsPaymentPurchases, label: "Purchases", icon: ShoppingCart },
               { href: `${ROUTES.reports}?report=sales`, label: "Sales", icon: ShoppingBag },   
             ],
           },

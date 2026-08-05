@@ -277,3 +277,47 @@ export async function getPurchaseReport(
     }))
     .sort((a, b) => b.createdAt - a.createdAt);
 }
+
+/**
+ * PurchaseOrder does not (yet) record how or by whom it was paid, so
+ * `paidBy`/`account`/`addedBy` are fixed placeholders rather than read off
+ * the order. Draft and cancelled orders never became a payment, so they are
+ * excluded.
+ */
+export interface PaymentPurchaseRow {
+  id: string;
+  createdAt: number;
+  date: string; /* yyyy-mm-dd */
+  reference: string;
+  purchaseRef: string;
+  supplierName: string;
+  paidBy: string;
+  account: string;
+  amountCents: number;
+  addedBy: string;
+}
+
+export async function getPaymentPurchasesReport(
+  range: DateRange,
+): Promise<PaymentPurchaseRow[]> {
+  const orders = await db.purchaseOrders
+    .where("created_at")
+    .between(range.from, range.to, true, true)
+    .toArray();
+
+  return orders
+    .filter((order) => order.status !== "draft" && order.status !== "cancelled")
+    .map((order): PaymentPurchaseRow => ({
+      id: order.id,
+      createdAt: order.created_at,
+      date: localDateKey(order.created_at),
+      reference: `INV/${order.reference}`,
+      purchaseRef: order.reference,
+      supplierName: order.supplier_name,
+      paidBy: "Cash",
+      account: "—",
+      amountCents: order.total_cents,
+      addedBy: "—",
+    }))
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
