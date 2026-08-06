@@ -90,7 +90,9 @@ export default function PaymentSalesReportPage() {
   const range = presetToRange(preset);
   const rangeLabel = `${formatDate(range.from, REPORT_DATE_LOCALE)} — ${formatDate(range.to, REPORT_DATE_LOCALE)}`;
 
-  const paidByOptions = [...new Set(rows.map((row) => row.paidBy))].sort();
+  const paidByOptions = [...new Set(rows.map((row) => row.paidBy))].sort((a, b) =>
+    a.localeCompare(b),
+  );
   const filtered = rows.filter((row) => rowMatches(row, search, paidBy));
   const totalCents = filtered.reduce((sum, row) => sum + row.amountCents, 0);
 
