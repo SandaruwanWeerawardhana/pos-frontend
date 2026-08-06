@@ -277,3 +277,106 @@ export async function getPurchaseReport(
     }))
     .sort((a, b) => b.createdAt - a.createdAt);
 }
+
+/**
+ * PurchaseOrder does not (yet) record how or by whom it was paid, so
+ * `paidBy`/`account`/`addedBy` are fixed placeholders rather than read off
+ * the order. Draft and cancelled orders never became a payment, so they are
+ * excluded.
+ */
+export interface PaymentPurchaseRow {
+  id: string;
+  createdAt: number;
+  date: string; /* yyyy-mm-dd */
+  reference: string;
+  purchaseRef: string;
+  supplierName: string;
+  paidBy: string;
+  account: string;
+  amountCents: number;
+  addedBy: string;
+}
+
+export async function getPaymentPurchasesReport(
+  range: DateRange,
+): Promise<PaymentPurchaseRow[]> {
+  const orders = await db.purchaseOrders
+    .where("created_at")
+    .between(range.from, range.to, true, true)
+    .toArray();
+
+  return orders
+    .filter((order) => order.status !== "draft" && order.status !== "cancelled")
+    .map((order): PaymentPurchaseRow => ({
+      id: order.id,
+      createdAt: order.created_at,
+      date: localDateKey(order.created_at),
+      reference: `INV/${order.reference}`,
+      purchaseRef: order.reference,
+      supplierName: order.supplier_name,
+      paidBy: "Cash",
+      account: "—",
+      amountCents: order.total_cents,
+      addedBy: "—",
+    }))
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+/**
+ * PendingOrder does not (yet) record a customer or the cashier's display
+ * name, so `customerName`/`addedBy` fall back to placeholders rather than
+ * `cashier_id`, matching the placeholder approach `getPaymentPurchasesReport`
+ * already takes for fields the order doesn't carry. `account` is likewise a
+ * placeholder — the till has no concept of a bank account per tender.
+ * Refunded sales never resulted in a kept payment, so they are excluded.
+ */
+export interface PaymentSaleRow {
+  id: string;
+  createdAt: number;
+  date: string; /* yyyy-mm-dd */
+  reference: string;
+  saleRef: string;
+  customerName: string;
+  paidBy: string;
+  account: string;
+  amountCents: number;
+  addedBy: string;
+}
+
+function paymentMethodLabel(method: PendingOrder["payment_method"]): string {
+  switch (method) {
+    case "cash":
+      return "Cash";
+    case "card":
+      return "Card";
+    case "qr":
+      return "QR";
+    default:
+      return "Other";
+  }
+}
+
+export async function getPaymentSalesReport(
+  range: DateRange,
+): Promise<PaymentSaleRow[]> {
+  const orders = await ordersInRange(range);
+
+  return orders
+    .filter((order) => !order.refunded)
+    .map((order): PaymentSaleRow => {
+      const saleRef = order.receipt_no ?? `SL_${order.client_generated_id.slice(0, 6)}`;
+      return {
+        id: order.client_generated_id,
+        createdAt: order.created_at,
+        date: localDateKey(order.created_at),
+        reference: `INV/${saleRef}`,
+        saleRef,
+        customerName: "walk-in-customer",
+        paidBy: paymentMethodLabel(order.payment_method),
+        account: "—",
+        amountCents: order.total_cents,
+        addedBy: "—",
+      };
+    })
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
