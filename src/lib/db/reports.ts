@@ -321,3 +321,62 @@ export async function getPaymentPurchasesReport(
     }))
     .sort((a, b) => a.createdAt - b.createdAt);
 }
+
+/**
+ * PendingOrder does not (yet) record a customer or the cashier's display
+ * name, so `customerName`/`addedBy` fall back to placeholders rather than
+ * `cashier_id`, matching the placeholder approach `getPaymentPurchasesReport`
+ * already takes for fields the order doesn't carry. `account` is likewise a
+ * placeholder — the till has no concept of a bank account per tender.
+ * Refunded sales never resulted in a kept payment, so they are excluded.
+ */
+export interface PaymentSaleRow {
+  id: string;
+  createdAt: number;
+  date: string; /* yyyy-mm-dd */
+  reference: string;
+  saleRef: string;
+  customerName: string;
+  paidBy: string;
+  account: string;
+  amountCents: number;
+  addedBy: string;
+}
+
+function paymentMethodLabel(method: PendingOrder["payment_method"]): string {
+  switch (method) {
+    case "cash":
+      return "Cash";
+    case "card":
+      return "Card";
+    case "qr":
+      return "QR";
+    default:
+      return "Other";
+  }
+}
+
+export async function getPaymentSalesReport(
+  range: DateRange,
+): Promise<PaymentSaleRow[]> {
+  const orders = await ordersInRange(range);
+
+  return orders
+    .filter((order) => !order.refunded)
+    .map((order): PaymentSaleRow => {
+      const saleRef = order.receipt_no ?? `SL_${order.client_generated_id.slice(0, 6)}`;
+      return {
+        id: order.client_generated_id,
+        createdAt: order.created_at,
+        date: localDateKey(order.created_at),
+        reference: `INV/${saleRef}`,
+        saleRef,
+        customerName: "walk-in-customer",
+        paidBy: paymentMethodLabel(order.payment_method),
+        account: "—",
+        amountCents: order.total_cents,
+        addedBy: "—",
+      };
+    })
+    .sort((a, b) => a.createdAt - b.createdAt);
+}

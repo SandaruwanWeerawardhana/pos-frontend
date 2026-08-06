@@ -64,6 +64,7 @@ export const ROUTES = {
   reports: "/reports",
   reports3d: "/reports/3Dreport",
   reportsPaymentPurchases: "/reports/payment/purchase",
+  reportsPaymentSales: "/reports/payment/sale",
   discounts: "/discounts",
   users: {
     root: "/users",

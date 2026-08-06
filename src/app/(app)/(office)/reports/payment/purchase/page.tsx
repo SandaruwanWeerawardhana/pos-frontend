@@ -47,6 +47,13 @@ const RANGES: { value: RangePreset; label: string }[] = [
   { value: "year", label: "Year to date" },
 ];
 
+/*
+ * Report dates stay in English regardless of the store's configured locale
+ * (which drives currency formatting app-wide) so month names read
+ * consistently across reports.
+ */
+const REPORT_DATE_LOCALE = "en-US";
+
 function rowMatches(row: PaymentPurchaseRow, search: string, supplier: string): boolean {
   if (supplier !== "all" && row.supplierName !== supplier) return false;
   if (!search.trim()) return true;
@@ -59,7 +66,7 @@ function rowMatches(row: PaymentPurchaseRow, search: string, supplier: string): 
 }
 
 export default function PaymentPurchasesReportPage() {
-  const { money, settings } = useSettings();
+  const { money } = useSettings();
   const [preset, setPreset] = useState<RangePreset>("30d");
   const [rows, setRows] = useState<PaymentPurchaseRow[]>([]);
   const [search, setSearch] = useState("");
@@ -81,7 +88,7 @@ export default function PaymentPurchasesReportPage() {
   }, [preset]);
 
   const range = presetToRange(preset);
-  const rangeLabel = `${formatDate(range.from, settings.locale)} — ${formatDate(range.to, settings.locale)}`;
+  const rangeLabel = `${formatDate(range.from, REPORT_DATE_LOCALE)} — ${formatDate(range.to, REPORT_DATE_LOCALE)}`;
 
   const suppliers = [...new Set(rows.map((row) => row.supplierName))].sort();
   const filtered = rows.filter((row) => rowMatches(row, search, supplier));
@@ -105,7 +112,7 @@ export default function PaymentPurchasesReportPage() {
       key: "date",
       header: "Date",
       sortValue: (r) => r.createdAt,
-      render: (r) => formatDate(r.createdAt, settings.locale),
+      render: (r) => formatDate(r.createdAt, REPORT_DATE_LOCALE),
     },
     { key: "reference", header: "Reference", sortValue: (r) => r.reference, render: (r) => r.reference },
     {

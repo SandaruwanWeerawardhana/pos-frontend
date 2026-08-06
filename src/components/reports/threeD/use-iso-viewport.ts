@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_PITCH, MAX_PITCH, MIN_PITCH } from "./iso";
 
 export const MIN_ZOOM = 0.6;
 export const MAX_ZOOM = 8;
@@ -9,10 +10,16 @@ const WHEEL_SENSITIVITY = 0.0016;
 const WHEEL_LINE_HEIGHT = 16;
 const BUTTON_ZOOM_FACTOR = 1.35;
 const ROTATE_SENSITIVITY = 0.012;
+const TILT_SENSITIVITY = 0.008;
 const KEY_ROTATE_STEP = 0.15;
+const KEY_TILT_STEP = 0.08;
+const TWO_PI = Math.PI * 2;
+
+export type ViewPreset = "iso" | "front" | "top";
 
 export interface IsoViewport {
   azimuth: number;
+  pitch: number;
   zoom: number;
   panX: number;
   panY: number;
@@ -27,22 +34,37 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Keeps the azimuth in (-PI, PI] so an hour of auto-rotation can't drift into
+ * float ranges where the angle loses precision. */
+function wrapAngle(theta: number): number {
+  const wrapped = ((theta + Math.PI) % TWO_PI + TWO_PI) % TWO_PI;
+  return wrapped - Math.PI;
+}
+
 /**
  * Shared camera state for the canvas-based 3D report charts: azimuth from
- * horizontal drag, zoom from wheel/pinch/buttons, and pan from shift-drag,
- * middle/right drag or two-finger drag. Everything lives in refs so a gesture
- * redraws the canvas without re-rendering React; only the zoom readout is
- * mirrored into state for the on-screen controls.
+ * horizontal drag, pitch from vertical drag, zoom from wheel/pinch/buttons, and
+ * pan from shift-drag, middle/right drag or two-finger drag. Everything lives
+ * in refs so a gesture redraws the canvas without re-rendering React; only the
+ * zoom readout and preset name are mirrored into state for the on-screen
+ * controls.
  */
 export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptions) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const viewRef = useRef<IsoViewport>({ azimuth: initialAzimuth, zoom: 1, panX: 0, panY: 0 });
+  const viewRef = useRef<IsoViewport>({
+    azimuth: initialAzimuth,
+    pitch: DEFAULT_PITCH,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+  });
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchRef = useRef<{ distance: number; x: number; y: number } | null>(null);
   const panningRef = useRef(false);
   const interactingRef = useRef(false);
   const changeRef = useRef(onChange);
   const [zoom, setZoom] = useState(1);
+  const [preset, setPreset] = useState<ViewPreset>("iso");
 
   useEffect(() => {
     changeRef.current = onChange;
@@ -72,8 +94,15 @@ export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptio
   }, []);
 
   const applyReset = useCallback(() => {
-    viewRef.current = { azimuth: initialAzimuth, zoom: 1, panX: 0, panY: 0 };
+    viewRef.current = {
+      azimuth: initialAzimuth,
+      pitch: DEFAULT_PITCH,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+    };
     setZoom(1);
+    setPreset("iso");
   }, [initialAzimuth]);
 
   const zoomIn = useCallback(() => {
@@ -90,6 +119,34 @@ export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptio
     applyReset();
     changeRef.current();
   }, [applyReset]);
+
+  /**
+   * Canned cameras: "front" is the flat, chart-like read where heights compare
+   * honestly, "top" is the plan view for spotting which cells are hot, and
+   * "iso" is the three-quarter default.
+   */
+  const applyPreset = useCallback(
+    (next: ViewPreset) => {
+      const view = viewRef.current;
+      view.panX = 0;
+      view.panY = 0;
+      view.zoom = 1;
+      setZoom(1);
+      if (next === "front") {
+        view.azimuth = 0;
+        view.pitch = MIN_PITCH;
+      } else if (next === "top") {
+        view.azimuth = 0;
+        view.pitch = MAX_PITCH;
+      } else {
+        view.azimuth = initialAzimuth;
+        view.pitch = DEFAULT_PITCH;
+      }
+      setPreset(next);
+      changeRef.current();
+    },
+    [initialAzimuth],
+  );
 
   /**
    * Wheel is bound natively because React registers its `onWheel` listener as
@@ -159,7 +216,8 @@ export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptio
         view.panX += deltaX;
         view.panY += deltaY;
       } else {
-        view.azimuth += deltaX * ROTATE_SENSITIVITY;
+        view.azimuth = wrapAngle(view.azimuth + deltaX * ROTATE_SENSITIVITY);
+        view.pitch = clamp(view.pitch - deltaY * TILT_SENSITIVITY, MIN_PITCH, MAX_PITCH);
       }
       changeRef.current();
       return true;
@@ -185,10 +243,16 @@ export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptio
       const view = viewRef.current;
       switch (event.key) {
         case "ArrowLeft":
-          view.azimuth -= KEY_ROTATE_STEP;
+          view.azimuth = wrapAngle(view.azimuth - KEY_ROTATE_STEP);
           break;
         case "ArrowRight":
-          view.azimuth += KEY_ROTATE_STEP;
+          view.azimuth = wrapAngle(view.azimuth + KEY_ROTATE_STEP);
+          break;
+        case "ArrowUp":
+          view.pitch = clamp(view.pitch + KEY_TILT_STEP, MIN_PITCH, MAX_PITCH);
+          break;
+        case "ArrowDown":
+          view.pitch = clamp(view.pitch - KEY_TILT_STEP, MIN_PITCH, MAX_PITCH);
           break;
         case "+":
         case "=":
@@ -214,14 +278,27 @@ export function useIsoViewport({ initialAzimuth, onChange }: UseIsoViewportOptio
     event.preventDefault();
   }, []);
 
+  /** Saves the current frame as a PNG so a chart can go into a report or email. */
+  const exportPng = useCallback((filename: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `${filename}.png`;
+    link.click();
+  }, []);
+
   return {
     canvasRef,
     viewRef,
     interactingRef,
     zoom,
+    preset,
     zoomIn,
     zoomOut,
     reset,
+    applyPreset,
+    exportPng,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
