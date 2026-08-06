@@ -4,9 +4,14 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Calculator,
   Calendar,
+  Clock,
+  Package,
   Receipt,
   Settings as SettingsIcon,
   Sparkles,
+  Store,
+  TrendingDown,
+  TrendingUp,
   Users,
   Wallet,
   X,
@@ -15,6 +20,7 @@ import { Pie, PieChart, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import {
   getReports3D,
   presetToRange,
+  type DateRange,
   type Grid3D,
   type PaymentMethodSlice,
   type RangePreset,
@@ -26,7 +32,7 @@ import { IsoGridBarChart } from "@/components/reports/threeD/IsoGridBarChart";
 import { IsoScatterChart } from "@/components/reports/threeD/IsoScatterChart";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useConnectionStore } from "@/lib/store/connection";
-import type { PaymentMethod } from "@/lib/types";
+import type { PaymentMethod, StoreSettings } from "@/lib/types";
 
 /**
  * The dataviz skill's validated 8-hue categorical ramp (dark surface steps —
@@ -67,6 +73,8 @@ const RANGES: { value: RangePreset; label: string }[] = [
   { value: "all", label: "All time" },
 ];
 
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 const EMPTY_GRID: Grid3D = { columns: [], rows: [], values: [] };
 const EMPTY_RESULT: Report3DResult = {
   stats: { revenueCents: 0, orders: 0, avgOrderCents: 0, cashiers: 0 },
@@ -77,6 +85,34 @@ const EMPTY_RESULT: Report3DResult = {
   heatmap: EMPTY_GRID,
   warehouses: [],
 };
+
+/**
+ * The comparison window immediately before the selected one, same length, so
+ * the headline tiles can carry a "vs previous period" delta. "All time" has no
+ * previous window, so the caller skips the second query for it.
+ */
+function previousRange(range: DateRange): DateRange {
+  const span = range.to - range.from;
+  return { from: range.from - span - 1, to: range.from - 1 };
+}
+
+/** Short money for axis ticks and bar captions, where the full format is too wide. */
+function compactMoneyFor(settings: StoreSettings): (cents: number) => string {
+  return (cents: number) => {
+    const body = (cents / 100).toLocaleString(settings.locale, {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    });
+    return settings.currency_position === "after"
+      ? `${body}${settings.currency_symbol}`
+      : `${settings.currency_symbol}${body}`;
+  };
+}
+
+function percentChange(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+}
 
 function ChartCard({
   title,
@@ -120,7 +156,17 @@ function StatTile({
   value,
   icon,
   tint,
-}: Readonly<{ label: string; value: string; icon: ReactNode; tint: string }>) {
+  delta,
+  loading,
+}: Readonly<{
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tint: string;
+  delta?: number | null;
+  loading?: boolean;
+}>) {
+  const rising = (delta ?? 0) >= 0;
   return (
     <div className="flex animate-fade-in-up items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint}`}>
@@ -130,7 +176,47 @@ function StatTile({
         <span className="block text-xs uppercase tracking-wide text-on-surface-variant dark:text-zinc-500">
           {label}
         </span>
-        <span className="block text-lg font-bold text-on-surface dark:text-zinc-50">{value}</span>
+        {loading ? (
+          <span className="mt-1 block h-5 w-20 animate-pulse rounded bg-surface-container-highest dark:bg-zinc-800" />
+        ) : (
+          <span className="block text-lg font-bold text-on-surface dark:text-zinc-50">{value}</span>
+        )}
+        {delta !== null && delta !== undefined && !loading && (
+          <span
+            className={`mt-0.5 flex items-center gap-1 text-xs font-medium ${
+              rising
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-red-700 dark:text-red-400"
+            }`}
+          >
+            {rising ? <TrendingUp size={12} aria-hidden /> : <TrendingDown size={12} aria-hidden />}
+            {Math.abs(delta).toFixed(1)}% vs previous
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function InsightTile({
+  icon,
+  label,
+  value,
+  detail,
+}: Readonly<{ icon: ReactNode; label: string; value: string; detail: string }>) {
+  return (
+    <div className="flex animate-fade-in-up items-start gap-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3.5 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <span className="mt-0.5 shrink-0 text-on-surface-variant dark:text-zinc-400">{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-[11px] uppercase tracking-wide text-on-surface-variant dark:text-zinc-500">
+          {label}
+        </span>
+        <span className="block truncate text-sm font-semibold text-on-surface dark:text-zinc-50">
+          {value}
+        </span>
+        <span className="block truncate text-xs text-on-surface-variant dark:text-zinc-500">
+          {detail}
+        </span>
       </span>
     </div>
   );
@@ -145,6 +231,7 @@ function PaymentMethodsCard({
     value: slice.amountCents,
     fill: PAYMENT_COLORS[slice.method],
   }));
+  const total = slices.reduce((sum, slice) => sum + slice.amountCents, 0);
 
   return (
     <ChartCard
@@ -158,7 +245,7 @@ function PaymentMethodsCard({
           No payments in this period.
         </div>
       ) : (
-        <div className="h-72 w-full">
+        <div className="relative h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -176,6 +263,14 @@ function PaymentMethodsCard({
               <Legend wrapperStyle={{ fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-x-0 top-[38%] flex -translate-y-1/2 flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wide text-on-surface-variant dark:text-zinc-500">
+              Total
+            </span>
+            <span className="text-base font-bold text-on-surface dark:text-zinc-50">
+              {money(total)}
+            </span>
+          </div>
         </div>
       )}
     </ChartCard>
@@ -188,26 +283,103 @@ export default function Reports3DPage() {
 
   const [preset, setPreset] = useState<RangePreset>("30d");
   const [warehouseId, setWarehouseId] = useState<string>("all");
-  const [data, setData] = useState<Report3DResult>(EMPTY_RESULT);
+  const [snapshot, setSnapshot] = useState<{
+    key: string;
+    data: Report3DResult;
+    previous: Report3DResult["stats"] | null;
+  }>({ key: "", data: EMPTY_RESULT, previous: null });
   const [autoRotate, setAutoRotate] = useState(true);
+  const [rotateBars, setRotateBars] = useState(false);
+  const [showValues, setShowValues] = useState(false);
+  const [showDropLines, setShowDropLines] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const range = useMemo(() => presetToRange(preset), [preset]);
+  const compactMoney = useMemo(() => compactMoneyFor(settings), [settings]);
+
+  /* Loading is derived from "the snapshot I hold is not the one this filter set
+     asks for" rather than from a flag flipped inside the effect. */
+  const requestKey = `${range.from}:${range.to}:${warehouseId}`;
+  const loading = snapshot.key !== requestKey;
+  const data = snapshot.data;
+  const previousStats = snapshot.previous;
 
   useEffect(() => {
     let cancelled = false;
-    getReports3D(range, warehouseId).then((result) => {
-      if (!cancelled) setData(result);
+    const comparable = preset !== "all";
+    Promise.all([
+      getReports3D(range, warehouseId),
+      comparable ? getReports3D(previousRange(range), warehouseId) : Promise.resolve(null),
+    ]).then(([result, previous]) => {
+      if (cancelled) return;
+      setSnapshot({ key: requestKey, data: result, previous: previous ? previous.stats : null });
     });
     return () => {
       cancelled = true;
     };
-  }, [range, warehouseId]);
+  }, [range, warehouseId, preset, requestKey]);
 
   const rangeLabel = `${new Date(range.from).toLocaleDateString(settings.locale, { year: "numeric", month: "2-digit", day: "2-digit" })} - ${new Date(range.to).toLocaleDateString(settings.locale, { year: "numeric", month: "2-digit", day: "2-digit" })}`;
 
   const warehouseColorByRowIndex = CATEGORICAL_DARK;
-  const dayColors = CATEGORICAL_DARK.slice(0, 7);
+
+  /* Derived call-outs: the same numbers the charts show, stated once in words
+     so the dashboard answers "when are we busy, what sells" without a drag. */
+  const insights = useMemo(() => {
+    const heatmap = data.heatmap;
+    let peakDay = -1;
+    let peakHour = -1;
+    let peakValue = 0;
+    heatmap.values.forEach((row, dayIndex) => {
+      row.forEach((value, hourIndex) => {
+        if (value > peakValue) {
+          peakValue = value;
+          peakDay = dayIndex;
+          peakHour = hourIndex;
+        }
+      });
+    });
+    const dayTotals = heatmap.values.map((row) => row.reduce((sum, value) => sum + value, 0));
+    let bestDay = -1;
+    let bestDayValue = 0;
+    dayTotals.forEach((total, index) => {
+      if (total > bestDayValue) {
+        bestDayValue = total;
+        bestDay = index;
+      }
+    });
+    const topProduct = data.productMetrics[0];
+    const warehouseTotals = data.salesByMonthWarehouse.rows.map((row, rowIndex) => ({
+      label: row.label,
+      total: (data.salesByMonthWarehouse.values[rowIndex] ?? []).reduce(
+        (sum, value) => sum + value,
+        0,
+      ),
+    }));
+    const topWarehouse = [...warehouseTotals].sort((a, b) => b.total - a.total)[0];
+    return {
+      peak:
+        peakHour >= 0
+          ? {
+              value: `${String(peakHour).padStart(2, "0")}:00 ${DAY_NAMES[peakDay]}`,
+              detail: money(peakValue),
+            }
+          : null,
+      bestDay:
+        bestDay >= 0 ? { value: DAY_NAMES[bestDay], detail: money(bestDayValue) } : null,
+      topProduct: topProduct
+        ? {
+            value: topProduct.name,
+            detail: `${topProduct.quantity} sold · ${money(topProduct.revenueCents)}`,
+          }
+        : null,
+      topWarehouse:
+        topWarehouse && topWarehouse.total > 0
+          ? { value: topWarehouse.label, detail: money(topWarehouse.total) }
+          : null,
+    };
+  }, [data, money]);
 
   return (
     <div className="relative flex flex-col gap-6 pb-8">
@@ -232,7 +404,8 @@ export default function Reports3DPage() {
               3D Sales Dashboard
             </h1>
             <p className="mt-1 text-sm text-on-primary/80">
-              Interactive 3D visualization of sales performance.
+              Drag to turn, drag up or down to tilt, scroll to zoom. Front view compares heights
+              honestly; top view finds the hot cells.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -263,7 +436,7 @@ export default function Reports3DPage() {
             </div>
             <span className="flex items-center gap-1.5 rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm">
               <Calendar size={12} aria-hidden />
-              {rangeLabel}
+              {loading ? "Loading…" : rangeLabel}
             </span>
           </div>
         </div>
@@ -275,30 +448,74 @@ export default function Reports3DPage() {
           value={money(data.stats.revenueCents)}
           icon={<Wallet size={20} />}
           tint="bg-violet-600 text-white dark:bg-violet-500"
+          loading={loading}
+          delta={
+            previousStats
+              ? percentChange(data.stats.revenueCents, previousStats.revenueCents)
+              : null
+          }
         />
         <StatTile
           label="Orders"
           value={String(data.stats.orders)}
           icon={<Receipt size={20} />}
           tint="bg-sky-600 text-white dark:bg-sky-500"
+          loading={loading}
+          delta={
+            previousStats ? percentChange(data.stats.orders, previousStats.orders) : null
+          }
         />
         <StatTile
           label="Average order"
           value={money(data.stats.avgOrderCents)}
           icon={<Calculator size={20} />}
           tint="bg-emerald-600 text-white dark:bg-emerald-500"
+          loading={loading}
+          delta={
+            previousStats
+              ? percentChange(data.stats.avgOrderCents, previousStats.avgOrderCents)
+              : null
+          }
         />
         <StatTile
           label="Cashiers"
           value={String(data.stats.cashiers)}
           icon={<Users size={20} />}
           tint="bg-orange-600 text-white dark:bg-orange-500"
+          loading={loading}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <InsightTile
+          icon={<Clock size={16} />}
+          label="Peak hour"
+          value={insights.peak?.value ?? "—"}
+          detail={insights.peak?.detail ?? "No sales yet"}
+        />
+        <InsightTile
+          icon={<Calendar size={16} />}
+          label="Best day"
+          value={insights.bestDay?.value ?? "—"}
+          detail={insights.bestDay?.detail ?? "No sales yet"}
+        />
+        <InsightTile
+          icon={<Package size={16} />}
+          label="Top product"
+          value={insights.topProduct?.value ?? "—"}
+          detail={insights.topProduct?.detail ?? "No sales yet"}
+        />
+        <InsightTile
+          icon={<Store size={16} />}
+          label="Top warehouse"
+          value={insights.topWarehouse?.value ?? "—"}
+          detail={insights.topWarehouse?.detail ?? "No sales yet"}
         />
       </div>
 
       <ChartCard
         title="Sales by Month and Warehouse"
-        subtitle="3D bar visualization · drag to rotate"
+        subtitle="Drag to rotate · tilt · click a warehouse in the key to isolate it"
         badge="3D"
         badgeTone="violet"
       >
@@ -306,15 +523,19 @@ export default function Reports3DPage() {
           grid={data.salesByMonthWarehouse}
           rowColors={warehouseColorByRowIndex}
           valueFormatter={money}
+          tickFormatter={compactMoney}
           axisLabel="Sales"
           height={340}
+          showValues={showValues}
+          autoRotate={rotateBars}
+          exportName="sales-by-month-warehouse"
         />
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
           title="Top Products by Month"
-          subtitle={`Top ${data.topProductsByMonth.rows.length || 7} products`}
+          subtitle={`Top ${data.topProductsByMonth.rows.length || 7} products by revenue`}
           badge="3D"
           badgeTone="sky"
         >
@@ -322,12 +543,17 @@ export default function Reports3DPage() {
             grid={data.topProductsByMonth}
             rowColors={CATEGORICAL_DARK}
             valueFormatter={money}
+            tickFormatter={compactMoney}
+            axisLabel="Revenue"
             height={300}
+            showValues={showValues}
+            autoRotate={rotateBars}
+            exportName="top-products-by-month"
           />
         </ChartCard>
         <ChartCard
           title="Product Quantity vs Price vs Revenue"
-          subtitle="Auto-rotating scatter"
+          subtitle="Size = revenue · colour = average price"
           badge="3D"
           badgeTone="emerald"
         >
@@ -335,7 +561,10 @@ export default function Reports3DPage() {
             points={data.productMetrics}
             autoRotate={autoRotate}
             formatMoney={money}
+            showDropLines={showDropLines}
+            showLabels={showLabels}
             height={300}
+            exportName="product-quantity-price-revenue"
           />
         </ChartCard>
       </div>
@@ -344,23 +573,27 @@ export default function Reports3DPage() {
         <PaymentMethodsCard slices={data.paymentMethods} money={money} />
         <ChartCard
           title="Sales Heatmap (Hour x Day of Week)"
-          subtitle="Hour x day of week"
+          subtitle="Colour and height both track takings · top view reads best"
           badge="3D"
           badgeTone="emerald"
         >
           <IsoGridBarChart
             grid={data.heatmap}
-            rowColors={dayColors}
+            rowColors={CATEGORICAL_DARK}
             valueFormatter={money}
+            tickFormatter={compactMoney}
             axisLabel="Sales"
             height={300}
+            colorMode="value"
+            autoRotate={rotateBars}
+            exportName="sales-heatmap"
           />
         </ChartCard>
       </div>
 
       <div className="fixed bottom-6 right-6 z-20">
         {settingsOpen && (
-          <div className="mb-3 w-64 animate-fade-in-up rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="mb-3 w-72 animate-fade-in-up rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-elevated dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-semibold text-on-surface dark:text-zinc-50">
                 Chart settings
@@ -374,12 +607,38 @@ export default function Reports3DPage() {
                 <X size={16} />
               </button>
             </div>
-            <Switch
-              checked={autoRotate}
-              onChange={setAutoRotate}
-              label="Auto-rotate scatter"
-              description="Spin the quantity/price/revenue chart automatically"
-            />
+            <div className="flex flex-col gap-2">
+              <Switch
+                checked={autoRotate}
+                onChange={setAutoRotate}
+                label="Auto-rotate scatter"
+                description="Spin the quantity/price/revenue cloud"
+              />
+              <Switch
+                checked={rotateBars}
+                onChange={setRotateBars}
+                label="Auto-rotate bar charts"
+                description="Turntable on every 3D bar scene"
+              />
+              <Switch
+                checked={showValues}
+                onChange={setShowValues}
+                label="Bar value labels"
+                description="Print each bar's total above it"
+              />
+              <Switch
+                checked={showDropLines}
+                onChange={setShowDropLines}
+                label="Scatter drop lines"
+                description="Drop each point to the floor for depth"
+              />
+              <Switch
+                checked={showLabels}
+                onChange={setShowLabels}
+                label="Top product labels"
+                description="Name the five biggest sellers in the cloud"
+              />
+            </div>
           </div>
         )}
         <button
