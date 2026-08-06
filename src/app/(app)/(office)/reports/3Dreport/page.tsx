@@ -217,12 +217,12 @@ export default function Reports3DPage() {
         breadcrumbs={[{ label: "Reports", href: "/reports" }, { label: "3D Sales Dashboard" }]}
       />
 
-      <div className="animate-fade-in-up rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-500 to-blue-500 p-6 text-white shadow-elevated">
+      <div className="animate-fade-in-up rounded-2xl bg-gradient-to-r from-primary to-secondary p-6 text-on-primary shadow-elevated">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                online ? "bg-emerald-500/25 text-emerald-100" : "bg-white/15 text-white/80"
+                online ? "bg-emerald-500/25 text-emerald-100" : "bg-on-primary/15 text-on-primary/80"
               }`}
             >
               <Sparkles size={12} aria-hidden />
@@ -231,7 +231,7 @@ export default function Reports3DPage() {
             <h1 className="mt-2 font-display text-2xl font-bold tracking-tight">
               3D Sales Dashboard
             </h1>
-            <p className="mt-1 text-sm text-white/80">
+            <p className="mt-1 text-sm text-on-primary/80">
               Interactive 3D visualization of sales performance.
             </p>
           </div>
@@ -240,7 +240,7 @@ export default function Reports3DPage() {
               <select
                 value={warehouseId}
                 onChange={(event) => setWarehouseId(event.target.value)}
-                className="min-h-11 rounded-lg border border-white/30 bg-white/15 px-3 text-sm font-medium text-white backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white [&>option]:text-on-surface"
+                className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
               >
                 <option value="all">Filter by warehouse</option>
                 {data.warehouses.map((warehouse) => (
@@ -252,7 +252,7 @@ export default function Reports3DPage() {
               <select
                 value={preset}
                 onChange={(event) => setPreset(event.target.value as RangePreset)}
-                className="min-h-11 rounded-lg border border-white/30 bg-white/15 px-3 text-sm font-medium text-white backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white [&>option]:text-on-surface"
+                className="min-h-11 rounded-lg border border-on-primary/30 bg-on-primary/15 px-3 text-sm font-medium text-on-primary backdrop-blur-sm transition-colors duration-[var(--duration-fast)] hover:bg-on-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-primary [&>option]:text-on-surface"
               >
                 {RANGES.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -261,7 +261,7 @@ export default function Reports3DPage() {
                 ))}
               </select>
             </div>
-            <span className="flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm">
+            <span className="flex items-center gap-1.5 rounded-lg bg-on-primary/15 px-3 py-1.5 text-xs font-medium text-on-primary/90 backdrop-blur-sm">
               <Calendar size={12} aria-hidden />
               {rangeLabel}
             </span>
